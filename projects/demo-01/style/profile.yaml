@@ -1,0 +1,17 @@
+schema_version: "0.1"
+samples:
+  - sample_id: SAMPLE_001
+    tags:
+      pov: CH_WOMAN
+      scene_type: interior
+      tone: restraint
+    text: 她把手机翻了个面，屏幕朝下。屋里很静，静到能听见冰箱的嗡声。
+    de_entity: false
+  - sample_id: SAMPLE_002
+    tags:
+      pov: CH_WOMAN
+      scene_type: dialogue
+      tone: conflict
+    text: “那就分吧。”她说完就低头喝汤，汤已经不烫了。
+    de_entity: true
+    sanitized_text: “[CHAR_A]说完了就低头喝汤，汤已经不烫了。”

@@ -1,0 +1,87 @@
+contract: scene_breakdown
+contract_version: "0.1"
+seed: story2/03-realism.txt
+gate1_ops: [{"kind":"skip"}]
+gate2_plan: {"fields":{"title":"PROP_A","genre":"PROP_A","pov":"PROP_B","target_length":"PROP_B","premise":"PROP_A","theme":"PROP_B","characters":"PROP_B","core_conflict":"PROP_B","arc":"PROP_A","structure":"PROP_A","key_knowledge":"PROP_B","foreshadowing":"PROP_A","style_direction":"PROP_B"},"resolutions":{"PROP_B:CONF_001":"changed_user"}}
+input_sha256: "d37e9100b19a92ff62555c2187a3ed9672d20c70780885474c2910b1b6fdfdb7"
+response:
+  model: recorded-scene-breakdown-v0.1
+  text: |
+    scenes:
+      - pov: CH_HUSBAND
+        scene_type: interior
+        purpose: '交代他当天被裁员，却照常去买菜做饭'
+        target_length: 1500
+        narrative_role_ref: BP_STR_BEG
+        characters: [CH_HUSBAND, CH_WIFE]
+        location: '超市与家里的厨房'
+        start_state: '他从公司出来，先去了超市'
+        conflict: '他要决定今天要不要说'
+        turn: '他挑了打折的排骨，把购物小票塞进口袋'
+        end_state: '他系上围裙开始做饭'
+        referenced_blueprint_items: [BP_PREMISE_01, CH_HUSBAND, CH_WIFE, REL_HUSBAND_WIFE]
+        director_notes:
+          - '只写动作与物件，不写心里话'
+        proposed_additions: []
+      - pov: CH_WIFE
+        scene_type: interior
+        purpose: '交代妻子当天也被裁，并提前回家'
+        target_length: 1600
+        narrative_role_ref: BP_STR_DEV
+        characters: [CH_WIFE]
+        location: '她的公司与回家的路'
+        start_state: '她在会议室签完字'
+        conflict: '她想告诉他，又怕两个人都慌'
+        turn: '她把离职补偿文件塞进包的最里层'
+        end_state: '她在楼下站了一会儿才上楼'
+        referenced_blueprint_items: [BP_CONFLICT_01, CH_WIFE, OBH_WIFE_01]
+        director_notes:
+          - '双 POV 交替，本场只写她能感知的部分'
+        proposed_additions:
+          - '补偿文件是装订好的复印件'
+      - pov: CH_HUSBAND
+        scene_type: dialogue
+        purpose: '一顿饭里的试探与那句问话'
+        target_length: 1700
+        narrative_role_ref: BP_STR_TURN
+        characters: [CH_HUSBAND, CH_WIFE]
+        location: '家里的餐桌'
+        start_state: '排骨端上桌，两人都坐得比平时直'
+        conflict: '他解释放假，她追问细节'
+        turn: '她问出那句"今天怎么这么早"，两人都停了一下'
+        end_state: '他把话题扯回汤的咸淡'
+        referenced_blueprint_items: [BP_CONFLICT_01, CH_HUSBAND, CH_WIFE, OBH_HUSBAND_01]
+        director_notes:
+          - '对白为主，避免解释性旁白'
+        proposed_additions: []
+      - pov: CH_WIFE
+        scene_type: dialogue
+        purpose: '两人几乎同时说出真相'
+        target_length: 1800
+        narrative_role_ref: BP_STR_CLIMAX
+        characters: [CH_HUSBAND, CH_WIFE]
+        location: '家里的餐桌'
+        start_state: '她把筷子放下'
+        conflict: '谁先说，谁就先拆掉对方的体面'
+        turn: '她先开口，说出了自己也提前回家'
+        end_state: '两人都不说话，开始吃同一盘排骨'
+        referenced_blueprint_items: [K001, BP_STR_CLIMAX, CH_HUSBAND, CH_WIFE, REL_WIFE_HUSBAND]
+        director_notes:
+          - '两句关键台词之间的沉默要保持'
+        proposed_additions: []
+      - pov: CH_HUSBAND
+        scene_type: transition
+        purpose: '收尾：房贷的数字留在桌上'
+        target_length: 1400
+        narrative_role_ref: BP_STR_END
+        characters: [CH_HUSBAND, CH_WIFE]
+        location: '家里的餐桌与冰箱前'
+        start_state: '盘子空了，两个人都没起身'
+        conflict: '说出真相之后要面对更具体的事'
+        turn: '他从冰箱上取下还款计划表放在桌上'
+        end_state: '两人一起看那张表'
+        referenced_blueprint_items: [BP_STR_END, BP_ARC_END, CH_HUSBAND, CH_WIFE, BP_FS_001]
+        director_notes:
+          - '结尾只写桌面上的纸'
+        proposed_additions:
+          - '还款计划表上写着每一期的日期'

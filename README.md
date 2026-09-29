@@ -43,7 +43,8 @@ src/
   gate2/      Author Gate 2（字段计划 / 合并与装配 / 版本与快照 / 服务）
   developer/  Story Developer（Proposal 生成 / ID 规范化 / seed_fidelity 与冲突检查）
   scenes/     Scene Breakdown / Structure Resolver / Story State / Coverage Check
-  prompts/    版本化 Prompt Contract（seed_interpreter / story_developer / blueprint_builder / scene_breakdown，均 @0.1）
+  context/    Context Compiler（数据源白名单 / POV Filter / Manifest / Draft Context）
+  prompts/    版本化 Prompt Contract（seed_interpreter / story_developer / blueprint_builder / scene_breakdown，均 @0.1；Story 6 不新增契约）
   cli/        CLI 入口
 scripts/      fixture 哈希刷新工具
 tests/
@@ -95,6 +96,13 @@ pnpm harness scenes show demo-02
 pnpm harness state show demo-02
 pnpm harness coverage show demo-02
 
+# Context Compiler + Manifest（Story 6）
+pnpm harness context demo-02 --scene scene-003          # 编译单场受控上下文 + Manifest
+pnpm harness context demo-02 --all                      # 逐场编译并打印摘要
+pnpm harness context demo-02 --scene scene-001 --note '这一场不要出现回忆'   # 降级路径：用户 director note
+pnpm harness style add demo-02 --text '……' --pov CH_HUSBAND --scene-type action --tone tension
+pnpm harness style show demo-02
+
 # fixture 与 Seed 文本 / Gate 1 状态一致性（离线回放依赖）
 pnpm fixtures:check
 pnpm fixtures:refresh
@@ -113,9 +121,10 @@ Node 24 可直接执行 TypeScript，CLI 无需构建步骤。
 | Story 2 | Seed Interpreter + Gate 1 | ✅ 完成 |
 | Story 3 | Story Developer + Proposal | ✅ 完成 |
 | Story 4 | Blueprint Confirm / Merge / Edit（Gate 2） | ✅ 完成 |
-| Story 5 | Scene Breakdown + Story State + Coverage Check | ✅ 完成（410 项测试全绿） |
+| Story 5 | Scene Breakdown + Story State + Coverage Check | ✅ 完成 |
+| Story 6 | Context Compiler + POV Filter + Manifest | ✅ 完成（461 项测试全绿） |
 | Story 3 | Story Developer + Proposal | 未开始 |
 | Story 4 | Blueprint Confirm / Merge / Edit（Gate 2） | 未开始 |
 | Story 5 | Scene Breakdown + Story State + Coverage Check | 未开始 |
 | M1 | 最小端到端验证（Story 5 后强制） | ✅ **通过** |
-| Story 6–10 | Context Compiler → 评估 | 未开始 |
+| Story 7–10 | Prose Writer → 评估 | 未开始 |

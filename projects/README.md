@@ -32,5 +32,8 @@ projects/<project_id>/
   `history/blueprint-001.yaml`（快照）、`blueprint-history/001.meta.yaml`（Gate 2 动作与字段来源元数据）。
 - `demo-01/`、`demo-02/` 也已完成 Story 5：`scenes/scene-00N.yaml`、`story_state.yaml`、
   `reports/coverage.yaml`（两个项目均为 5 个 Scene、零 Coverage warning）。
-  这两个项目可直接作为 Story 6（Context Compiler）的输入。
+- `demo-01/`、`demo-02/` 也已完成 Story 6：`style/profile.yaml`（手工样本）与
+  `reports/context-manifest.yaml`（受控上下文审计）。demo-01 的 Manifest 是 scene-003
+  （含 allowed_reveals=K001 与一条用户 override），demo-02 的是 scene-001。
+  这两个项目可直接作为 Story 7（Prose Writer）的输入。
 - 其余目录中的项目属于本地创作数据；是否提交由作者决定（当前仓库未对 `projects/**` 设忽略规则）。

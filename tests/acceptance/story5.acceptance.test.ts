@@ -345,6 +345,12 @@ describe('验收 13：Story State 不存在未定义的 characters.notes', () =>
     const files = readdirSync(join(RECORDED_DIR, 'scene_breakdown'))
       .filter((name) => name.endsWith('.yaml'))
       .sort()
-    expect(files).toEqual(['multi-sentence-a.yaml', 'mystery-merge.yaml', 'single-scene-promoted-a.yaml', 'warmth-manual.yaml'])
+    expect(files).toEqual([
+      'multi-sentence-a.yaml',
+      'mystery-merge.yaml',
+      'realism-merge.yaml',
+      'single-scene-promoted-a.yaml',
+      'warmth-manual.yaml',
+    ])
   })
 })

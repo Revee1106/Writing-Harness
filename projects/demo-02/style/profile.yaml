@@ -1,0 +1,9 @@
+schema_version: "0.1"
+samples:
+  - sample_id: SAMPLE_001
+    tags:
+      pov: CH_HUSBAND
+      scene_type: action
+      tone: tension
+    text: 他按下按钮的那一下，走廊的灯也亮了一格。
+    de_entity: false

@@ -36,6 +36,12 @@ export const DEFAULT_LINTER_RULES: Readonly<Record<LinterRuleKey, boolean>> = {
 /** 需求规格 §19.1 / 架构设计 §19：v0.1 只有一种 Draft Context 选择模式。 */
 export const DRAFT_CONTEXT_MODES = ['same_pov_previous'] as const
 export const DRAFT_CONTEXT_MAX_CHARS_DEFAULT = 600
+/**
+ * OQ-16 裁决：`draft_context.max_chars` 的计数口径 =
+ * **Unicode 码点、含所有非空白字符、不含空白 / 换行 / 制表符**
+ * （实现见 `src/core/text.ts` 的 `countNonWhitespaceCodePoints`）。
+ */
+export const DRAFT_CONTEXT_MAX_CHARS_UNIT = 'non_whitespace_code_points'
 /** 需求规格 §19.1："max_chars v0.1 推荐允许 500～800 范围配置"—— 推荐区间，不设硬门槛（解读 I-3）。 */
 export const DRAFT_CONTEXT_MAX_CHARS_RECOMMENDED = { min: 500, max: 800 } as const
 
@@ -68,6 +74,7 @@ export const projectConfigSchema = z.strictObject({
   /** 需求规格 §19.1 原文结构。 */
   draft_context: z.strictObject({
     mode: z.enum(DRAFT_CONTEXT_MODES),
+    /** 计数口径：Unicode 码点、含所有非空白字符、不含空白 / 换行 / 制表符（OQ-16）。 */
     max_chars: z.number().int().positive(),
   }),
 })

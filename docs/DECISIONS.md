@@ -160,3 +160,36 @@
 | 《架构设计》§32、《需求规格》§29 | 新增 `blueprint-history/` 目录（Gate 2 元数据；OQ-10 / OQ-35） |
 | 《需求规格》§25.1 / 《架构设计》§26 | `anti-ai-template-actions.yaml` 明确为项目级 + 仓库级 fallback（OQ-07） |
 | 《需求规格》§11.3 | OBH 的 `applicable_scene_types` 明确为 scene_type ∪ tone 联合白名单（OQ-36 / OQ-41） |
+
+---
+
+## 八、Story 6 用户裁决落地与实现解读
+
+### 用户裁决
+
+| 事项 | 裁决 | 落地 |
+|---|---|---|
+| OQ-16 | 计数口径 = Unicode 码点、含所有非空白字符、不含空白/换行/制表符；在 project-config 的 max_chars 描述注明 | `src/core/text.ts`；`DRAFT_CONTEXT_MAX_CHARS_UNIT`；`config show` 打印口径 |
+| OQ-12 | style/profile.yaml Schema 采纳 dsh 提议 + 四条补充（SAMPLE_<NNN> 不复用 / text 原样 / de_entity 与 sanitized_text 互斥 / tags 三必填）；linter.yaml 留到 Story 8 | `src/schema/style-profile.ts` |
+| Manifest director_surface 组装规则 | Scene notes 原 id 原 source；style_direction 固定 `DIR_BLUEPRINT_001`；用户 note `DIR_USER_NNN` + user_override + overrides 一对一；禁止把 truth / proposed_additions 拆进去；只有 user_override 进 overrides | `src/context/compiler.ts` |
+| excluded_sensitive.reason | 六类枚举锁定 | `EXCLUSION_REASONS` in `src/schema/context-manifest.ts` |
+
+### 实现解读
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-44 | **`writer_context` 不落盘**：§29/§32 的文件结构里只有 `reports/context-manifest.yaml`，没有 writer_context 文件；Compiler 返回 writer_context（CLI 打印 / `--json`），只把 Manifest 写入磁盘。 | §29 / §32 文件结构 + "不新增文件结构"约定。 | 见 OQ-48。 |
+| I-45 | **Manifest 落盘为 `reports/context-manifest.yaml`（当前编译的 Scene）**；`--all` 时逐场编译并打印摘要，磁盘上保留最后一场的 Manifest。 | §21 的 Schema 是"单个 Scene 一份 Manifest"，而 §29 只给了一个文件路径。 | 见 OQ-49；若需要每场一份，需先裁决新增目录。 |
+| I-46 | **用户在 Compiler 降级路径补充的 note 同时满足两处语义**：写进 Manifest 的 `director_surface`（`source: user_override`）+ `overrides`；`--note` 传参形式不修改 Scene 文件，`breakdown --note` 才会把 note 持久化到 Scene 的 `director_notes`（`source: user`）。 | §22（用户可对 Scene 加 director_note，且进入 Manifest）+ OQ-11 的 source 联合。 | 避免在编译期静默改写已确认的 Scene。 |
+| I-47 | **Scene 的 tone 判定**（OQ-47）：§14 的 Scene 没有 tone 字段，因此把"Scene 自身文本（purpose / conflict / turn / start_state / end_state / location / director notes）中出现的 tone 标签词"视为该场景的 tone；匹配集合 = `{scene_type} ∪ tone`。 | OQ-36（OBH 白名单是 scene_type ∪ tone）+ §23.1（Style Sample 也按 tone 匹配）。 | 若要让 tone 成为一等字段，需要裁决给 Scene 增字段。 |
+| I-48 | `included_sensitive` 只记录**敏感**包含项（角色内心、allowed reveal、用户 override）；普通事实不逐条写入 Manifest。 | §21「普通非敏感 included facts 不逐条写入」。 | 角色内心以"当前 POV 可见"作为敏感项记录。 |
+| I-49 | 非 POV 角色的 `type` 记 `future_content`、reason 记 `non_pov_inner_state`。 | §21 的 `excluded_sensitive.type` 枚举里没有"角色内心"这一类，而 reason 六类里有 `non_pov_inner_state`。 | type 取枚举内最贴近的一项，reason 精确表达原因。 |
+| I-50 | 已确认（Gate 3 之后）的知识若在本场无 reveal 权限，排除 reason 记为 `user_override`；未揭示的记 `not_revealed_yet`。 | §15.5/§15.6（allowed_reveals 只决定本场权限）+ 六类 reason 枚举。 | 两类原因严格区分"用户已在正文里写过"与"计划尚未揭示"。 |
+
+### 回写清单（累计，新增）
+
+| 目标文档 | 需要回写的内容 |
+|---|---|
+| 《需求规格》§19.1 | `draft_context.max_chars` 的计数口径（Unicode 码点、含非空白、不含空白）（OQ-16） |
+| 《需求规格》§23 / 《架构设计》§24 | `style/profile.yaml` 的 Schema（含 `de_entity` / `sanitized_text` 规则；OQ-12） |
+| 《需求规格》§21 | `excluded_sensitive.reason` 六类枚举（OQ-44/Story 6 裁决） |

@@ -1,0 +1,47 @@
+schema_version: "0.1"
+scene_id: scene-003
+blueprint_version: 1
+pov: CH_WOMAN
+included_sensitive:
+  - id: CH_WOMAN
+    type: key_knowledge
+    source_ref: blueprint.characters.CH_WOMAN.inner_state
+    reason: 当前 POV 可以看到该角色的内心状态（inner_state_pov_visible 命中）
+  - id: K001
+    type: key_knowledge
+    source_ref: blueprint.key_knowledge.K001
+    reason: 本场 allowed_reveals 命中：允许在本场发生该 reveal（§15.5 / §15.6）
+excluded_sensitive:
+  - id: CH_MAN.inner_state
+    type: future_content
+    source_ref: blueprint.characters.CH_MAN
+    reason: non_pov_inner_state
+  - id: BP_FS_001
+    type: foreshadowing
+    source_ref: blueprint.foreshadowing.BP_FS_001
+    reason: foreshadowing_backstage
+director_surface:
+  - id: DIR_SCENE_003
+    source_ref: scene.scene-003.director_notes.DIR_SCENE_003
+    instruction: 不写他的内心，只写她的观察
+    source: scene
+  - id: DIR_BLUEPRINT_001
+    source_ref: blueprint.style_direction.BP_STYLE_01
+    instruction: 叙述：贴身第三人称，只写她能看到和听到的；对白：对白占比高，短句，避免解释情绪；节奏：段落短，场景内不做时间跳跃
+    source: blueprint
+  - id: DIR_USER_001
+    source_ref: user_note.scene-003.DIR_USER_001
+    instruction: 这一场不要出现回忆，对白再短一点
+    source: user_override
+style_samples:
+  - sample_id: SAMPLE_002
+    matched_on:
+      - pov
+      - scene_type
+future_content_exposed: false
+unconfirmed_proposal_exposed: false
+overrides:
+  - id: OVR_001
+    director_surface_ref: DIR_USER_001
+    note: 这一场不要出现回忆，对白再短一点
+    source: user

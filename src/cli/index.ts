@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { PROJECT_FILE_NAMES, projectPaths } from '../io/paths.ts'
@@ -10,7 +10,11 @@ import {
   setRawSeedInput,
   type CreatedProject,
 } from '../project/project.ts'
-import { DRAFT_CONTEXT_MAX_CHARS_RECOMMENDED, TARGET_LENGTH_UNIT } from '../schema/project-config.ts'
+import {
+  DRAFT_CONTEXT_MAX_CHARS_RECOMMENDED,
+  DRAFT_CONTEXT_MAX_CHARS_UNIT,
+  TARGET_LENGTH_UNIT,
+} from '../schema/project-config.ts'
 import { runGate1, Gate1PreconditionError } from '../gate1/service.ts'
 import { runStoryDeveloper, StoryDeveloperOutputError, UnresolvableSeedRefError } from '../developer/developer.ts'
 import {
@@ -35,6 +39,19 @@ import { SceneValidationError } from '../schema/scene.ts'
 import { CoverageValidationError } from '../scenes/coverage.ts'
 import { StoryStateValidationError } from '../schema/story-state.ts'
 import { unresolvedOrphans } from '../scenes/state.ts'
+import { ContextCompileError, compileContext } from '../context/compiler.ts'
+import { ContextManifestValidationError } from '../schema/context-manifest.ts'
+import {
+  StyleProfileValidationError,
+  createEmptyStyleProfile,
+  nextSampleId,
+  validateStyleProfile,
+  type StyleProfile,
+} from '../schema/style-profile.ts'
+import { UnresolvedOrphanError } from '../scenes/state.ts'
+import { SCENE_TYPES, TONE_TAGS } from '../core/scene-types.ts'
+import { writeYamlFile } from '../io/yaml.ts'
+import { readYamlFile } from '../io/yaml.ts'
 import { Gate2MetaValidationError } from '../schema/gate2-meta.ts'
 import { blueprintExists, loadBlueprint } from '../project/project.ts'
 import { computeSeedPreservationRate, ProposalValidationError, conflictResolutionSchema } from '../schema/proposal.ts'
@@ -56,6 +73,7 @@ import { normalizeForEvidence } from '../interpreter/interpreter.ts'
  *         develop（Story 3，Story Developer + Proposal）
  *         gate2 / blueprint show（Story 4，Blueprint Confirm / Merge / Edit）
  *         breakdown / scenes show / state show / coverage show（Story 5，Scene Breakdown + Story State + Coverage）
+ *         context / style add / style show（Story 6，Context Compiler + Style Samples）
  * Gate 3 的交互命令属于 Story 10。
  */
 
@@ -78,6 +96,9 @@ const USAGE = `Short-story-first Writing Harness v0.1 — 项目 / Seed / Gate 1
   harness scenes show <projectId>       显示 Scene 列表摘要
   harness state show <projectId>        显示 story_state.yaml 摘要
   harness coverage show <projectId>     显示 coverage 报告（结构化 warning）
+  harness context <projectId> [选项]    Context Compiler：为某个 Scene 编译受控上下文 + Manifest
+  harness style add <projectId> [选项]  保存一个 Style Sample（SAMPLE_<NNN> 由 Harness 分配）
+  harness style show <projectId>        显示 style/profile.yaml 摘要
   harness help                          显示本帮助
 
 通用选项：
@@ -105,6 +126,20 @@ gate1 选项（必须给出一种选择）：
                             delete:SEED_A002           删除错误分类
   --provider <name>       ${PROVIDER_NAMES.join(' / ')}（默认 auto：有 fixtures 用 recorded，否则用环境变量）
   --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/seed-interpreter）
+
+context 选项：
+  --scene <scene-###>     目标 Scene（必填）
+  --all                   为全部 Scene 各编译一次（打印摘要；manifest 只写最后一个 Scene，见 I-45）
+  --note <文本>           降级路径：为当前 Scene 追加用户 director note（source=user_override，可重复）
+  --plan                  只读预览：完整编译但不写 reports/context-manifest.yaml
+  --json                  以 JSON 输出 writer_context + manifest
+
+style add 选项：
+  --text <文本> | --file <path>   样本原文（原样保留）
+  --pov <CH_X>            标签 pov（必填）
+  --scene-type <类型>     标签 scene_type：${SCENE_TYPES.join(' / ')}（必填）
+  --tone <标签>           标签 tone：${TONE_TAGS.join(' / ')}（必填）
+  --sanitized <文本>      去实体化后的文本（给出即视为 de_entity=true）
 
 breakdown 选项：
   --plan                  只读预览：完整解析但不写 /scenes、story_state、coverage
@@ -182,11 +217,24 @@ function parseCli(argv: string[]): ParsedCli {
       resolve: { type: 'string', multiple: true },
       rerun: { type: 'boolean' },
       note: { type: 'string', multiple: true },
+      scene: { type: 'string' },
+      all: { type: 'boolean' },
+      pov: { type: 'string' },
+      'scene-type': { type: 'string' },
+      tone: { type: 'string' },
+      sanitized: { type: 'string' },
     },
   })
   const [command, second, third] = positionals
   const isSubcommandForm =
-    command === 'seed' || command === 'config' || command === 'proposals' || command === 'blueprint' || command === 'scenes' || command === 'state' || command === 'coverage'
+    command === 'seed' ||
+    command === 'config' ||
+    command === 'proposals' ||
+    command === 'blueprint' ||
+    command === 'scenes' ||
+    command === 'state' ||
+    command === 'coverage' ||
+    command === 'style'
   return {
     command,
     subcommand: isSubcommandForm ? second : undefined,
@@ -306,7 +354,9 @@ function runConfigShow(parsed: ParsedCli): number {
   for (const [key, enabled] of Object.entries(projectConfig.linter.rules)) {
     process.stdout.write(`linter.${key}: ${enabled ? 'on' : 'off'}\n`)
   }
-  process.stdout.write(`draft_context: mode=${projectConfig.draft_context.mode} max_chars=${projectConfig.draft_context.max_chars}\n`)
+  process.stdout.write(
+    `draft_context: mode=${projectConfig.draft_context.mode} max_chars=${projectConfig.draft_context.max_chars}（口径：${DRAFT_CONTEXT_MAX_CHARS_UNIT}；OQ-16）\n`,
+  )
   return 0
 }
 
@@ -729,6 +779,129 @@ function runCoverageShowCommand(parsed: ParsedCli): number {
   return 0
 }
 
+
+function printContextSummary(
+  result: ReturnType<typeof compileContext>,
+  sceneId: string,
+): void {
+  const { writerContext, manifest } = result
+  process.stdout.write(`scene_id=${sceneId} pov=${writerContext.pov} blueprint_version=${manifest.blueprint_version}\n`)
+  process.stdout.write(`scene_type=${writerContext.scene.scene_type} narrative_role_ref=${writerContext.scene.narrative_role_ref}\n`)
+  process.stdout.write(`characters（内心可见性由 inner_state_pov_visible 物理决定）：\n`)
+  for (const character of writerContext.characters) {
+    process.stdout.write(
+      `  ${character.id}  内心=${character.inner_state === undefined ? '不可见' : '可见'}  hints=${character.observable_behavior_hints.map((hint) => hint.id).join(',') || '-'}\n`,
+    )
+  }
+  process.stdout.write(`allowed_reveals: ${writerContext.allowed_reveals.map((reveal) => reveal.id).join(',') || '（本场无）'}\n`)
+  process.stdout.write(`已知 K（开场）：${writerContext.known_knowledge_ids.join(', ') || '（无）'}\n`)
+  process.stdout.write(`style_samples: ${manifest.style_samples.map((sample) => `${sample.sample_id}[${sample.matched_on.join('+') || 'none'}]`).join(', ') || '（无匹配，不阻塞）'}\n`)
+  process.stdout.write(`director_surface: ${manifest.director_surface.map((entry) => `${entry.id}[${entry.source}]`).join(', ')}\n`)
+  process.stdout.write(`draft_context: ${writerContext.draft_context === null ? '（无；首个该 POV Scene 或没有 Draft）' : `${writerContext.draft_context.scene_id} 末尾 ${writerContext.draft_context.counted_code_points} 个非空白码点`}\n`)
+  process.stdout.write(`included_sensitive: ${manifest.included_sensitive.length} 条  excluded_sensitive: ${manifest.excluded_sensitive.length} 条\n`)
+  process.stdout.write(`future_content_exposed=${manifest.future_content_exposed} unconfirmed_proposal_exposed=${manifest.unconfirmed_proposal_exposed}\n`)
+  if (manifest.overrides.length > 0) {
+    process.stdout.write(`overrides: ${manifest.overrides.map((override) => `${override.id}→${override.director_surface_ref}`).join(', ')}\n`)
+  }
+}
+
+function runContextCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const notes = (parsed.values.note as string[] | undefined) ?? []
+  const all = parsed.values.all === true
+  const sceneRaw = parsed.values.scene
+
+  const sceneIds = all
+    ? loadScenes(paths).map((scene) => scene.scene_id)
+    : [typeof sceneRaw === 'string' ? sceneRaw : (() => {
+        throw new UsageError('context 需要 --scene <scene-###> 或 --all')
+      })()]
+
+  const results = sceneIds.map((sceneId) =>
+    compileContext({ paths, sceneId, userNotes: notes }),
+  )
+
+  if (parsed.values.json === true) {
+    process.stdout.write(
+      `${JSON.stringify(
+        results.length === 1
+          ? results[0]
+          : results.map((result) => ({ scene_id: result.manifest.scene_id, manifest: result.manifest })),
+        null,
+        2,
+      )}\n`,
+    )
+  } else {
+    results.forEach((result) => {
+      printContextSummary(result, result.manifest.scene_id)
+      process.stdout.write('\n')
+    })
+  }
+
+  const last = results[results.length - 1] as ReturnType<typeof compileContext>
+  if (parsed.values.plan === true) {
+    process.stdout.write('[plan] 只读预览：未写 reports/context-manifest.yaml\n')
+    return 0
+  }
+  writeYamlFile(paths.contextManifestReport, last.manifest)
+  process.stdout.write(`已写入 Manifest：${paths.contextManifestReport}（scene_id=${last.manifest.scene_id}）\n`)
+  return 0
+}
+
+function loadStyleProfileOrEmpty(paths: ReturnType<typeof projectPaths>): StyleProfile {
+  return existsSync(paths.styleProfile) ? validateStyleProfile(readYamlFile(paths.styleProfile)) : createEmptyStyleProfile()
+}
+
+function runStyleAddCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const textRaw = parsed.values.text
+  const fileRaw = parsed.values.file
+  if (typeof textRaw === 'string' && typeof fileRaw === 'string') {
+    throw new UsageError('--text 与 --file 只能给出一个')
+  }
+  const text = typeof textRaw === 'string' ? textRaw : typeof fileRaw === 'string' ? readTextFile(fileRaw) : undefined
+  if (text === undefined || text.length === 0) {
+    throw new UsageError('style add 需要 --text <文本> 或 --file <path>')
+  }
+  const pov = parsed.values.pov
+  const sceneType = parsed.values['scene-type']
+  const tone = parsed.values.tone
+  const sanitized = parsed.values.sanitized
+  if (typeof pov !== 'string' || typeof sceneType !== 'string' || typeof tone !== 'string') {
+    throw new UsageError('style add 需要 --pov / --scene-type / --tone 三个标签')
+  }
+
+  const profile = loadStyleProfileOrEmpty(paths)
+  const sampleId = nextSampleId(profile)
+  const sample = {
+    sample_id: sampleId,
+    tags: { pov, scene_type: sceneType, tone },
+    text,
+    de_entity: typeof sanitized === 'string',
+    ...(typeof sanitized === 'string' ? { sanitized_text: sanitized } : {}),
+  }
+  const next = validateStyleProfile({ ...profile, samples: [...profile.samples, sample] })
+  writeYamlFile(paths.styleProfile, next)
+  process.stdout.write(`已保存样本 ${sampleId}（tags: pov=${pov} scene_type=${sceneType} tone=${tone}；de_entity=${String(sample.de_entity)}）\n`)
+  process.stdout.write(`已写入：${paths.styleProfile}\n`)
+  return 0
+}
+
+function runStyleShowCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const profile = loadStyleProfileOrEmpty(paths)
+  process.stdout.write(`# ${paths.styleProfile}\nschema_version: ${profile.schema_version}\nsamples: ${profile.samples.length}\n`)
+  for (const sample of profile.samples) {
+    process.stdout.write(
+      `${sample.sample_id}  pov=${sample.tags.pov} scene_type=${sample.tags.scene_type} tone=${sample.tags.tone} de_entity=${String(sample.de_entity)}\n`,
+    )
+  }
+  return 0
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseCli(argv)
 
@@ -770,6 +943,12 @@ async function main(argv: string[]): Promise<number> {
     case 'coverage':
       if (parsed.subcommand === 'show') return runCoverageShowCommand(parsed)
       throw new UsageError(`未知子命令：coverage ${parsed.subcommand ?? ''}`)
+    case 'context':
+      return runContextCommand(parsed)
+    case 'style':
+      if (parsed.subcommand === 'add') return runStyleAddCommand(parsed)
+      if (parsed.subcommand === 'show') return runStyleShowCommand(parsed)
+      throw new UsageError(`未知子命令：style ${parsed.subcommand ?? ''}`)
     default:
       throw new UsageError(`未知命令：${parsed.command}`)
   }
@@ -804,7 +983,11 @@ try {
     error instanceof SceneRerunRequiredError ||
     error instanceof SceneValidationError ||
     error instanceof CoverageValidationError ||
-    error instanceof StoryStateValidationError
+    error instanceof StoryStateValidationError ||
+    error instanceof ContextCompileError ||
+    error instanceof ContextManifestValidationError ||
+    error instanceof StyleProfileValidationError ||
+    error instanceof UnresolvedOrphanError
   ) {
     process.stderr.write(`错误：${error.message}\n`)
     process.exitCode = 1
