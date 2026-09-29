@@ -29,8 +29,8 @@ const fixtureDirs = readdirSync(recordedRoot, { withFileTypes: true })
 const all: FixtureCheckEntry[] = []
 for (const fixturesDir of fixtureDirs) {
   const entries = write
-    ? await refreshRecordedFixtures({ fixturesDir, seedsDir, interpreterFixturesDir, write: true })
-    : await checkRecordedFixtures({ fixturesDir, seedsDir, interpreterFixturesDir })
+    ? await refreshRecordedFixtures({ fixturesDir, seedsDir, interpreterFixturesDir, repoRoot: REPO_ROOT, write: true })
+    : await checkRecordedFixtures({ fixturesDir, seedsDir, interpreterFixturesDir, repoRoot: REPO_ROOT })
   process.stdout.write(`\n[${fixturesDir.slice(REPO_ROOT.length + 1)}]\n`)
   for (const entry of entries) {
     const status = entry.ok ? 'OK  ' : 'FAIL'

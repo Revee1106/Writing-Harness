@@ -10,6 +10,7 @@ response:
     scenes:
       - pov: CH_GRANDSON
         scene_type: interior
+        tone: ['restraint']
         purpose: '回家整理旧物，发现本子'
         target_length: 1100
         narrative_role_ref: BP_STR_BEG
@@ -25,6 +26,7 @@ response:
         proposed_additions: []
       - pov: CH_GRANDSON
         scene_type: interior
+        tone: ['tenderness']
         purpose: '一页页看过去的分数'
         target_length: 1200
         narrative_role_ref: BP_STR_DEV
@@ -41,6 +43,7 @@ response:
           - '本子的边角被翻得起了毛'
       - pov: CH_GRANDSON
         scene_type: interior
+        tone: ['grief', 'tenderness']
         purpose: '最后一页出现一句完整的话'
         target_length: 1300
         narrative_role_ref: BP_STR_TURN
@@ -56,6 +59,7 @@ response:
         proposed_additions: []
       - pov: CH_GRANDSON
         scene_type: dialogue
+        tone: ['tenderness']
         purpose: '他意识到这句话是留给自己的'
         target_length: 1300
         narrative_role_ref: BP_STR_CLIMAX
@@ -71,6 +75,7 @@ response:
         proposed_additions: []
       - pov: CH_GRANDSON
         scene_type: transition
+        tone: ['restraint', 'grief']
         purpose: '把本子带回城里'
         target_length: 1100
         narrative_role_ref: BP_STR_END

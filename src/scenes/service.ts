@@ -13,7 +13,7 @@ import type { SeedFile } from '../schema/seed.ts'
 import type { StoryState } from '../schema/story-state.ts'
 import { loadBlueprint, loadSeed } from '../project/project.ts'
 import type { LLMProvider } from '../providers/types.ts'
-import { SCENE_TYPES } from '../core/scene-types.ts'
+import { SCENE_TYPES, TONE_TAGS } from '../core/scene-types.ts'
 import { applyAllowedReveals, resolveStructure, sortScenesByOrder, type StructureResolution } from './resolver.ts'
 import { runCoverageCheck, validateCoverageReport, type CoverageReport } from './coverage.ts'
 import { initStoryState, rebuildStoryState } from './state.ts'
@@ -37,6 +37,8 @@ export const SCENE_BREAKDOWN_CONTRACT_VERSION = '0.1'
 const rawSceneSchema = z.strictObject({
   pov: z.string().min(1),
   scene_type: z.enum(SCENE_TYPES),
+  /** OQ-47：tone 由模型输出，不从文本推断。 */
+  tone: z.array(z.enum(TONE_TAGS)).min(1),
   purpose: z.string().min(1),
   target_length: z.number().int().positive(),
   narrative_role_ref: z.string().min(1),
@@ -191,6 +193,7 @@ export function assembleScenes(
       order: index + 1,
       pov: scene.pov,
       scene_type: scene.scene_type,
+      tone: [...new Set(scene.tone)],
       purpose: scene.purpose,
       target_length: scene.target_length,
       narrative_role_ref: scene.narrative_role_ref,

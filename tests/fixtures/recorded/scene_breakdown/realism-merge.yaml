@@ -10,6 +10,7 @@ response:
     scenes:
       - pov: CH_HUSBAND
         scene_type: interior
+        tone: ['restraint']
         purpose: '交代他当天被裁员，却照常去买菜做饭'
         target_length: 1500
         narrative_role_ref: BP_STR_BEG
@@ -25,6 +26,7 @@ response:
         proposed_additions: []
       - pov: CH_WIFE
         scene_type: interior
+        tone: ['tension']
         purpose: '交代妻子当天也被裁，并提前回家'
         target_length: 1600
         narrative_role_ref: BP_STR_DEV
@@ -41,6 +43,7 @@ response:
           - '补偿文件是装订好的复印件'
       - pov: CH_HUSBAND
         scene_type: dialogue
+        tone: ['conflict']
         purpose: '一顿饭里的试探与那句问话'
         target_length: 1700
         narrative_role_ref: BP_STR_TURN
@@ -56,6 +59,7 @@ response:
         proposed_additions: []
       - pov: CH_WIFE
         scene_type: dialogue
+        tone: ['conflict', 'tension']
         purpose: '两人几乎同时说出真相'
         target_length: 1800
         narrative_role_ref: BP_STR_CLIMAX
@@ -71,6 +75,7 @@ response:
         proposed_additions: []
       - pov: CH_HUSBAND
         scene_type: transition
+        tone: ['restraint', 'grief']
         purpose: '收尾：房贷的数字留在桌上'
         target_length: 1400
         narrative_role_ref: BP_STR_END

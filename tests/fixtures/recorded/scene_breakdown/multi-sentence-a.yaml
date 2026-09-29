@@ -10,6 +10,7 @@ response:
     scenes:
       - pov: CH_WOMAN
         scene_type: dialogue
+        tone: ['conflict']
         purpose: '建立两人的日常与那件小事的引爆点'
         target_length: 1500
         narrative_role_ref: BP_STR_BEG
@@ -26,6 +27,7 @@ response:
           - '那天晚饭吃的是她做的汤'
       - pov: CH_WOMAN
         scene_type: interior
+        tone: ['restraint']
         purpose: '呈现女方独自等待的心理过程'
         target_length: 1600
         narrative_role_ref: BP_STR_DEV
@@ -41,6 +43,7 @@ response:
         proposed_additions: []
       - pov: CH_WOMAN
         scene_type: dialogue
+        tone: ['conflict', 'tension']
         purpose: '让女方发现男方也写过消息'
         target_length: 1800
         narrative_role_ref: BP_STR_TURN
@@ -57,6 +60,7 @@ response:
           - '他去开门时手机留在桌上没有锁屏'
       - pov: CH_WOMAN
         scene_type: interior
+        tone: ['restraint', 'tension']
         purpose: '把沉默推到顶点'
         target_length: 1600
         narrative_role_ref: BP_STR_CLIMAX
@@ -72,6 +76,7 @@ response:
         proposed_additions: []
       - pov: CH_WOMAN
         scene_type: transition
+        tone: ['restraint', 'grief']
         purpose: '收尾：分手成为事实，草稿留在他的手机里'
         target_length: 1200
         narrative_role_ref: BP_STR_END

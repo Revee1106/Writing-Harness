@@ -1,3 +1,5 @@
+# Last compiled scene: scene-003
+# OQ-49：Manifest 为单文件、末次覆盖；完整 writer_context 不落盘（见 docs/DECISIONS.md I-44 / I-45）
 schema_version: "0.1"
 scene_id: scene-003
 blueprint_version: 1
@@ -13,7 +15,7 @@ included_sensitive:
     reason: 本场 allowed_reveals 命中：允许在本场发生该 reveal（§15.5 / §15.6）
 excluded_sensitive:
   - id: CH_MAN.inner_state
-    type: future_content
+    type: character_inner_state
     source_ref: blueprint.characters.CH_MAN
     reason: non_pov_inner_state
   - id: BP_FS_001
@@ -29,19 +31,12 @@ director_surface:
     source_ref: blueprint.style_direction.BP_STYLE_01
     instruction: 叙述：贴身第三人称，只写她能看到和听到的；对白：对白占比高，短句，避免解释情绪；节奏：段落短，场景内不做时间跳跃
     source: blueprint
-  - id: DIR_USER_001
-    source_ref: user_note.scene-003.DIR_USER_001
-    instruction: 这一场不要出现回忆，对白再短一点
-    source: user_override
 style_samples:
   - sample_id: SAMPLE_002
     matched_on:
       - pov
       - scene_type
+      - tone
 future_content_exposed: false
 unconfirmed_proposal_exposed: false
-overrides:
-  - id: OVR_001
-    director_surface_ref: DIR_USER_001
-    note: 这一场不要出现回忆，对白再短一点
-    source: user
+overrides: []

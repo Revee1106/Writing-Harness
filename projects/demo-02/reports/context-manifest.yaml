@@ -1,3 +1,5 @@
+# Last compiled scene: scene-001
+# OQ-49：Manifest 为单文件、末次覆盖；完整 writer_context 不落盘（见 docs/DECISIONS.md I-44 / I-45）
 schema_version: "0.1"
 scene_id: scene-001
 blueprint_version: 1
@@ -9,7 +11,7 @@ included_sensitive:
     reason: 当前 POV 可以看到该角色的内心状态（inner_state_pov_visible 命中）
 excluded_sensitive:
   - id: CH_WIFE.inner_state
-    type: future_content
+    type: character_inner_state
     source_ref: blueprint.characters.CH_WIFE
     reason: non_pov_inner_state
   - id: CH_OLD_MAN.inner_state

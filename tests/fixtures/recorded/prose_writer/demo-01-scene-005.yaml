@@ -1,0 +1,13 @@
+contract: prose_writer
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-005
+input_sha256: "dd07f549cb05844c505e03ff3633be616d3900c902de63512cdb3f9a14100148"
+response:
+  model: recorded-prose-writer-v0.1
+  text: |
+    她拖着箱子下楼的时候，箱轮在每一级台阶上磕一下。
+    
+    楼道的灯一层层亮起来又灭掉。她把那只旧汤锅也带走了，塞在箱子旁边的袋子里，磕得更响。走到小区门口她停了一下，没有回头。风把她的头发吹到脸上，她抬手拨开，继续往外走。
+    
+    出租屋的桌上，那部手机亮了一次，是一条系统提示。草稿箱里那半句话还在，没有被发出去，也没有被删掉。

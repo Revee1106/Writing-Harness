@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { takeLastNonWhitespaceCodePoints } from '../core/text.ts'
-import { TONE_TAGS } from '../core/scene-types.ts'
 import type { ProjectPaths } from '../io/paths.ts'
 import { loadBlueprint, loadSeed } from '../project/project.ts'
 import type { Blueprint } from '../schema/blueprint.ts'
@@ -107,7 +106,16 @@ export interface WriterContext {
   /** 当前 POV 在本场开场时已知的 Key Knowledge（§17.2 planned_knowledge_view）。 */
   readonly known_knowledge_ids: readonly string[]
   readonly style_direction: { readonly narration: string; readonly dialogue: string; readonly rhythm: string }
-  readonly style_samples: readonly { readonly sample_id: string; readonly text: string; readonly matched_on: readonly string[] }[]
+  readonly style_samples: readonly {
+    readonly sample_id: string
+    readonly text: string
+    readonly matched_on: readonly string[]
+    /** 用于 Writer 侧的可测性：是否已去实体化 + 原始 text（Story 7 裁决）。 */
+    readonly de_entity: boolean
+    readonly original_text: string
+    readonly sanitized_text?: string | undefined
+    readonly entity_reminder?: string | undefined
+  }[]
   readonly director_surface: readonly { readonly id: string; readonly instruction: string; readonly source: string }[]
   readonly draft_context: { readonly scene_id: string; readonly text: string; readonly counted_code_points: number } | null
 }
@@ -124,30 +132,13 @@ export const STYLE_MATCH_ORDER = ['pov+scene_type+tone', 'pov+scene_type', 'pov'
 export type StyleMatchLevel = (typeof STYLE_MATCH_ORDER)[number]
 
 /**
- * Scene 的 tone 标签集合。
+ * 当前场景的匹配标签集合：`scene_type ∪ tone`（OQ-36 / OQ-41 / OQ-47）。
  *
- * 说明（OQ-47，dsh 提议待复核）：§14 的 Scene Schema **没有** tone 字段，
- * 但 §11.3（OBH）与 §23.1（Style Sample）都要按 `scene_type ∪ tone` 匹配。
- * 在"不新增 Schema 字段"的前提下，这里把 tone 判定为"Scene 自身文本中出现的标签词"：
- * 逐条扫描 `purpose` / `conflict` / `turn` / `start_state` / `end_state` / `location` 与 director notes，
- * 命中 `TONE_TAGS` 的标签即视为该场景的 tone。
+ * OQ-47 裁决后，`tone` 是 Scene 的**必填字段**（由 `scene_breakdown@0.1` 输出），
+ * 因此这里不再从 Scene 文本推断 tone；匹配规则 = 与 hint 的 `applicable_scene_types` 求交集，非空即加载。
  */
-export function sceneToneTags(scene: Scene): string[] {
-  const haystack = [
-    scene.purpose,
-    scene.conflict,
-    scene.turn,
-    scene.start_state,
-    scene.end_state,
-    scene.location,
-    ...scene.director_notes.map((note) => note.instruction),
-  ].join(' ')
-  return TONE_TAGS.filter((tag) => haystack.includes(tag))
-}
-
-/** 当前场景的匹配标签集合：scene_type ∪ tone（OQ-36 / OQ-41）。 */
 export function sceneMatchTags(scene: Scene): string[] {
-  return [...new Set([scene.scene_type, ...sceneToneTags(scene)])]
+  return [...new Set([scene.scene_type, ...scene.tone])]
 }
 
 /** §23.1：按降级顺序挑选最多 2～3 个样本。 */
@@ -155,7 +146,7 @@ export function selectStyleSamples(
   profile: StyleProfile,
   scene: Scene,
 ): { readonly samples: readonly StyleSample[]; readonly matchedOn: readonly string[]; readonly level: StyleMatchLevel } {
-  const tones = sceneToneTags(scene)
+  const tones = scene.tone
   const levels: Array<{ level: StyleMatchLevel; matchedOn: string[]; predicate: (sample: StyleSample) => boolean }> = [
     {
       level: 'pov+scene_type+tone',
@@ -327,7 +318,7 @@ export function compileContext(options: CompileContextOptions): CompileContextRe
       // 非当前 POV 角色的完整内心：物理不进入 Writer Context
       excludedSensitive.push({
         id: `${character.id}.inner_state`,
-        type: 'future_content',
+        type: 'character_inner_state',
         source_ref: `blueprint.characters.${character.id}`,
         reason: 'non_pov_inner_state',
       })
@@ -436,6 +427,11 @@ export function compileContext(options: CompileContextOptions): CompileContextRe
     sample_id: sample.sample_id,
     text: sampleTextForWriter(sample),
     matched_on: selection.matchedOn,
+    de_entity: sample.de_entity,
+    original_text: sample.text,
+    ...(sample.sanitized_text === undefined ? {} : { sanitized_text: sample.sanitized_text }),
+    // Story 7 裁决：使用未去实体化样本时，编译结果 / Manifest 标注需人工复核
+    ...(sample.de_entity ? {} : { entity_reminder: '使用未去实体化样本，需人工复核是否搬运了实体' }),
   }))
 
   // ---- Draft Context（§19.1） ----
@@ -497,7 +493,11 @@ export function compileContext(options: CompileContextOptions): CompileContextRe
     included_sensitive: includedSensitive,
     excluded_sensitive: excludedSensitive,
     director_surface: directorSurface,
-    style_samples: styleSamples.map((sample) => ({ sample_id: sample.sample_id, matched_on: [...sample.matched_on] })),
+    style_samples: styleSamples.map((sample) => ({
+      sample_id: sample.sample_id,
+      matched_on: [...sample.matched_on],
+      ...(sample.entity_reminder === undefined ? {} : { entity_reminder: sample.entity_reminder }),
+    })),
     future_content_exposed: false,
     unconfirmed_proposal_exposed: false,
     overrides,

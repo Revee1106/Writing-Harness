@@ -3,6 +3,9 @@ scene_id: scene-004
 order: 4
 pov: CH_WOMAN
 scene_type: interior
+tone:
+  - restraint
+  - tension
 purpose: 把沉默推到顶点
 target_length: 1600
 narrative_role_ref: BP_STR_CLIMAX

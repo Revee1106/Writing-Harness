@@ -58,9 +58,25 @@ export function loadYaml(text: string): unknown {
   return parse(text) ?? null
 }
 
-export function writeYamlFile(filePath: string, value: unknown): void {
+export interface WriteYamlOptions {
+  /** 写在文件最前面的注释行（OQ-49：Manifest 顶部标注最后编译的 Scene）。 */
+  readonly headerComments?: readonly string[] | undefined
+}
+
+export function writeYamlFile(filePath: string, value: unknown, options: WriteYamlOptions = {}): void {
   mkdirSync(dirname(filePath), { recursive: true })
-  writeFileSync(filePath, dumpYaml(value), { encoding: 'utf8' })
+  const header = (options.headerComments ?? []).map((line) => `# ${line}\n`).join('')
+  writeFileSync(filePath, `${header}${dumpYaml(value)}`, { encoding: 'utf8' })
+}
+
+/** 纯文本落盘（用于 drafts/*.md 这类非 YAML 产物）。 */
+export function writeTextFile(filePath: string, text: string): void {
+  mkdirSync(dirname(filePath), { recursive: true })
+  writeFileSync(filePath, text, { encoding: 'utf8' })
+}
+
+export function readTextFile(filePath: string): string {
+  return readFileSync(filePath, { encoding: 'utf8' })
 }
 
 export function readYamlFile(filePath: string): unknown {

@@ -10,6 +10,7 @@ response:
     scenes:
       - pov: CH_SISTER
         scene_type: interior
+        tone: ['suspense']
         purpose: '交代姐姐去世、姐夫每天发消息'
         target_length: 1500
         narrative_role_ref: BP_STR_BEG
@@ -26,6 +27,7 @@ response:
           - '姐姐的手机一直留着充电器'
       - pov: CH_SISTER
         scene_type: interior
+        tone: ['restraint', 'suspense']
         purpose: '展示男人每天检查手机的习惯'
         target_length: 1600
         narrative_role_ref: BP_STR_DEV
@@ -41,6 +43,7 @@ response:
         proposed_additions: []
       - pov: CH_SISTER
         scene_type: dialogue
+        tone: ['conflict', 'suspense']
         purpose: '妹妹意识到自己在替姐姐活着'
         target_length: 1700
         narrative_role_ref: BP_STR_TURN
@@ -56,6 +59,7 @@ response:
         proposed_additions: []
       - pov: CH_SISTER
         scene_type: dialogue
+        tone: ['tension']
         purpose: '她发出最后一条消息'
         target_length: 1500
         narrative_role_ref: BP_STR_CLIMAX
@@ -72,6 +76,7 @@ response:
           - '注销后账号名变成一串数字'
       - pov: CH_SISTER
         scene_type: transition
+        tone: ['grief']
         purpose: '男人收到"该用户不存在"'
         target_length: 1700
         narrative_role_ref: BP_STR_END

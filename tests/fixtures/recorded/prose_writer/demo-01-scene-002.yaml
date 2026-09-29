@@ -1,0 +1,15 @@
+contract: prose_writer
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-002
+input_sha256: "77740e1700c5bbe2f6cf0b6f1700561962e78f32d262f5560146310dfb231526"
+response:
+  model: recorded-prose-writer-v0.1
+  text: |
+    她回到自己那间屋子，把手机放在桌上，屏幕朝上。
+    
+    十一点零七分，她点开对话框，打了一行字，删掉。十一点二十，又打了一行，也删掉。她试着把话说得轻一点，结果每个字都像在讨一件东西。她最后留在输入框里的是一句很短的话，短到她自己也认不出是什么意思。
+    
+    冰箱在响。她盯着那个闪着的输入光标看了很久，直到屏幕自己暗下去。
+    
+    她伸手把手机翻了个面，屏幕朝下。

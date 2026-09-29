@@ -3,6 +3,8 @@ scene_id: scene-001
 order: 1
 pov: CH_WOMAN
 scene_type: dialogue
+tone:
+  - conflict
 purpose: 建立两人的日常与那件小事的引爆点
 target_length: 1500
 narrative_role_ref: BP_STR_BEG

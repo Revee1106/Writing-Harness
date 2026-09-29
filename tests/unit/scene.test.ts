@@ -10,6 +10,7 @@ function baseScene(overrides: Record<string, unknown> = {}): Record<string, unkn
     order: 1,
     pov: 'CH_A',
     scene_type: 'dialogue',
+    tone: ['conflict'],
     purpose: '目的',
     target_length: 1200,
     narrative_role_ref: 'BP_STR_BEG',
@@ -41,6 +42,15 @@ describe('Scene 类型与 tone 标签（OQ-36 / OQ-41）', () => {
     expect(isObservableHintTag('whatever')).toBe(false)
   })
 
+  it('tone 是必填字段，至少 1 个，且取值在八值枚举内（OQ-47）', () => {
+    expect(validateScene(baseScene({ tone: ['conflict', 'tension'] })).tone).toEqual(['conflict', 'tension'])
+    expect(() => validateScene(baseScene({ tone: [] }))).toThrow(SceneValidationError)
+    expect(() => validateScene(baseScene({ tone: ['unknown'] }))).toThrow(SceneValidationError)
+    const withoutTone = baseScene()
+    delete (withoutTone as Record<string, unknown>).tone
+    expect(() => validateScene(withoutTone)).toThrow(SceneValidationError)
+  })
+
   it('Scene Schema 只接受四种 scene_type', () => {
     for (const sceneType of SCENE_TYPES) {
       expect(validateScene(baseScene({ scene_type: sceneType })).scene_type).toBe(sceneType)
@@ -70,6 +80,7 @@ describe('Scene Schema（需求规格 §14）', () => {
       'schema_version',
       'start_state',
       'target_length',
+      'tone',
       'turn',
     ])
   })

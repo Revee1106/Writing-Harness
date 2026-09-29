@@ -1,0 +1,15 @@
+contract: prose_writer
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-004
+input_sha256: "fe24ba5788f238f8cafaad4507140524e443633c80566a8e7a39c278479d8d4f"
+response:
+  model: recorded-prose-writer-v0.1
+  text: |
+    两个人站在门口，谁都没有先开口。
+    
+    她看见他的手下意识往口袋里探了一下，又停住。她自己也把手机从包里拿了出来，屏幕朝上，什么都还没写。楼道里的声控灯灭了一次，两个人都没有动，灯又亮起来。
+    
+    她想，只要他把那句话说出来，她就留下来。他不知道她在想什么。
+    
+    他们几乎同时拿起手机，又几乎同时放下。

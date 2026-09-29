@@ -3,6 +3,8 @@ scene_id: scene-001
 order: 1
 pov: CH_HUSBAND
 scene_type: interior
+tone:
+  - tension
 purpose: 交代两人刚办完手续、进入电梯
 target_length: 800
 narrative_role_ref: BP_STR_BEG

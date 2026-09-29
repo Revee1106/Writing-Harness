@@ -3,6 +3,9 @@ scene_id: scene-003
 order: 3
 pov: CH_HUSBAND
 scene_type: dialogue
+tone:
+  - tenderness
+  - grief
 purpose: 老人讲出自己也在这栋楼里离过婚
 target_length: 1300
 narrative_role_ref: BP_STR_TURN

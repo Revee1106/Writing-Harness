@@ -3,6 +3,8 @@ scene_id: scene-004
 order: 4
 pov: CH_HUSBAND
 scene_type: action
+tone:
+  - tension
 purpose: 男方按下呼叫铃
 target_length: 900
 narrative_role_ref: BP_STR_CLIMAX

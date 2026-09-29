@@ -3,6 +3,8 @@ scene_id: scene-005
 order: 5
 pov: CH_HUSBAND
 scene_type: transition
+tone:
+  - restraint
 purpose: 门开，两人第一次并肩走出
 target_length: 800
 narrative_role_ref: BP_STR_END

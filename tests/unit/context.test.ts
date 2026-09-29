@@ -6,7 +6,6 @@ import {
   compileContext,
   computePlannedKnowledgeView,
   sceneMatchTags,
-  sceneToneTags,
   selectDraftContext,
   selectStyleSamples,
   STYLE_MATCH_ORDER,
@@ -14,6 +13,7 @@ import {
 import { loadScenes } from '../../src/scenes/service.ts'
 import { UnresolvedOrphanError } from '../../src/scenes/state.ts'
 import { validateContextManifest } from '../../src/schema/context-manifest.ts'
+import { TONE_TAGS } from '../../src/core/scene-types.ts'
 import { validateStyleProfile } from '../../src/schema/style-profile.ts'
 import { projectPaths } from '../../src/io/paths.ts'
 import { createProject, saveProposals, saveSeed, loadBlueprint } from '../../src/project/project.ts'
@@ -207,29 +207,36 @@ describe('allowed_reveals 与 known_knowledge（§15 / §17.2）', () => {
   })
 })
 
-describe('observable_behavior_hints 与 tone（OQ-36 / OQ-47）', () => {
-  it('scene_type ∪ tone 匹配：tone 来自 Scene 文本中的标签词', async () => {
+describe('observable_behavior_hints 与 tone（OQ-36 / OQ-41 / OQ-47）', () => {
+  it('Scene 的 tone 是必填字段，且匹配集合 = scene_type ∪ tone', async () => {
     const paths = await projectWithScenes('ctx-09', EMOTION)
-    const before = compileContext({ paths, sceneId: 'scene-001' })
-    const manBefore = before.writerContext.characters.find((character) => character.id === 'CH_MAN')
-    // OBH_MAN_01 的标签是 [conflict]（tone），scene-001 文本未含该标签词 → 不加载
-    expect(manBefore?.observable_behavior_hints).toEqual([])
-
-    // 把 tone 标签写进 Scene 文本（模拟作者标注 tone）
-    const sceneFile = join(paths.scenesDir, 'scene-001.yaml')
-    const scene = readYamlFile(sceneFile) as Record<string, unknown>
-    writeYamlFile(sceneFile, { ...scene, purpose: '建立日常与冲突（tone: conflict）' })
-    const after = compileContext({ paths, sceneId: 'scene-001' })
-    const manAfter = after.writerContext.characters.find((character) => character.id === 'CH_MAN')
-    expect(manAfter?.observable_behavior_hints.map((hint) => hint.id)).toEqual(['OBH_MAN_01'])
-    expect(sceneMatchTags(loadScenes(paths)[0] as never)).toContain('conflict')
+    const scenes = loadScenes(paths)
+    for (const scene of scenes) {
+      expect(scene.tone.length, scene.scene_id).toBeGreaterThanOrEqual(1)
+      for (const tone of scene.tone) expect(TONE_TAGS).toContain(tone)
+    }
+    const first = scenes[0] as never
+    expect(sceneMatchTags(first)).toEqual([
+      (first as { scene_type: string }).scene_type,
+      ...(first as { tone: string[] }).tone,
+    ])
   })
 
-  it('sceneToneTags / sceneMatchTags 只识别白名单标签', async () => {
+  it('tone 变化会改变 hint 加载结果（scene_type ∪ tone 求交集）', async () => {
     const paths = await projectWithScenes('ctx-10', EMOTION)
-    const scene = loadScenes(paths)[0] as never
-    expect(sceneToneTags(scene)).toEqual([])
-    expect(sceneMatchTags(scene)).toEqual([(scene as { scene_type: string }).scene_type])
+    const sceneFile = join(paths.scenesDir, 'scene-001.yaml')
+    const scene = readYamlFile(sceneFile) as Record<string, unknown>
+    // 去掉 conflict tone：OBH_MAN_01（标签 [conflict]）不再命中
+    writeYamlFile(sceneFile, { ...scene, tone: ['restraint'] })
+    const without = compileContext({ paths, sceneId: 'scene-001' })
+    expect(without.writerContext.characters.find((character) => character.id === 'CH_MAN')?.observable_behavior_hints).toEqual([])
+
+    // 加上 conflict tone：命中
+    writeYamlFile(sceneFile, { ...scene, tone: ['conflict'] })
+    const withTone = compileContext({ paths, sceneId: 'scene-001' })
+    expect(
+      withTone.writerContext.characters.find((character) => character.id === 'CH_MAN')?.observable_behavior_hints.map((hint) => hint.id),
+    ).toEqual(['OBH_MAN_01'])
   })
 })
 
@@ -244,14 +251,15 @@ describe('Style Samples（§23.1 降级 + 不阻塞）', () => {
     // 只命中 pov
     const onlyPov = make([{ ...base, sample_id: 'SAMPLE_001', tags: { pov: 'CH_WOMAN', scene_type: 'interior', tone: 'restraint' } }])
     expect(selectStyleSamples(onlyPov, scene).level).toBe('pov')
-    // 命中 pov + scene_type
-    const povScene = make([{ ...base, sample_id: 'SAMPLE_001' }])
+    // 命中 pov + scene_type（样本 tone 与 Scene.tone 不同 → 降到第二级）
+    const povScene = make([{ ...base, sample_id: 'SAMPLE_001', tags: { pov: 'CH_WOMAN', scene_type: 'dialogue', tone: 'grief' } }])
     expect(selectStyleSamples(povScene, scene).level).toBe('pov+scene_type')
-    // 命中 pov + scene_type + tone（把 tone 写进场景文本）
+    // 命中 pov + scene_type + tone（Scene.tone 直接声明 conflict）
     const sceneFile = join(paths.scenesDir, 'scene-001.yaml')
     const raw = readYamlFile(sceneFile) as Record<string, unknown>
-    writeYamlFile(sceneFile, { ...raw, purpose: 'conflict 场景' })
-    const withTone = selectStyleSamples(povScene, loadScenes(paths)[0] as never)
+    writeYamlFile(sceneFile, { ...raw, tone: ['conflict'] })
+    const conflictSample = make([{ ...base, sample_id: 'SAMPLE_001' }])
+    const withTone = selectStyleSamples(conflictSample, loadScenes(paths)[0] as never)
     expect(withTone.level).toBe('pov+scene_type+tone')
     expect(withTone.matchedOn).toEqual(['pov', 'scene_type', 'tone'])
     // 无匹配
@@ -281,11 +289,11 @@ describe('Style Samples（§23.1 降级 + 不阻塞）', () => {
     const result = compileContext({ paths, sceneId: 'scene-001' })
     expect(result.writerContext.style_samples).toHaveLength(3)
     expect(result.writerContext.style_samples[0]?.text).toContain('[CHAR_A]')
-    expect(result.manifest.style_samples.map((sample) => sample.matched_on)).toEqual([
-      ['pov', 'scene_type'],
-      ['pov', 'scene_type'],
-      ['pov', 'scene_type'],
-    ])
+    expect(result.manifest.style_samples).toHaveLength(3)
+    for (const sample of result.manifest.style_samples) {
+      // Scene 的 tone 含 conflict（fixture 显式声明），因此命中最高一级
+      expect(sample.matched_on).toEqual(['pov', 'scene_type', 'tone'])
+    }
   })
 })
 

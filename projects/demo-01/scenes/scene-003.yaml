@@ -3,6 +3,9 @@ scene_id: scene-003
 order: 3
 pov: CH_WOMAN
 scene_type: dialogue
+tone:
+  - conflict
+  - tension
 purpose: 让女方发现男方也写过消息
 target_length: 1800
 narrative_role_ref: BP_STR_TURN

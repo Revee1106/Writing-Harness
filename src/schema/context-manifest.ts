@@ -27,12 +27,17 @@ export const EXCLUSION_REASONS = [
 export type ExclusionReason = (typeof EXCLUSION_REASONS)[number]
 
 export const INCLUDED_SENSITIVE_TYPES = ['key_knowledge', 'foreshadowing', 'user_override'] as const
+/**
+ * OQ-50 裁决：`excluded_sensitive.type` 扩为 6 类，新增 `character_inner_state`。
+ * `included_sensitive.type` 不加新类；reason 词表不变。
+ */
 export const EXCLUDED_SENSITIVE_TYPES = [
   'key_knowledge',
   'foreshadowing',
   'future_content',
   'unconfirmed_content',
   'user_override',
+  'character_inner_state',
 ] as const
 
 /** Story 6 起始会裁决：只有 `source=user_override` 进 `overrides`。 */
@@ -66,6 +71,8 @@ export const styleSampleManifestEntrySchema = z.strictObject({
   sample_id: z.string().regex(/^SAMPLE_\d{3}$/, 'sample_id 必须形如 SAMPLE_001'),
   /** 实际命中使用的标签（按 §23.1 的降级顺序）。 */
   matched_on: z.array(z.enum(['pov', 'scene_type', 'tone'])),
+  /** Story 7 裁决：使用 de_entity=false 的样本时标注"需人工复核是否搬运实体"。 */
+  entity_reminder: z.string().min(1).optional(),
 })
 
 export const overrideSchema = z.strictObject({

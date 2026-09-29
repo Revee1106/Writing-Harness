@@ -100,6 +100,7 @@ describe('fixture 与 Seed 文本不漂移（fixtures:check 的库内版本）',
       fixturesDir: FIXTURES_DIR,
       seedsDir: SEEDS_DIR,
       interpreterFixturesDir: FIXTURES_DIR,
+      repoRoot: ROOT_WITH_PROMPTS,
     })
     expect(entries).toHaveLength(14)
     const failing = entries.filter((entry) => !entry.ok)
@@ -111,6 +112,7 @@ describe('fixture 与 Seed 文本不漂移（fixtures:check 的库内版本）',
       fixturesDir: FIXTURES_DIR,
       seedsDir: SEEDS_DIR,
       interpreterFixturesDir: FIXTURES_DIR,
+      repoRoot: ROOT_WITH_PROMPTS,
     })
     const seeds = entries.map((entry) => entry.seedFile).filter((value): value is string => value !== undefined)
     for (const name of SEED_FIXTURES_DIR_STORY2) {

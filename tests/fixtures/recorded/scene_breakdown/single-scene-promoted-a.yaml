@@ -10,6 +10,7 @@ response:
     scenes:
       - pov: CH_HUSBAND
         scene_type: interior
+        tone: ['tension']
         purpose: '交代两人刚办完手续、进入电梯'
         target_length: 800
         narrative_role_ref: BP_STR_BEG
@@ -25,6 +26,7 @@ response:
         proposed_additions: []
       - pov: CH_HUSBAND
         scene_type: dialogue
+        tone: ['conflict']
         purpose: '老人提出条件，夫妻互相推让'
         target_length: 1200
         narrative_role_ref: BP_STR_DEV
@@ -41,6 +43,7 @@ response:
           - '电梯报警灯是缓闪的橙色'
       - pov: CH_HUSBAND
         scene_type: dialogue
+        tone: ['tenderness', 'grief']
         purpose: '老人讲出自己也在这栋楼里离过婚'
         target_length: 1300
         narrative_role_ref: BP_STR_TURN
@@ -56,6 +59,7 @@ response:
         proposed_additions: []
       - pov: CH_HUSBAND
         scene_type: action
+        tone: ['tension']
         purpose: '男方按下呼叫铃'
         target_length: 900
         narrative_role_ref: BP_STR_CLIMAX
@@ -71,6 +75,7 @@ response:
         proposed_additions: []
       - pov: CH_HUSBAND
         scene_type: transition
+        tone: ['restraint']
         purpose: '门开，两人第一次并肩走出'
         target_length: 800
         narrative_role_ref: BP_STR_END

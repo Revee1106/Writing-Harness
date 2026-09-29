@@ -18,6 +18,9 @@ import { parseRecordedInteraction, RecordedProvider, type RecordedInteraction } 
  *   然后按 fixture 元数据 `gate2_plan` 解析字段计划并构造输入。
  * - `scene_breakdown`   → 在 blueprint_builder 链条上再装配出 Blueprint（走 Gate 2 装配路径），
  *   然后构造 Scene Breakdown 的输入。
+ * - `prose_writer`      → 输入是 Context Compiler 的产物，因此直接读取 fixture 声明的
+ *   `source_project`（仓库内的项目目录，含 scenes / style / drafts），编译该 Scene 的上下文后构造输入。
+ *   这类 fixture **不需要** `seed` 字段。
  */
 
 export interface FixtureCheckEntry {
@@ -35,12 +38,15 @@ export interface FixtureToolOptions {
   readonly seedsDir: string
   /** seed-interpreter fixture 目录：story_developer 复核需要用它复现 Gate 1 状态。 */
   readonly interpreterFixturesDir: string
+  /** 仓库根目录：prose_writer 复核需要用它定位 `source_project`。 */
+  readonly repoRoot: string
 }
 
 type InputBuilder = (context: {
   interaction: RecordedInteraction
   rawInput: string
   interpreterFixturesDir: string
+  repoRoot: string
 }) => Promise<Readonly<Record<string, unknown>>> | Readonly<Record<string, unknown>>
 
 const INPUT_BUILDERS: Record<string, InputBuilder> = {
@@ -161,6 +167,23 @@ const INPUT_BUILDERS_EXTRA2: Record<string, InputBuilder> = {
   },
 }
 
+const INPUT_BUILDERS_EXTRA3: Record<string, InputBuilder> = {
+  prose_writer: async ({ interaction, repoRoot }) => {
+    const { buildProseWriterInput } = await import('../writer/writer.ts')
+    const { compileContext } = await import('../context/compiler.ts')
+    const { projectPaths } = await import('../io/paths.ts')
+    if (interaction.source_project === undefined || interaction.scene === undefined) {
+      throw new Error('prose_writer fixture 必须声明 source_project 与 scene')
+    }
+    const projectDir = join(repoRoot as string, interaction.source_project)
+    // 项目目录布局：<projectsRoot>/<projectId>
+    const projectId = projectDir.split('/').pop() as string
+    const paths = projectPaths(join(repoRoot as string, 'projects'), projectId)
+    const context = compileContext({ paths, sceneId: interaction.scene })
+    return buildProseWriterInput(context)
+  },
+}
+
 function listFixtureFiles(fixturesDir: string): string[] {
   return readdirSync(fixturesDir)
     .filter((name) => name.endsWith('.yaml') || name.endsWith('.yml'))
@@ -178,21 +201,53 @@ export async function checkRecordedFixtures(options: FixtureToolOptions): Promis
       actualSha256: interaction.input_sha256,
     }
 
-    if (interaction.seed === undefined) {
-      entries.push({
-        ...base,
-        seedFile: undefined,
-        expectedSha256: undefined,
-        ok: false,
-        problem: '缺少 seed 字段：无法复核该 fixture 与 Seed 文本是否一致',
-      })
-      continue
-    }
-
     const builder: InputBuilder | undefined =
       INPUT_BUILDERS[interaction.contract] ??
       INPUT_BUILDERS_EXTRA[interaction.contract] ??
-      INPUT_BUILDERS_EXTRA2[interaction.contract]
+      INPUT_BUILDERS_EXTRA2[interaction.contract] ??
+      INPUT_BUILDERS_EXTRA3[interaction.contract]
+
+    // prose_writer 这类 fixture 的输入来自项目状态，不需要 seed 字段
+    if (interaction.seed === undefined) {
+      if (builder === undefined) {
+        entries.push({
+          ...base,
+          seedFile: undefined,
+          expectedSha256: undefined,
+          ok: false,
+          problem: '缺少 seed 字段，且该契约没有注册不依赖 Seed 的输入构造函数',
+        })
+        continue
+      }
+      try {
+        const input = await builder({
+          interaction,
+          rawInput: '',
+          interpreterFixturesDir: options.interpreterFixturesDir,
+          repoRoot: options.repoRoot,
+        })
+        const expected = hashContractInput(interaction.contract, interaction.contract_version, input)
+        entries.push({
+          ...base,
+          seedFile: interaction.source_project,
+          expectedSha256: expected,
+          ok: expected === interaction.input_sha256,
+          problem:
+            expected === interaction.input_sha256
+              ? undefined
+              : 'input_sha256 与当前项目状态不一致，请运行 pnpm fixtures:refresh',
+        })
+      } catch (error) {
+        entries.push({
+          ...base,
+          seedFile: interaction.source_project,
+          expectedSha256: undefined,
+          ok: false,
+          problem: `重建输入失败：${(error as Error).message}`,
+        })
+      }
+      continue
+    }
     if (builder === undefined) {
       entries.push({
         ...base,
@@ -219,7 +274,12 @@ export async function checkRecordedFixtures(options: FixtureToolOptions): Promis
     }
 
     try {
-      const input = await builder({ interaction, rawInput, interpreterFixturesDir: options.interpreterFixturesDir })
+      const input = await builder({
+        interaction,
+        rawInput,
+        interpreterFixturesDir: options.interpreterFixturesDir,
+        repoRoot: options.repoRoot,
+      })
       const expected = hashContractInput(interaction.contract, interaction.contract_version, input)
       entries.push({
         ...base,

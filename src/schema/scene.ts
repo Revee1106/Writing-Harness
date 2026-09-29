@@ -1,7 +1,13 @@
 import { z } from 'zod'
 import { deepFreeze } from '../core/freeze.ts'
 import { ID_PATTERNS } from '../core/ids.ts'
-import { OBSERVABLE_HINT_TAGS, SCENE_TYPES, observableHintTagList, sceneTypeList } from '../core/scene-types.ts'
+import {
+  OBSERVABLE_HINT_TAGS,
+  SCENE_TYPES,
+  TONE_TAGS,
+  observableHintTagList,
+  sceneTypeList,
+} from '../core/scene-types.ts'
 import { STRUCTURE_IDS } from './blueprint.ts'
 
 /**
@@ -12,6 +18,7 @@ import { STRUCTURE_IDS } from './blueprint.ts'
  * scene_id / order / pov / scene_type / purpose / target_length
  * narrative_role_ref: BP_STR_TURN
  * characters / location / start_state / conflict / turn / end_state
+ * tone: [conflict, restraint]       # OQ-47：必填，至少 1 个（OBH 与 Style Sample 匹配用）
  * allowed_reveals: []              # 由 Structure Resolver 写入，不由模型输出
  * director_notes: []               # OQ-11 裁决的结构
  * referenced_blueprint_items: []
@@ -81,6 +88,14 @@ export const sceneSchema = z
     scene_type: z.enum(SCENE_TYPES, {
       error: () => ({ message: `scene_type 必须是 ${sceneTypeList()}（OQ-36 裁决）` }),
     }),
+    /**
+     * OQ-47 裁决：Scene 新增必填字段 `tone`（至少 1 个，取自 OQ-41 的八值枚举），
+     * 由 `scene_breakdown@0.1` 的 LLM 输出，**不从 Scene 文本推断**。
+     * OBH 匹配 = Scene 的 `scene_type ∪ tone` 与 hint 的 `applicable_scene_types` 求交集，非空即加载。
+     */
+    tone: z
+      .array(z.enum(TONE_TAGS, { error: () => ({ message: `tone 取值必须是 ${TONE_TAGS.join(' / ')}（OQ-41 / OQ-47）` }) }))
+      .min(1, 'tone 至少要有 1 个取值（OQ-47 裁决）'),
     purpose: z.string().min(1),
     target_length: z.number().int().positive(),
     narrative_role_ref: z

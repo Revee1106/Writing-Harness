@@ -40,6 +40,13 @@ import { CoverageValidationError } from '../scenes/coverage.ts'
 import { StoryStateValidationError } from '../schema/story-state.ts'
 import { unresolvedOrphans } from '../scenes/state.ts'
 import { ContextCompileError, compileContext } from '../context/compiler.ts'
+import {
+  PROSE_WRITER_CONTRACT_ID,
+  ProseWriterError,
+  checkProseFormat,
+  runProseWriter,
+  runProseWriterAll,
+} from '../writer/writer.ts'
 import { ContextManifestValidationError } from '../schema/context-manifest.ts'
 import {
   StyleProfileValidationError,
@@ -51,7 +58,9 @@ import {
 import { UnresolvedOrphanError } from '../scenes/state.ts'
 import { SCENE_TYPES, TONE_TAGS } from '../core/scene-types.ts'
 import { writeYamlFile } from '../io/yaml.ts'
-import { readYamlFile } from '../io/yaml.ts'
+import { readTextFile as readTextFileFromDisk, readYamlFile } from '../io/yaml.ts'
+import { countNonWhitespaceCodePoints } from '../core/text.ts'
+import { readdirSync } from 'node:fs'
 import { Gate2MetaValidationError } from '../schema/gate2-meta.ts'
 import { blueprintExists, loadBlueprint } from '../project/project.ts'
 import { computeSeedPreservationRate, ProposalValidationError, conflictResolutionSchema } from '../schema/proposal.ts'
@@ -74,6 +83,7 @@ import { normalizeForEvidence } from '../interpreter/interpreter.ts'
  *         gate2 / blueprint show（Story 4，Blueprint Confirm / Merge / Edit）
  *         breakdown / scenes show / state show / coverage show（Story 5，Scene Breakdown + Story State + Coverage）
  *         context / style add / style show（Story 6，Context Compiler + Style Samples）
+ *         write / drafts show（Story 7，Prose Writer）
  * Gate 3 的交互命令属于 Story 10。
  */
 
@@ -99,6 +109,8 @@ const USAGE = `Short-story-first Writing Harness v0.1 — 项目 / Seed / Gate 1
   harness context <projectId> [选项]    Context Compiler：为某个 Scene 编译受控上下文 + Manifest
   harness style add <projectId> [选项]  保存一个 Style Sample（SAMPLE_<NNN> 由 Harness 分配）
   harness style show <projectId>        显示 style/profile.yaml 摘要
+  harness write <projectId> [选项]      Prose Writer：按 Scene 生成 drafts/scene-NNN.md
+  harness drafts show <projectId>       显示已生成正文的长度与检查摘要
   harness help                          显示本帮助
 
 通用选项：
@@ -126,6 +138,13 @@ gate1 选项（必须给出一种选择）：
                             delete:SEED_A002           删除错误分类
   --provider <name>       ${PROVIDER_NAMES.join(' / ')}（默认 auto：有 fixtures 用 recorded，否则用环境变量）
   --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/seed-interpreter）
+
+write 选项：
+  --scene <scene-###>     只写这一场（默认按 order 逐场写全部）
+  --note <文本>           降级路径：本场追加用户 director note（source=user_override，可重复）
+  --plan                  只读预览：完整生成但不写 drafts/*.md
+  --provider <name>       ${PROVIDER_NAMES.join(' / ')}
+  --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/${PROSE_WRITER_CONTRACT_ID}）
 
 context 选项：
   --scene <scene-###>     目标 Scene（必填）
@@ -234,7 +253,8 @@ function parseCli(argv: string[]): ParsedCli {
     command === 'scenes' ||
     command === 'state' ||
     command === 'coverage' ||
-    command === 'style'
+    command === 'style' ||
+    command === 'drafts'
   return {
     command,
     subcommand: isSubcommandForm ? second : undefined,
@@ -844,7 +864,12 @@ function runContextCommand(parsed: ParsedCli): number {
     process.stdout.write('[plan] 只读预览：未写 reports/context-manifest.yaml\n')
     return 0
   }
-  writeYamlFile(paths.contextManifestReport, last.manifest)
+  writeYamlFile(paths.contextManifestReport, last.manifest, {
+    headerComments: [
+      `Last compiled scene: ${last.manifest.scene_id}`,
+      `OQ-49：Manifest 为单文件、末次覆盖；完整 writer_context 不落盘（见 docs/DECISIONS.md I-44 / I-45）`,
+    ],
+  })
   process.stdout.write(`已写入 Manifest：${paths.contextManifestReport}（scene_id=${last.manifest.scene_id}）\n`)
   return 0
 }
@@ -902,6 +927,99 @@ function runStyleShowCommand(parsed: ParsedCli): number {
   return 0
 }
 
+
+function printWriterSummary(result: Awaited<ReturnType<typeof runProseWriter>>): void {
+  process.stdout.write(
+    `${result.sceneId}  正文 ${result.countedCodePoints} 个非空白码点 / 目标 ${result.targetLength}  pov=${result.context.writerContext.pov}\n`,
+  )
+  process.stdout.write(`  style_samples: ${result.context.manifest.style_samples.map((sample) => sample.sample_id).join(', ') || '（无）'}\n`)
+  process.stdout.write(`  draft_context: ${result.context.writerContext.draft_context === null ? '（无）' : result.context.writerContext.draft_context.scene_id}\n`)
+  for (const sample of result.context.manifest.style_samples) {
+    if (sample.entity_reminder !== undefined) {
+      process.stdout.write(`  [human-review] ${sample.sample_id}: ${sample.entity_reminder}\n`)
+    }
+  }
+  for (const finding of result.checks.hardFailures) {
+    process.stdout.write(`  [hard] ${finding.code}: ${finding.message}\n`)
+  }
+  for (const finding of result.checks.warnings) {
+    process.stdout.write(`  [warning] ${finding.code}: ${finding.message}\n`)
+  }
+  if (result.checks.hardFailures.length === 0 && result.checks.warnings.length === 0) {
+    process.stdout.write('  （硬检查与软检查均无发现）\n')
+  }
+}
+
+async function runWriteCommand(parsed: ParsedCli): Promise<number> {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const notes = (parsed.values.note as string[] | undefined) ?? []
+  const resolved = providerFor(parsed, PROSE_WRITER_CONTRACT_ID)
+  const sceneRaw = parsed.values.scene
+  const dryRun = parsed.values.plan === true
+
+  if (typeof sceneRaw === 'string') {
+    const result = await runProseWriter({
+      paths,
+      provider: resolved.provider,
+      sceneId: sceneRaw,
+      userNotes: notes,
+      dryRun,
+    })
+    if (parsed.values.json === true) {
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    } else {
+      printWriterSummary(result)
+    }
+    process.stdout.write(result.written ? `已写入：${result.draftPath}\n` : '[plan] 只读预览：未写 drafts/*.md\n')
+    if (result.checks.hardFailures.length > 0) return 1
+    return 0
+  }
+
+  const all = await runProseWriterAll({ paths, provider: resolved.provider, userNotes: notes, dryRun })
+  if (parsed.values.json === true) {
+    process.stdout.write(`${JSON.stringify(all, null, 2)}\n`)
+  } else {
+    all.results.forEach((result) => {
+      printWriterSummary(result)
+      process.stdout.write('\n')
+    })
+    for (const failure of all.failures) {
+      process.stdout.write(`[失败] ${failure.sceneId}: ${failure.message}\n`)
+    }
+  }
+  process.stdout.write(
+    dryRun
+      ? `[plan] 只读预览：${all.results.length} 场已生成，未写盘\n`
+      : `已写入 ${all.results.length} 个 Draft 到 ${paths.draftsDir}（失败 ${all.failures.length} 场）\n`,
+  )
+  return all.failures.length === 0 ? 0 : 1
+}
+
+function runDraftsShowCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  if (!existsSync(paths.draftsDir)) {
+    process.stdout.write('（没有 drafts 目录；请先执行 harness write）\n')
+    return 0
+  }
+  const files = readdirSync(paths.draftsDir).filter((name) => /^scene-\d{3}\.md$/.test(name)).sort()
+  if (files.length === 0) {
+    process.stdout.write('（没有正文；请先执行 harness write）\n')
+    return 0
+  }
+  process.stdout.write(`# ${paths.draftsDir}（${files.length} 个已知正文）\n`)
+  for (const name of files) {
+    const text = readTextFileFromDisk(join(paths.draftsDir, name))
+    const counted = countNonWhitespaceCodePoints(text)
+    const formatIssues = checkProseFormat(text)
+    process.stdout.write(
+      `${name}  ${counted} 个非空白码点  段落 ${text.split(/\n\s*\n/).filter((block) => block.trim() !== '').length}  格式问题 ${formatIssues.length}\n`,
+    )
+  }
+  return 0
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseCli(argv)
 
@@ -945,6 +1063,11 @@ async function main(argv: string[]): Promise<number> {
       throw new UsageError(`未知子命令：coverage ${parsed.subcommand ?? ''}`)
     case 'context':
       return runContextCommand(parsed)
+    case 'write':
+      return runWriteCommand(parsed)
+    case 'drafts':
+      if (parsed.subcommand === 'show') return runDraftsShowCommand(parsed)
+      throw new UsageError(`未知子命令：drafts ${parsed.subcommand ?? ''}`)
     case 'style':
       if (parsed.subcommand === 'add') return runStyleAddCommand(parsed)
       if (parsed.subcommand === 'show') return runStyleShowCommand(parsed)
@@ -987,7 +1110,8 @@ try {
     error instanceof ContextCompileError ||
     error instanceof ContextManifestValidationError ||
     error instanceof StyleProfileValidationError ||
-    error instanceof UnresolvedOrphanError
+    error instanceof UnresolvedOrphanError ||
+    error instanceof ProseWriterError
   ) {
     process.stderr.write(`错误：${error.message}\n`)
     process.exitCode = 1

@@ -193,3 +193,27 @@
 | 《需求规格》§19.1 | `draft_context.max_chars` 的计数口径（Unicode 码点、含非空白、不含空白）（OQ-16） |
 | 《需求规格》§23 / 《架构设计》§24 | `style/profile.yaml` 的 Schema（含 `de_entity` / `sanitized_text` 规则；OQ-12） |
 | 《需求规格》§21 | `excluded_sensitive.reason` 六类枚举（OQ-44/Story 6 裁决） |
+
+---
+
+## 九、Story 7 用户裁决落地与实现解读
+
+### 用户裁决
+
+| 事项 | 裁决 | 落地 |
+|---|---|---|
+| OQ-47 | Scene 新增**必填** `tone: [tone_value, ...]`（≥1，取自八值枚举），由 `scene_breakdown@0.1` 输出，不从文本推断；OBH 匹配 = `scene_type ∪ tone` ∩ `applicable_scene_types` 非空即加载 | `src/schema/scene.ts` + `src/scenes/service.ts`（raw schema 与装配）+ `src/context/compiler.ts`（`sceneMatchTags`）；5 个 scene fixture 的 25 个 Scene 全部补 `tone`；demo 项目已重跑 |
+| OQ-48 / OQ-49 | 保持现状：writer_context 不落盘、Manifest 单文件末次覆盖；Manifest 顶部加 `# Last compiled scene: scene-XXX` 注释 | `writeYamlFile(..., {headerComments})`；CLI `context` 写入时带头部注释 |
+| OQ-50 | `excluded_sensitive.type` 扩为 6 类（新增 `character_inner_state`）；`included_sensitive.type` 不加新类；reason 词表不变 | `src/schema/context-manifest.ts` + 编译器改用新 type |
+| Story 7 起始会 | 纯正文输出 / `drafts/scene-NNN.md` 无伴生文件 / 四条硬检查 + 三条软检查 / de_entity 硬软分流 | 见下方解读与 `src/writer/` |
+
+### 实现解读
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-51 | **"实体原值"的判定方式**：对 `de_entity=true` 的样本，用码点级 LCS 求 `text` 与 `sanitized_text` 的差异片段，把"只在 text 中出现"的连续片段（长度 ≥2、非纯标点）视为被去实体化的实体原值；正文包含其中任一即硬失败。 | Story 7 裁决"de_entity=true：硬断言 Writer 输出不含 text 中对应实体原值"。 | 纯文本 diff，可测、可解释；不需要新增字段声明实体。 |
+| I-52 | **硬检查使用"关键短语"**（按标点切分后长度 ≥4 码点的片段）做字面匹配。 | Story 7 裁决的四条硬检查需要可执行判定；语义判定属 Story 9。 | 保守（几乎不误报），代价是覆盖面窄；在汇报中已注明。 |
+| I-53 | `UNCONFIRMED_CONTENT_MENTION` 是**软**检查：正文提到本场 `proposed_additions`（永久 PROPOSED）时提示，不失败。 | OQ-14（不回写、永久 PROPOSED）+ Story 7"不做语义判断"。 | 既不禁止写作，也不把未确认内容当事实。 |
+| I-54 | Writer 的输入里**保留** `scene.target_length`（它属于受控上下文的一部分），但 Contract 明文声明其只是参考信息、由外部校验；Prompt 不把它写成硬性字数要求。 | 用户裁决"target_length 由外部校验，不放入 Prompt 作为硬约束"。 | 外部校验实现为 `LENGTH_DEVIATION` 软检查（<50% 或 >180% 提示）。 |
+| I-55 | `prose_writer` fixture 的输入依赖项目状态（受控上下文 + Draft Context 链），因此这类 fixture **不使用 `seed:` 元数据**，改为声明 `source_project` + `scene`，由 `fixtures:check` 读取仓库内项目目录重建输入。 | 保证"fixture 不漂移"的既有承诺；Draft Context 的顺序依赖使 seed→…的链条无法唯一决定输入。 | 生成时必须**按 Scene 顺序**（先算哈希 → 写 fixture → 写 draft）。 |
+| I-56 | Writer 运行前后自动做**项目状态快照比对**（seed / config / proposals / blueprint / story_state / coverage / manifest / style / scenes / history），一旦有差异直接报错。 | Story 7 裁决第 3 条（硬：不修改任何状态文件）。 | 与测试里的快照比对互为双重保险。 |

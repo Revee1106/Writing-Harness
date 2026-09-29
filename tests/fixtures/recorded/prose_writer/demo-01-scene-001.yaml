@@ -1,0 +1,17 @@
+contract: prose_writer
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-001
+input_sha256: "98186b7f783367ae846f210911d4271ef1c398792f5f94b5a016628d2a4629ae"
+response:
+  model: recorded-prose-writer-v0.1
+  text: |
+    汤是下午就开始炖的，到端上桌的时候已经不烫了。
+    
+    她把碗推到他面前，说了一句什么，他没听清，问了一遍，她就重复了一遍，声音比第一次短了一半。
+    
+    "就这一次。"他说。
+    
+    "每次都是这句话。"
+    
+    他放下筷子，说这件事根本不值得吵。她看着他，忽然不想再解释了。桌上还剩半锅汤，热气已经散完，上层结了一层薄薄的油。她把筷子搁在碗沿上，没有再动。
