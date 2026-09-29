@@ -1,0 +1,10 @@
+contract: local_rewrite
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-003
+rewrite_target: {"warning_id":"LINT_001","rule":"subtext_exposed","severity":"high","span":{"start":71,"end":85},"text":"是他写给她的话，删到只剩一半","message":"把潜台词直接说明，代替了让她自己读出来的过程"}
+input_sha256: "e4cf9b5a0b65a355dc5ac94c240946b46757c547c3a4d4a15d35dbc656e581d0"
+response:
+  model: recorded-local-rewrite-v0.1
+  text: |
+    屏幕亮着，没有锁，输入框里停着一行没发出去的字

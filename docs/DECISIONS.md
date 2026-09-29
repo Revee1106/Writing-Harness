@@ -247,3 +247,38 @@
 | I-61 | **`reports/linter.yaml` 采用"单文件、末次覆盖"**，并在文件顶部写 `# Last linted scene: ...` 与词表版本注释。 | 与 Manifest（I-45 / OQ-49）保持同一约定。 | 若需要"每场一份"，与 OQ-49 一并裁决。 |
 | I-62 | `linter:` 字段值域 `rule | llm` 共用一个 Schema；`rule` 报告强制两个词表版本非空，`llm` 报告允许为 `null`。 | 用户裁决测试 C。 | Story 9 直接复用，不建平行结构。 |
 | I-63 | 词表加载失败（两处都不存在或词表非法）时**明确报错**，不静默降级成"没有词表"。 | 需求规格 §25.1 / §26 要求冻结词表；静默降级会让 Linter 形同虚设。 | `AntiAiVocabError`。 |
+
+---
+
+## 十一、Story 9 用户裁决落地与实现解读
+
+### 三个追问的答复（Story 8 汇报补充）
+
+| 追问 | 答复 |
+|---|---|
+| 测试 B 断言写死 | 已改为硬编码：**唯一允许命中的规则是 `paragraph_ending_elevation`**，其余四条（`template_actions` / `sentence_length_variance` / `paragraph_length_variance` / `dialogue_ratio`）**必须零命中**；用例说明也写清了"为什么这段语义文本只会命中它"（见 `tests/acceptance/story8.acceptance.test.ts` 验收 D） |
+| "仿佛整个世界 / 时间仿佛静止"在哪个词表 | 在 **模板动作词表** `config/anti-ai-template-actions.yaml` 里，分别是 `TA_016` / `TA_017`，`severity: high`（命中 1 次即 high，不走"≥3 次升级"）。**升华词典是另一个文件**：`config/anti-ai-elevation-phrases.yaml`（`EL_NNN`，12 条），其条目**同样带 `severity`**（OQ-52 采纳）。两个词表各自独立 `version`，分别写入报告的 `template_actions_version` / `elevation_phrases_version` |
+| `linter: llm` 报告里两个版本键的写法 | **保留键、值为 `null`**（Story 9 起始会裁决 3）：这样 rule / llm 共用同一 Schema、顶层键集合完全一致，工具与测试不需要分支判断（`validateLinterReport` 对 `rule` 报告强制非空、对 `llm` 报告允许 null） |
+
+### 用户裁决（Story 9 起始会五项）
+
+| 事项 | 裁决 | 落地 |
+|---|---|---|
+| LLM Linter Contract | 只给 Scene 正文 + scene_id/pov/purpose + 五类语义类型 + 判定准则；输出严格 YAML 且**只有 `findings[]`**；每项 `{type, span:{start,end}, reason}`；span 用码点；reason 必填 ≤200 非空白码点；不允许输出"建议改写文本"；无法判定输出 `findings: []` | `src/prompts/llm_linter@0.1.md` + `src/linter/llm-linter.ts`（`rawLlmOutputSchema` 是 strictObject，多余键直接报错） |
+| span 稳定性与合法性 | `0 ≤ start < end ≤ 码点总数`、回切非空、同一 finding 集合内不得完全重叠；不合法 → 丢弃 + `low_severity_log: [{code: "llm_span_invalid"}]`；不 fail 整个 Linter；**不做 golden 稳定性测试**，用 fixture 回放保证稳定 | `validateFindings()`；LLM 报告确认不承诺字节级稳定（测试只做 fixture 回放） |
+| Local Rewrite 契约 | 输入 span + 切片 + warning + 前后一段 + Scene 元信息 + Style Samples；输出纯文本（无引号 / 前缀 / Markdown）；长度 ≤ 原 span 的 3 倍；无法改写输出原文本；不得引入 Scene 外实体 / 未授权 truth / 改变 end_state 语义；**拼接后除 span 外字节级一致** | `src/prompts/local_rewrite@0.1.md` + `src/linter/rewrite.ts`（`validateRewrite()` + 拼接守恒断言） |
+| Rewrite 落回 | 原地改写 `drafts/scene-NNN.md`；对应 warning 加 `rewrite: {applied, before, after, rewrite_contract, rewritten_at}`；不新增备份文件；不实现自动回滚 | 已落地；有"drafts 目录只含 `.md`"的断言 |
+| 二次检查范围 | Rule Linter 重跑 span 所在段落 + 相邻段落；LLM Linter 检查 span ± 前后一段；范围**独立定义**；局部结果替换范围内旧 warning，范围外不变；ID 重新分配不复用；终稿前/用户请求时跑完整 Linter（`--full`） | `src/linter/relint.ts`（`ruleRelintRange` / `llmRelintRange` 两个独立函数）+ `--full` |
+
+### 实现解读
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-64 | **`linter: llm` 报告保留两个词表版本键、值为 `null`。** | 裁决 3 的落地选择。 | 与 "rule/llm 同一 Schema" 一致。 |
+| I-65 | **`low_severity_log[]` 增加可选 `code` 字段**（`llm_span_invalid` 等）；Story 8 的 `kind` 保留不动。 | 裁决 2 要求 `low_severity_log: [{code: "llm_span_invalid", ...}]`，而 Story 8 已冻结 `kind`。 | 两者同时写入，避免破坏既有产物。 |
+| I-66 | **五类语义类型默认 severity**：`author_summary` / `subtext_exposed` = **high**；`emotion_repeated` / `voice_blur` / `over_explanation` = medium。 | §25.3 的展示策略 + Story 9 未规定。 | 见 OQ-56（待复核）。 |
+| I-67 | **`reports/linter.yaml` 仍是"单文件、末次覆盖"**；一次 `lint --llm` 写 llm 报告，一次 `rewrite` 写"局部重跑报告"，因此报告可能同时包含 llm 与 rule 的 warning（各自 `linter` 字段标识）。 | OQ-55 / I-61 的同一约定 + 裁决 5 的"局部替换"。 | 报告级 `linter` 表示"最后一次完整运行的 Linter"，warning 级 `linter` 表示该条来源；见 OQ-57。 |
+| I-68 | **"不得改变 end_state 语义"的可执行代理**：改写前正文中已存在的 `end_state` 关键短语，改写后必须仍然存在（不存在则拒绝）。 | 裁决 3 的语义要求需要可执行判定；深度语义留给人工与后续版本。 | 保守：不新增 end_state 要求。 |
+| I-69 | **被改写的目标 warning 在局部重跑中保留**（携带 `rewrite` 审计记录），其余范围内旧 warning 被替换；若重跑结果与目标 span 完全一致则不重复记录。 | 裁决 4（rewrite 记录留在 warning 上）与裁决 5（局部替换）的组合语义。 | 否则 `rewrite` 记录会被局部重跑清掉。 |
+| I-71 | **替换文本不得与紧邻上下文形成"重叠重复"**：替换文本与紧邻前文的最长重叠片段、或与紧邻后文的最长重叠片段，达到 **4 码点**即拒绝（上限检查 12 码点）。 | Story 9 裁决 3 的"不得引入新事实"与"拼接自然"需要一道防线；实际演示中曾出现"手机亮了一次，手机亮了一次，又暗下去。"这类重复粘贴。 | 阈值常量在 `validateRewrite()` 内；4 码点以下不判，避免误伤正常衔接。 |
+| I-70 | LLM Linter 与 Local Rewrite 的 fixture 都不使用 `seed:` 元数据，改为 `source_project` + `scene`（`local_rewrite` 另有 `rewrite_target` 元数据），工具链通过 `prepareRewrite()` / `buildLlmLinterInput()` 重建与运行时逐字段一致的输入。 | 输入依赖项目状态（正文 + Scene + Style Samples）。 | 与 I-55 同一思路。 |

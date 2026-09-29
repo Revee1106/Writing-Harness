@@ -60,12 +60,31 @@ export const linterWarningSchema = z.strictObject({
   message: z.string().min(1),
   /** 按规则固定的结构（OQ-53）。 */
   evidence: z.record(z.string(), z.unknown()),
+  /**
+   * Local Rewrite 的落回记录（Story 9 起始会裁决 4）：
+   * 原地改写 `drafts/scene-NNN.md`，并把 before / after 与契约版本记在对应 warning 上；
+   * **不新增备份文件**、v0.1 不实现自动回滚。
+   */
+  rewrite: z
+    .strictObject({
+      applied: z.boolean(),
+      before: z.string(),
+      after: z.string(),
+      rewrite_contract: z.string().min(1),
+      rewritten_at: z.string().min(1),
+    })
+    .optional(),
 })
 export type LinterWarning = z.infer<typeof linterWarningSchema>
 
 export const lowSeverityEntrySchema = z.strictObject({
   id: z.string().regex(/^LOW_\d{3}$/, 'low severity 记录 ID 必须形如 LOW_001'),
   kind: z.string().min(1),
+  /**
+   * Story 9 起始会裁决：低级别日志带稳定 code（例如 `llm_span_invalid`），
+   * 便于测试与工具消费；Story 8 的词频类条目可省略该字段。
+   */
+  code: z.string().min(1).optional(),
   message: z.string().min(1),
   evidence: z.record(z.string(), z.unknown()),
 })
@@ -77,7 +96,10 @@ export const linterReportSchema = z
     scene_id: z.string().regex(ID_PATTERNS.scene, 'scene_id 必须是 scene-###'),
     generated_at: z.string().min(1),
     linter: z.enum(LINTER_KINDS),
-    /** rule 报告必填；llm 报告为 null（它不用词表）。 */
+    /**
+     * rule 报告必填；llm 报告**保留键、值为 `null`**（Story 9 起始会裁决 3）：
+     * 这样 rule 与 llm 共用同一 Schema、键集合完全一致，工具与测试不需要分支处理。
+     */
     template_actions_version: z.string().min(1).nullable(),
     elevation_phrases_version: z.string().min(1).nullable(),
     /** 被项目配置关闭的规则（关闭的规则不产生任何输出，但要记录在这里）。 */
@@ -126,6 +148,13 @@ export const linterReportSchema = z
       ctx.addIssue({ code: 'custom', path: ['disabled_rules'], message: 'disabled_rules 不允许重复' })
     }
     for (const warning of report.warnings) {
+      if (warning.rewrite !== undefined && warning.rewrite.applied && warning.rewrite.before === warning.rewrite.after) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['warnings'],
+          message: `${warning.id}.rewrite.applied=true 但 before 与 after 相同（Story 9 裁决：无法改写时应输出原文并记 applied=false）`,
+        })
+      }
       if (disabled.includes(warning.rule)) {
         ctx.addIssue({
           code: 'custom',

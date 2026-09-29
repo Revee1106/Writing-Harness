@@ -40,5 +40,10 @@ projects/<project_id>/
   `LENGTH_DEVIATION` 提示；这正是"target_length 只做外部校验"的演示。
 - `demo-01/`、`demo-02/` 也已完成 Story 8：`reports/linter.yaml`（Rule Linter 报告，
   含词表版本 / `disabled_rules` / 结构化 warning 与 `low_severity_log`）。
-  这两个项目可直接作为 Story 9（LLM Linter + Local Rewrite）的输入。
+- `demo-01/` 已完成 Story 9 的完整链路：`reports/linter.yaml` 是 **Local Rewrite 之后**的报告，
+  其中对应 warning 带 `rewrite: {applied: true, before, after, rewrite_contract, rewritten_at}`，
+  正文已原地更新（`drafts/scene-005.md`）。
+- `demo-02/` 的 `reports/linter.yaml` 是 **LLM Linter 报告**（`linter: llm`，两个词表版本键为 `null`），
+  未做改写（演示"模型原样输出 → applied=false"的路径）。
+- 两个项目可直接作为 Story 10 的输入。
 - 其余目录中的项目属于本地创作数据；是否提交由作者决定（当前仓库未对 `projects/**` 设忽略规则）。

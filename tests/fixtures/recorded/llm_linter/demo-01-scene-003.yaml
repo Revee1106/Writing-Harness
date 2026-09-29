@@ -1,0 +1,15 @@
+contract: llm_linter
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-003
+input_sha256: "7b9a2f6695e2f14a9e8d762f5a4b648b93452fce68814392c5da2bba8677c8a6"
+response:
+  model: recorded-llm-linter-v0.1
+  text: |
+    findings:
+      - type: subtext_exposed
+        span: {start: 71, end: 85}
+        reason: "把潜台词直接说明，代替了让她自己读出来的过程"
+      - type: voice_blur
+        span: {start: 107, end: 117}
+        reason: "与紧随的女性对白句式相同，声音区分度不足"

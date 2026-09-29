@@ -1,34 +1,52 @@
-# Last linted scene: scene-005 (rule linter)
-# template_actions@2026.01 (repo_default) / elevation_phrases@2026.01 (repo_default)
-# Story 8：只报告问题，不自动 Rewrite（需求规格 §27）
+# Last linted scene: scene-005 (rule linter, partial re-lint)
+# 局部范围：26-158（Rule Linter 只重跑该范围；LLM Linter 的范围独立定义）
+# Story 9：warning id 重跑后重新分配，不复用
 schema_version: "0.1"
 scene_id: scene-005
-generated_at: 2026-09-29T15:26:42.706Z
+generated_at: 2026-09-29T15:50:34.930Z
 linter: rule
 template_actions_version: "2026.01"
 elevation_phrases_version: "2026.01"
 disabled_rules: []
 warnings:
   - id: LINT_001
+    linter: llm
+    rule: over_explanation
+    severity: medium
+    span:
+      start: 126
+      end: 133
+    text: 是一条系统提示
+    message: 为读者显式说明这是什么，属于多余的过渡解释
+    evidence:
+      type: over_explanation
+      reason: 为读者显式说明这是什么，属于多余的过渡解释
+      span_code_points: 7
+    rewrite:
+      applied: true
+      before: 是一条系统提示
+      after: 又暗了下去
+      rewrite_contract: local_rewrite@0.1
+      rewritten_at: 2026-09-29T15:50:34.916Z
+  - id: LINT_002
     linter: rule
     rule: sentence_length_variance
     severity: medium
     span:
-      start: 0
-      end: 159
+      start: 26
+      end: 157
     text: ""
-    message: 句长变异系数 0.20 低于阈值 0.3（句子节奏过于均匀，共 7 句）
+    message: 句长变异系数 0.22 低于阈值 0.3（句子节奏过于均匀，共 6 句）
     evidence:
-      cv: 0.204
-      mean: 22.14
-      stddev: 4.52
-      sentence_count: 7
+      cv: 0.2194
+      mean: 21.5
+      stddev: 4.72
+      sentence_count: 6
       lengths:
-        - 24
         - 14
         - 28
         - 17
         - 23
-        - 24
+        - 22
         - 25
 low_severity_log: []

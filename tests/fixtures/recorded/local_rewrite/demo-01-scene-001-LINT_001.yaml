@@ -1,0 +1,10 @@
+contract: local_rewrite
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-001
+rewrite_target: {"warning_id":"LINT_001","rule":"author_summary","severity":"high","span":{"start":113,"end":126},"text":"她看着他，忽然不想再解释了","message":"叙述者直接总结她的心理状态，本该由动作与对白体现"}
+input_sha256: "d5c96daa6ec960b3afd8a87d599a14d85c888ebf784e3896c497d910bde686ea"
+response:
+  model: recorded-local-rewrite-v0.1
+  text: |
+    她看着他，把筷子搁在碗沿上。

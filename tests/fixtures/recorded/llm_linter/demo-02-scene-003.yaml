@@ -1,0 +1,15 @@
+contract: llm_linter
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-003
+input_sha256: "7a31d32455757501f1fb2a3fdfc4a7c0b1fdbff6c9248ba9c825390394f956ce"
+response:
+  model: recorded-llm-linter-v0.1
+  text: |
+    findings:
+      - type: over_explanation
+        span: {start: 11, end: 47}
+        reason: "背景信息一次性交代过多，为读者解释得过于完整"
+      - type: subtext_exposed
+        span: {start: 102, end: 116}
+        reason: "把全篇主题直接写进台词，潜台词被说破"

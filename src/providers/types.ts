@@ -39,6 +39,12 @@ export interface LLMProvider {
   complete(request: LLMRequest): Promise<LLMResponse>
 }
 
+/**
+ * Story 9：Linter / Rewrite 与 Writer 使用同一个 Provider 接口
+ * （单模型优先；能力差异只体现在 Prompt Contract 上）。
+ */
+export type LinterProvider = LLMProvider
+
 export class ProviderError extends Error {
   override readonly name: string = 'ProviderError'
 }

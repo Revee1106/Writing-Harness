@@ -1,0 +1,15 @@
+contract: llm_linter
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-005
+input_sha256: "603623ef7048809f9f1b5ede7f25e90438b5dd5c2f6263f2337368179737a851"
+response:
+  model: recorded-llm-linter-v0.1
+  text: |
+    findings:
+      - type: author_summary
+        span: {start: 115, end: 134}
+        reason: "结尾替读者总结主题，属于作者式点题"
+      - type: over_explanation
+        span: {start: 20, end: 46}
+        reason: "多余的过渡解释，对场景推进没有作用"

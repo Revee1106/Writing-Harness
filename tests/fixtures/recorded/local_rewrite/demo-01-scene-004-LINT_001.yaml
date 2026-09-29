@@ -1,0 +1,10 @@
+contract: local_rewrite
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-004
+rewrite_target: {"warning_id":"LINT_001","rule":"subtext_exposed","severity":"high","span":{"start":95,"end":114},"text":"她想，只要他把那句话说出来，她就留下来","message":"把人物的条件与潜台词直接说出来，读者不再需要推断"}
+input_sha256: "eefddeb49f25a1a48c674264c172374aed8da75f908ce77622457e90e7c6d2b5"
+response:
+  model: recorded-local-rewrite-v0.1
+  text: |
+    她想，只要他先开口，她就留在这里

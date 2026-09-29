@@ -1,0 +1,10 @@
+contract: local_rewrite
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-002
+rewrite_target: {"warning_id":"LINT_001","rule":"emotion_repeated","severity":"medium","span":{"start":39,"end":63},"text":"打了一行字，删掉。十一点二十，又打了一行，也删掉","message":"同一动作与情绪被连续命名两次，重复加重"}
+input_sha256: "ee04b75979b45857b2b31714ca95d0098efd8e84eb3110b75cdd489334aa72e9"
+response:
+  model: recorded-local-rewrite-v0.1
+  text: |
+    十一点零七分，她点开对话框，打了一行字，删掉。十一点二十，又是一行，还是删掉。

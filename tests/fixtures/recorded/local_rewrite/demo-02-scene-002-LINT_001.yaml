@@ -1,0 +1,10 @@
+contract: local_rewrite
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-002
+rewrite_target: {"warning_id":"LINT_001","rule":"over_explanation","severity":"medium","span":{"start":32,"end":57},"text":"他说他年纪大了，站不了多久，可是他不打算替他们按。","message":"替读者解释老人的动机与逻辑，属于解释过度"}
+input_sha256: "f12087779a0cdc252e6ae232626459ec5db750be0c65c8eaa9008d7a80c2a416"
+response:
+  model: recorded-local-rewrite-v0.1
+  text: |
+    他说他年纪大了，站不了多久。

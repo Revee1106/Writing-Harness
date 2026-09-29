@@ -1,0 +1,15 @@
+contract: llm_linter
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-005
+input_sha256: "be2af36148c96ea11549fde0d24870a1e6e037d86664c97441403da6257c7552"
+response:
+  model: recorded-llm-linter-v0.1
+  text: |
+    findings:
+      - type: author_summary
+        span: {start: 132, end: 142}
+        reason: "结尾替读者总结这半句话的意义，属于作者式收束"
+      - type: emotion_repeated
+        span: {start: 26, end: 39}
+        reason: "与前后两段的灯光意象重复堆叠，情绪被反复加码"

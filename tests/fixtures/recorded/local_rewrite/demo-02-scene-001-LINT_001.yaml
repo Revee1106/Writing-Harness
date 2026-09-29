@@ -1,0 +1,10 @@
+contract: local_rewrite
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-001
+rewrite_target: {"warning_id":"LINT_001","rule":"over_explanation","severity":"medium","span":{"start":112,"end":138},"text":"他按了一下关门键，没有用。门外的楼层按钮也按不动了。","message":"为读者解释机械故障的因果，超出场景需要"}
+input_sha256: "1dfe80515b20b7f028b2ec7e4c73c6fc37b78723dcfab8a2d8cc1da14450cb0b"
+response:
+  model: recorded-local-rewrite-v0.1
+  text: |
+    他按了一下关门键。门外的楼层按钮也没有反应。

@@ -1,0 +1,10 @@
+contract: local_rewrite
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-005
+rewrite_target: {"warning_id":"LINT_001","rule":"author_summary","severity":"high","span":{"start":132,"end":142},"text":"草稿箱里那半句话还在","message":"结尾替读者总结这半句话的意义，属于作者式收束"}
+input_sha256: "b3c448336a19e6dc4095409a693d5676e702931564a69193f49b64c47b278fa3"
+response:
+  model: recorded-local-rewrite-v0.1
+  text: |
+    草稿箱的盖子合上了。

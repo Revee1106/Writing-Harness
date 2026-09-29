@@ -1,0 +1,15 @@
+contract: llm_linter
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-002
+input_sha256: "fe84514da54fdeb8b0f2fa9fa36105d4c9a8f0e4bdaaa5d264fc5fcf2d14e696"
+response:
+  model: recorded-llm-linter-v0.1
+  text: |
+    findings:
+      - type: over_explanation
+        span: {start: 32, end: 57}
+        reason: "替读者解释老人的动机与逻辑，属于解释过度"
+      - type: subtext_exposed
+        span: {start: 143, end: 154}
+        reason: "把两人的潜台词直接说明，代替了由动作体现"

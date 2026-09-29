@@ -45,7 +45,7 @@ src/
   scenes/     Scene Breakdown / Structure Resolver / Story State / Coverage Check
   context/    Context Compiler（数据源白名单 / POV Filter / Manifest / Draft Context）
   writer/     Prose Writer（纯正文生成 / 硬软约束检查 / Draft 落盘）
-  linter/     Rule Anti-AI Linter（五条规则 / 阈值 / 词频类 low 日志）
+  linter/     Rule Linter（五条规则）+ LLM Linter（五类语义）+ Local Rewrite 与局部二次检查
   prompts/    版本化 Prompt Contract（seed_interpreter / story_developer / blueprint_builder / scene_breakdown / prose_writer，均 @0.1）
   cli/        CLI 入口
 scripts/      fixture 哈希刷新工具
@@ -118,6 +118,11 @@ pnpm harness lint show demo-02               # 显示 reports/linter.yaml
 # 词表：config/anti-ai-template-actions.yaml（24 条）与 config/anti-ai-elevation-phrases.yaml（12 条）
 # 项目级覆盖：projects/<id>/config/<同名文件>（OQ-07）
 
+# LLM Linter + Local Rewrite（Story 9）
+pnpm harness lint demo-02 --scene scene-003 --llm     # 语义型五类检查（span 用码点偏移）
+pnpm harness rewrite demo-02 --scene scene-003 --warning LINT_001   # 局部改写 + 局部二次 Linter
+pnpm harness rewrite demo-02 --scene scene-003 --warning LINT_001 --full  # 改写后跑完整 Linter
+
 # fixture 与 Seed 文本 / Gate 1 状态一致性（离线回放依赖）
 pnpm fixtures:check
 pnpm fixtures:refresh
@@ -139,9 +144,10 @@ Node 24 可直接执行 TypeScript，CLI 无需构建步骤。
 | Story 5 | Scene Breakdown + Story State + Coverage Check | ✅ 完成 |
 | Story 6 | Context Compiler + POV Filter + Manifest | ✅ 完成 |
 | Story 7 | Prose Writer + Style Samples | ✅ 完成 |
-| Story 8 | Rule Anti-AI Linter | ✅ 完成（547 项测试全绿） |
+| Story 8 | Rule Anti-AI Linter | ✅ 完成 |
+| Story 9 | LLM Linter + Local Rewrite | ✅ 完成（577 项测试全绿） |
 | Story 3 | Story Developer + Proposal | 未开始 |
 | Story 4 | Blueprint Confirm / Merge / Edit（Gate 2） | 未开始 |
 | Story 5 | Scene Breakdown + Story State + Coverage Check | 未开始 |
 | M1 | 最小端到端验证（Story 5 后强制） | ✅ **通过** |
-| Story 9–10 | LLM Linter / Rewrite / 评估 | 未开始 |
+| Story 10 | Gate 3 + State Extractor + 评估 | 未开始 |

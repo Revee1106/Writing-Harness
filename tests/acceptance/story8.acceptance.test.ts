@@ -175,24 +175,34 @@ describe('验收 C：测试 A —— 同文本两次运行字节级一致（Span
 })
 
 describe('验收 D：测试 B —— 只含语义问题的文本，Rule Linter 不做语义判定', () => {
-  it('语义问题文本只允许出现 paragraph_ending_elevation，绝不出现语义型规则名', () => {
+  it('测试 B（写死断言）：只允许 paragraph_ending_elevation 命中，其余四条规则必须零命中', () => {
     const paths = cloneProject('demo-01')
-    // 这段文本的问题全是语义型：作者总结 / 潜台词直说 / 情绪重复 / 声音趋同 / 解释过度
-    const semanticOnly = [
-      '他终于明白了，原来爱一个人就是愿意为她改变自己，这就是生活的意义。',
-      '她心里其实很委屈，但她没有说，因为她知道说了也没有用，她真的很难过，非常难过。',
-      '"我今天很生气。"她说。',
-      '"我同样也很生气。"他说。',
-      '两个人生气的语气完全一样，都像是在念同一句话。',
-      '他之所以这样说，是因为他想让她明白，他其实是在乎她的，只是不擅长表达。',
-    ].join('\n\n')
-    writeFileSync(join(paths.draftsDir, 'scene-002.md'), `${semanticOnly}\n`, 'utf8')
+    // 这段文本的问题全部是语义型：作者总结 / 潜台词直说 / 情绪重复 / 声音趋同 / 解释过度。
+    // 其句长、段长、对话比例都不触发统计阈值，且不含任何模板动作词；
+    // 唯一允许命中的是"连续段尾升华"（这本身就是表达层问题，不属于语义判定）。
+    const paragraphs = [
+      '他终于明白了，原来爱一个人就是愿意为她改变自己，这就是生活的意义。也许，这就是结局。',
+      '「我今天很生气。」她说，「真的很生气。」「我知道。」他说。而这一切，才刚刚开始。',
+      '她心里很委屈，但她没有说，因为她知道说了也没有用。她放下杯子，站起来，走到窗边，外面的天已经黑了，楼下的路灯一盏一盏亮起来，她站了很久，直到腿有点酸。也许，这就是答案。',
+      '她没说。',
+      '他们都在等对方先开口。谁也没等到。灯灭了。',
+    ]
+    writeFileSync(join(paths.draftsDir, 'scene-002.md'), `${paragraphs.join('\n\n')}\n`, 'utf8')
     const result = runRuleLinter({ ...lintOptions(paths), sceneId: 'scene-002', dryRun: true })
     const rules = result.report.warnings.map((warning) => warning.rule)
+
+    // 写死：唯一允许出现的规则是 paragraph_ending_elevation
     for (const rule of rules) {
-      expect(RULE_LINTER_RULES).toContain(rule as never)
-      expect(LLM_LINTER_RULES).not.toContain(rule as never)
-      expect(['paragraph_ending_elevation', 'sentence_length_variance', 'paragraph_length_variance', 'dialogue_ratio', 'template_actions']).toContain(rule)
+      expect(rule, `不允许出现的规则命中：${rule}`).toBe('paragraph_ending_elevation')
+    }
+    // 其余四条规则必须零命中
+    for (const rule of [
+      'template_actions',
+      'sentence_length_variance',
+      'paragraph_length_variance',
+      'dialogue_ratio',
+    ]) {
+      expect(rules, `${rule} 必须零命中`).not.toContain(rule)
     }
     // 语义型规则名一个都不出现
     for (const semanticRule of LLM_LINTER_RULES) {

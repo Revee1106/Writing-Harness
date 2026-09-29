@@ -1,0 +1,10 @@
+contract: local_rewrite
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-005
+rewrite_target: {"warning_id":"LINT_001","rule":"author_summary","severity":"high","span":{"start":115,"end":134},"text":"他本来要讲的那件事，今天谁也没有听到。","message":"结尾替读者总结主题，属于作者式点题"}
+input_sha256: "3d5b6d7be721a5d2dc29e55ef46c577a42952f89127d1b6f5875ae7baa3f94d1"
+response:
+  model: recorded-local-rewrite-v0.1
+  text: |
+    他本来要讲的那件事，谁也没有听到。

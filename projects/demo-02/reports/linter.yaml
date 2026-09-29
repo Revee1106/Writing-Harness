@@ -1,33 +1,51 @@
-# Last linted scene: scene-005 (rule linter)
-# template_actions@2026.01 (repo_default) / elevation_phrases@2026.01 (repo_default)
-# Story 8：只报告问题，不自动 Rewrite（需求规格 §27）
+# Last linted scene: scene-005 (rule linter, partial re-lint)
+# 局部范围：20-133（Rule Linter 只重跑该范围；LLM Linter 的范围独立定义）
+# Story 9：warning id 重跑后重新分配，不复用
 schema_version: "0.1"
 scene_id: scene-005
-generated_at: 2026-09-29T15:26:43.609Z
+generated_at: 2026-09-29T15:46:36.155Z
 linter: rule
 template_actions_version: "2026.01"
 elevation_phrases_version: "2026.01"
 disabled_rules: []
 warnings:
   - id: LINT_001
+    linter: llm
+    rule: author_summary
+    severity: high
+    span:
+      start: 115
+      end: 134
+    text: 他本来要讲的那件事，今天谁也没有听到。
+    message: 结尾替读者总结主题，属于作者式点题
+    evidence:
+      type: author_summary
+      reason: 结尾替读者总结主题，属于作者式点题
+      span_code_points: 19
+    rewrite:
+      applied: true
+      before: 他本来要讲的那件事，今天谁也没有听到。
+      after: 他本来要讲的那件事，谁也没有听到。
+      rewrite_contract: local_rewrite@0.1
+      rewritten_at: 2026-09-29T15:46:36.143Z
+  - id: LINT_002
     linter: rule
     rule: sentence_length_variance
     severity: medium
     span:
-      start: 0
-      end: 134
+      start: 20
+      end: 132
     text: ""
-    message: 句长变异系数 0.18 低于阈值 0.3（句子节奏过于均匀，共 6 句）
+    message: 句长变异系数 0.19 低于阈值 0.3（句子节奏过于均匀，共 5 句）
     evidence:
-      cv: 0.1801
-      mean: 21.67
-      stddev: 3.9
-      sentence_count: 6
+      cv: 0.195
+      mean: 22
+      stddev: 4.29
+      sentence_count: 5
       lengths:
-        - 18
         - 26
         - 17
         - 23
         - 27
-        - 19
+        - 17
 low_severity_log: []

@@ -40,9 +40,11 @@ export const recordedInteractionSchema = z.strictObject({
    */
   gate1_ops: z.array(z.record(z.string(), z.unknown())).optional(),
   style_preference: z.string().optional(),
-  /** fixture 元数据：prose_writer 用（仓库内项目目录 + Scene）。 */
+  /** fixture 元数据：prose_writer / llm_linter / local_rewrite 用（仓库内项目目录 + Scene）。 */
   source_project: z.string().min(1).optional(),
   scene: z.string().min(1).optional(),
+  /** local_rewrite 用：待修复的 warning（含 span）。 */
+  rewrite_target: z.record(z.string(), z.unknown()).optional(),
   /** fixture 元数据：Gate 2 的字段计划 / 手改 / 冲突裁决（仅用于工具链重建输入）。 */
   gate2_plan: z
     .strictObject({

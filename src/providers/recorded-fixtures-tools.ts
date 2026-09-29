@@ -18,6 +18,9 @@ import { parseRecordedInteraction, RecordedProvider, type RecordedInteraction } 
  *   然后按 fixture 元数据 `gate2_plan` 解析字段计划并构造输入。
  * - `scene_breakdown`   → 在 blueprint_builder 链条上再装配出 Blueprint（走 Gate 2 装配路径），
  *   然后构造 Scene Breakdown 的输入。
+ * - `llm_linter`        → 输入 = Scene 元信息 + 正文（读取 `source_project` 的 Draft）。
+ * - `local_rewrite`     → 输入 = Scene 元信息 + warning（fixture 元数据 `rewrite_target`）+ span 切片
+ *   与前后段落 + Style Samples（与运行时共用 `prepareRewrite()`）。
  * - `prose_writer`      → 输入是 Context Compiler 的产物，因此直接读取 fixture 声明的
  *   `source_project`（仓库内的项目目录，含 scenes / style / drafts），编译该 Scene 的上下文后构造输入。
  *   这类 fixture **不需要** `seed` 字段。
@@ -184,6 +187,36 @@ const INPUT_BUILDERS_EXTRA3: Record<string, InputBuilder> = {
   },
 }
 
+const INPUT_BUILDERS_EXTRA4: Record<string, InputBuilder> = {
+  llm_linter: async ({ interaction, repoRoot }) => {
+    const { buildLlmLinterInput } = await import('../linter/llm-linter.ts')
+    const { loadScenes } = await import('../scenes/service.ts')
+    const { projectPaths } = await import('../io/paths.ts')
+    const { readTextFile } = await import('../io/yaml.ts')
+    const { resolveProjectDir } = projectDirResolver()
+    const paths = projectPaths(join(repoRoot, 'projects'), resolveProjectDir(interaction.source_project as string))
+    const scenes = loadScenes(paths)
+    const scene = scenes.find((candidate) => candidate.scene_id === interaction.scene)
+    if (scene === undefined) throw new Error(`找不到 ${String(interaction.scene)}`)
+    const text = readTextFile(join(paths.draftsDir, `${scene.scene_id}.md`))
+    return buildLlmLinterInput(scene, text)
+  },
+  local_rewrite: async ({ interaction, repoRoot }) => {
+    const { prepareRewrite } = await import('../linter/rewrite.ts')
+    const { projectPaths } = await import('../io/paths.ts')
+    const { resolveProjectDir } = projectDirResolver()
+    const paths = projectPaths(join(repoRoot, 'projects'), resolveProjectDir(interaction.source_project as string))
+    const target = interaction.rewrite_target
+    if (target === undefined) throw new Error('local_rewrite fixture 必须声明 rewrite_target')
+    const prepared = prepareRewrite(paths, interaction.scene as string, target as never)
+    return prepared.input
+  },
+}
+
+function projectDirResolver(): { resolveProjectDir: (value: string) => string } {
+  return { resolveProjectDir: (value: string) => value.split('/').pop() as string }
+}
+
 function listFixtureFiles(fixturesDir: string): string[] {
   return readdirSync(fixturesDir)
     .filter((name) => name.endsWith('.yaml') || name.endsWith('.yml'))
@@ -205,7 +238,8 @@ export async function checkRecordedFixtures(options: FixtureToolOptions): Promis
       INPUT_BUILDERS[interaction.contract] ??
       INPUT_BUILDERS_EXTRA[interaction.contract] ??
       INPUT_BUILDERS_EXTRA2[interaction.contract] ??
-      INPUT_BUILDERS_EXTRA3[interaction.contract]
+      INPUT_BUILDERS_EXTRA3[interaction.contract] ??
+      INPUT_BUILDERS_EXTRA4[interaction.contract]
 
     // prose_writer 这类 fixture 的输入来自项目状态，不需要 seed 字段
     if (interaction.seed === undefined) {

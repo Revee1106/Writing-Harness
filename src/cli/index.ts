@@ -55,6 +55,9 @@ import {
   runRuleLinterAll,
 } from '../linter/rule-linter.ts'
 import { LinterReportValidationError, SEVERITY_DISPLAY } from '../schema/linter-report.ts'
+import { LlmLinterError, LLM_LINTER_CONTRACT_ID, runLlmLinter } from '../linter/llm-linter.ts'
+import { LocalRewriteError, runLocalRewrite } from '../linter/rewrite.ts'
+import { LLM_LINTER_RULES } from '../linter/llm-rules.ts'
 import { AntiAiVocabError } from '../schema/anti-ai-vocab.ts'
 import { REPO_DEFAULT_ANTI_AI_ELEVATION_REL_PATH, REPO_DEFAULT_ANTI_AI_TEMPLATE_ACTIONS_REL_PATH } from '../io/paths.ts'
 import { ContextManifestValidationError } from '../schema/context-manifest.ts'
@@ -94,7 +97,8 @@ import { normalizeForEvidence } from '../interpreter/interpreter.ts'
  *         breakdown / scenes show / state show / coverage show（Story 5，Scene Breakdown + Story State + Coverage）
  *         context / style add / style show（Story 6，Context Compiler + Style Samples）
  *         write / drafts show（Story 7，Prose Writer）
- *         lint / lint show（Story 8，Rule Anti-AI Linter）
+ *         lint / lint show（Story 8 Rule Linter；Story 9 LLM Linter）
+ *         rewrite（Story 9，Local Rewrite + 局部二次 Linter）
  * Gate 3 的交互命令属于 Story 10。
  */
 
@@ -124,6 +128,7 @@ const USAGE = `Short-story-first Writing Harness v0.1 — 项目 / Seed / Gate 1
   harness drafts show <projectId>       显示已生成正文的长度与检查摘要
   harness lint <projectId> [选项]       Rule Anti-AI Linter：确定性 / 统计型检查（不自动 Rewrite）
   harness lint show <projectId>         显示 reports/linter.yaml
+  harness rewrite <projectId> [选项]    对某条 warning 的 span 做局部 Rewrite（不整篇重写）
   harness help                          显示本帮助
 
 通用选项：
@@ -154,8 +159,18 @@ gate1 选项（必须给出一种选择）：
 
 lint 选项：
   --scene <scene-###>     只检查这一场（默认检查全部 Scene，磁盘保留最后一场报告）
+  --llm                   切换到 LLM Linter（语义型五类；需要 provider）
+  --full                  完整检查（默认行为；局部重跑用 rewrite 的默认档）
   --plan                  只读预览：完整检查但不写 reports/linter.yaml
   --json                  以 JSON 输出报告
+  --provider / --fixtures LLM Linter 使用的 provider（默认 recorded）
+
+rewrite 选项：
+  --scene <scene-###>     目标 Scene（必填）
+  --warning <LINT_###>    要修复的 warning ID（来自 reports/linter.yaml；必填）
+  --full                  Rewrite 后跑完整 Linter（默认只做局部二次检查）
+  --plan                  只读预览：完整生成但不改写正文 / 报告
+  --provider / --fixtures Local Rewrite 使用的 provider（默认 recorded）
 
 write 选项：
   --scene <scene-###>     只写这一场（默认按 order 逐场写全部）
@@ -260,6 +275,9 @@ function parseCli(argv: string[]): ParsedCli {
       'scene-type': { type: 'string' },
       tone: { type: 'string' },
       sanitized: { type: 'string' },
+      llm: { type: 'boolean' },
+      full: { type: 'boolean' },
+      warning: { type: 'string' },
     },
   })
   const [command, second, third] = positionals
@@ -1125,6 +1143,72 @@ function runLintShowCommand(parsed: ParsedCli): number {
   return 0
 }
 
+
+async function runLintCommandAsync(parsed: ParsedCli): Promise<number> {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const sceneRaw = parsed.values.scene
+  if (typeof sceneRaw !== 'string') {
+    throw new UsageError('--llm 需要 --scene <scene-###>（LLM Linter 逐场运行）')
+  }
+  const resolved = providerFor(parsed, LLM_LINTER_CONTRACT_ID)
+  const result = await runLlmLinter({
+    paths,
+    provider: resolved.provider,
+    sceneId: sceneRaw,
+    dryRun: parsed.values.plan === true,
+  })
+  if (parsed.values.json === true) {
+    process.stdout.write(`${JSON.stringify(result.report, null, 2)}\n`)
+  } else {
+    printLinterReport(result.report, {})
+    if (result.rejected.length > 0) {
+      process.stdout.write(`  非法 span 已丢弃（low_severity_log）：${result.rejected.length} 条\n`)
+    }
+    process.stdout.write(`  语义类型：${LLM_LINTER_RULES.join(' / ')}\n`)
+  }
+  process.stdout.write(
+    result.written ? `已写入：${paths.linterReport}\n` : '[plan] 只读预览：未写 reports/linter.yaml\n',
+  )
+  return 0
+}
+
+async function runRewriteCommand(parsed: ParsedCli): Promise<number> {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const sceneRaw = parsed.values.scene
+  const warningRaw = parsed.values.warning
+  if (typeof sceneRaw !== 'string' || typeof warningRaw !== 'string') {
+    throw new UsageError('rewrite 需要 --scene <scene-###> 与 --warning <LINT_###>')
+  }
+  const resolved = providerFor(parsed, 'local_rewrite')
+  const result = await runLocalRewrite({
+    paths,
+    repoRoot: REPO_ROOT,
+    provider: resolved.provider,
+    sceneId: sceneRaw,
+    warningId: warningRaw,
+    dryRun: parsed.values.plan === true,
+    scope: parsed.values.full === true ? 'full' : 'paragraph',
+  })
+
+  if (parsed.values.json === true) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    return 0
+  }
+  process.stdout.write(`${result.sceneId}  ${result.warningId}  span ${result.span.start}-${result.span.end}\n`)
+  process.stdout.write(`  原文：${result.before}\n`)
+  process.stdout.write(`  替换：${result.after}\n`)
+  process.stdout.write(
+    `  结果：${result.applied ? '已原地改写 drafts/' + result.sceneId + '.md' : '未改动（模型原样输出或 --plan）'}\n`,
+  )
+  process.stdout.write(
+    `  局部二次检查：${parsed.values.full === true ? '完整 Linter' : 'span 所在段落 + 相邻段落'} → 范围 ${result.relint.replacedRange.start}-${result.relint.replacedRange.end}，当前 warning ${result.report.warnings.length} 条\n`,
+  )
+  printLinterReport(result.report, {})
+  return 0
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseCli(argv)
 
@@ -1175,7 +1259,10 @@ async function main(argv: string[]): Promise<number> {
       throw new UsageError(`未知子命令：drafts ${parsed.subcommand ?? ''}`)
     case 'lint':
       if (parsed.subcommand === 'show') return runLintShowCommand(parsed)
+      if (parsed.values.llm === true) return runLintCommandAsync(parsed)
       return runLintCommand(parsed)
+    case 'rewrite':
+      return runRewriteCommand(parsed)
     case 'style':
       if (parsed.subcommand === 'add') return runStyleAddCommand(parsed)
       if (parsed.subcommand === 'show') return runStyleShowCommand(parsed)
@@ -1222,7 +1309,9 @@ try {
     error instanceof ProseWriterError ||
     error instanceof RuleLinterPreconditionError ||
     error instanceof LinterReportValidationError ||
-    error instanceof AntiAiVocabError
+    error instanceof AntiAiVocabError ||
+    error instanceof LlmLinterError ||
+    error instanceof LocalRewriteError
   ) {
     process.stderr.write(`错误：${error.message}\n`)
     process.exitCode = 1

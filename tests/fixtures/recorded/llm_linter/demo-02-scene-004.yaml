@@ -1,0 +1,15 @@
+contract: llm_linter
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-004
+input_sha256: "24dd52d64270d8f39547db50bc549bc5604709459d4bc29929518f8349b1d276"
+response:
+  model: recorded-llm-linter-v0.1
+  text: |
+    findings:
+      - type: author_summary
+        span: {start: 48, end: 66}
+        reason: "叙述者替读者总结这一刻的意义，属于作者式收束"
+      - type: over_explanation
+        span: {start: 100, end: 118}
+        reason: "为读者解释外面有人来的因果，超出了场景需要"

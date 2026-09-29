@@ -1,0 +1,10 @@
+contract: local_rewrite
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-004
+rewrite_target: {"warning_id":"LINT_001","rule":"author_summary","severity":"high","span":{"start":48,"end":66},"text":"铃声响起来的时候，三个人都没有说话。","message":"叙述者替读者总结这一刻的意义，属于作者式收束"}
+input_sha256: "e8756ab88184a988a7cdef58d0dfc4ebf3816313b61b3d6005309b4e534eb3ae"
+response:
+  model: recorded-local-rewrite-v0.1
+  text: |
+    铃声响起。三个人都没有说话。

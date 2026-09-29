@@ -1,0 +1,15 @@
+contract: llm_linter
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-004
+input_sha256: "e57a34e7cee127e5492faa0b593428b670633a8153e90f73ac7a313a53639788"
+response:
+  model: recorded-llm-linter-v0.1
+  text: |
+    findings:
+      - type: subtext_exposed
+        span: {start: 95, end: 114}
+        reason: "把人物的条件与潜台词直接说出来，读者不再需要推断"
+      - type: over_explanation
+        span: {start: 115, end: 125}
+        reason: "叙述者替读者解释两人之间的信息差，属于解释过度"

@@ -1,0 +1,15 @@
+contract: llm_linter
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-002
+input_sha256: "4ecac4c2aece3a5d4e41c052367f6827b91adf044c3a37253c1e52dbdd5845ff"
+response:
+  model: recorded-llm-linter-v0.1
+  text: |
+    findings:
+      - type: emotion_repeated
+        span: {start: 39, end: 63}
+        reason: "同一动作与情绪被连续命名两次，重复加重"
+      - type: over_explanation
+        span: {start: 75, end: 88}
+        reason: "替读者解释她写字时的性质，超出场景需要"

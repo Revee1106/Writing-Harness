@@ -1,0 +1,15 @@
+contract: llm_linter
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-001
+input_sha256: "522abe84083b5fea3f40713aec78e50b33dff57c910358deb4ce0704138e7827"
+response:
+  model: recorded-llm-linter-v0.1
+  text: |
+    findings:
+      - type: over_explanation
+        span: {start: 112, end: 138}
+        reason: "为读者解释机械故障的因果，超出场景需要"
+      - type: author_summary
+        span: {start: 23, end: 46}
+        reason: "用物件替读者总结情绪，属于作者式点题"
