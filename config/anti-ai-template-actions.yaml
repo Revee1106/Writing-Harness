@@ -1,0 +1,106 @@
+# 反 AI 模板动作词表（仓库级默认）
+#
+# 依据：需求规格 §25.1 / 架构设计 §26 —— "Story 8 开发前必须冻结一份版本化模板动作词表"。
+# 位置裁决（OQ-07）：**项目级优先**，路径为
+#   projects/<project_id>/config/anti-ai-template-actions.yaml
+# 允许 fallback 到本文件（仓库级默认词表）。
+#
+# 匹配口径（Story 8 起始会裁决）：
+# - **字面匹配，不解释为正则**（pattern 就是原文子串）；
+# - **变体用多条独立 action，不合并**（例如"苦笑"与"露出一丝苦笑"是两条）；
+# - `severity` 是"命中 1 次"时的级别；同一 action 在同一 Scene 命中 ≥3 次时升级为 high；
+# - **词表变化必须修改 `version`**，运行时会把它写进 reports/linter.yaml。
+#
+# schema_version: "0.1"
+# version: "2026.01"
+# actions:
+#   - id: TA_001
+#     pattern: 沉默了片刻
+#     severity: medium
+#     note: 需求规格 §25.1 点名的首版测试项
+
+schema_version: "0.1"
+version: "2026.01"
+actions:
+  # ---- 需求规格 §25.1 点名的首版测试项（5 条）----
+  - id: TA_001
+    pattern: 沉默了片刻
+    severity: medium
+    note: 需求规格 §25.1 点名项
+  - id: TA_002
+    pattern: 深吸一口气
+    severity: medium
+    note: 需求规格 §25.1 点名项
+  - id: TA_003
+    pattern: 苦笑
+    severity: medium
+    note: 需求规格 §25.1 点名项
+  - id: TA_004
+    pattern: 眼底闪过
+    severity: medium
+    note: 需求规格 §25.1 点名项
+  - id: TA_005
+    pattern: 微微一怔
+    severity: medium
+    note: 需求规格 §25.1 点名项
+
+  # ---- 首版扩展（15 条以上）----
+  - id: TA_006
+    pattern: 嘴角勾起
+    severity: medium
+  - id: TA_007
+    pattern: 眼中闪过一丝
+    severity: medium
+  - id: TA_008
+    pattern: 心中一紧
+    severity: medium
+  - id: TA_009
+    pattern: 不由自主地
+    severity: medium
+  - id: TA_010
+    pattern: 缓缓开口
+    severity: medium
+  - id: TA_011
+    pattern: 轻声说道
+    severity: medium
+  - id: TA_012
+    pattern: 意味深长地
+    severity: medium
+  - id: TA_013
+    pattern: 下意识地
+    severity: medium
+  - id: TA_014
+    pattern: 空气中弥漫着
+    severity: medium
+  - id: TA_015
+    pattern: 气氛凝固
+    severity: medium
+  - id: TA_016
+    pattern: 仿佛整个世界
+    severity: high
+    note: 典型的"升华式"模板，命中即 high
+  - id: TA_017
+    pattern: 时间仿佛静止
+    severity: high
+    note: 典型的"升华式"模板，命中即 high
+  - id: TA_018
+    pattern: 五味杂陈
+    severity: medium
+  - id: TA_019
+    pattern: 心头一颤
+    severity: medium
+  - id: TA_020
+    pattern: 不置可否
+    severity: medium
+  - id: TA_021
+    pattern: 若有所思
+    severity: medium
+  - id: TA_022
+    pattern: 露出一丝微笑
+    severity: medium
+  - id: TA_023
+    pattern: 目光落在
+    severity: medium
+  - id: TA_024
+    pattern: 沉默在两人之间蔓延
+    severity: medium

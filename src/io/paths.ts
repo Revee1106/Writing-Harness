@@ -31,6 +31,9 @@ export const STYLE_FILE_NAMES = {
 /** OQ-07 裁决：项目级词表优先，允许 fallback 到仓库级默认词表。 */
 export const ANTI_AI_TEMPLATE_ACTIONS_FILENAME = 'anti-ai-template-actions.yaml'
 export const REPO_DEFAULT_ANTI_AI_TEMPLATE_ACTIONS_REL_PATH = join('config', ANTI_AI_TEMPLATE_ACTIONS_FILENAME)
+/** Story 8：段尾升华词典（同一 fallback 规则）。 */
+export const ANTI_AI_ELEVATION_PHRASES_FILENAME = 'anti-ai-elevation-phrases.yaml'
+export const REPO_DEFAULT_ANTI_AI_ELEVATION_REL_PATH = join('config', ANTI_AI_ELEVATION_PHRASES_FILENAME)
 
 /**
  * 项目目录下需要存在的骨架目录（需求规格 §29 / 架构设计 §32）。
@@ -88,6 +91,7 @@ export interface ProjectPaths {
   readonly linterReport: string
   readonly configDir: string
   readonly antiAiTemplateActions: string
+  readonly antiAiElevationPhrases: string
 }
 
 export function projectPaths(projectsRoot: string, projectId: string): ProjectPaths {
@@ -118,6 +122,7 @@ export function projectPaths(projectsRoot: string, projectId: string): ProjectPa
     linterReport: join(reportsDir, REPORT_FILE_NAMES.linter),
     configDir,
     antiAiTemplateActions: join(configDir, ANTI_AI_TEMPLATE_ACTIONS_FILENAME),
+    antiAiElevationPhrases: join(configDir, ANTI_AI_ELEVATION_PHRASES_FILENAME),
   }
 }
 

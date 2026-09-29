@@ -217,3 +217,33 @@
 | I-54 | Writer 的输入里**保留** `scene.target_length`（它属于受控上下文的一部分），但 Contract 明文声明其只是参考信息、由外部校验；Prompt 不把它写成硬性字数要求。 | 用户裁决"target_length 由外部校验，不放入 Prompt 作为硬约束"。 | 外部校验实现为 `LENGTH_DEVIATION` 软检查（<50% 或 >180% 提示）。 |
 | I-55 | `prose_writer` fixture 的输入依赖项目状态（受控上下文 + Draft Context 链），因此这类 fixture **不使用 `seed:` 元数据**，改为声明 `source_project` + `scene`，由 `fixtures:check` 读取仓库内项目目录重建输入。 | 保证"fixture 不漂移"的既有承诺；Draft Context 的顺序依赖使 seed→…的链条无法唯一决定输入。 | 生成时必须**按 Scene 顺序**（先算哈希 → 写 fixture → 写 draft）。 |
 | I-56 | Writer 运行前后自动做**项目状态快照比对**（seed / config / proposals / blueprint / story_state / coverage / manifest / style / scenes / history），一旦有差异直接报错。 | Story 7 裁决第 3 条（硬：不修改任何状态文件）。 | 与测试里的快照比对互为双重保险。 |
+
+---
+
+## 十、Story 8 用户裁决落地与实现解读
+
+### 用户裁决
+
+| 事项 | 裁决 | 落地 |
+|---|---|---|
+| OQ-51 | 接受；`fixtures:check` 在 prose_writer fixture 输入不匹配时必须**明确报错并列出差异**，不得静默跳过 | 工具对未注册构造器/重建失败的条目一律 `ok: false` + `problem` 文案，并以非 0 退出码结束（`scripts/refresh-recorded-fixtures.ts`） |
+| I-52 | 保持保守，Story 7 阶段不提高硬检查强度 | 未改动 |
+| 模板动作词表 | `{schema_version, version, actions:[{id: TA_NNN, pattern, severity, note?}]}`；字面匹配；变体独立成条；项目级覆盖仓库级；版本写入 `reports/linter.yaml` | `config/anti-ai-template-actions.yaml`（**24 条**，含 §25.1 点名 5 条）+ `src/schema/anti-ai-vocab.ts` |
+| 五条规则阈值 | 见裁决（CV 0.30 / 0.35、对话 0.85 / 0.10、模板 ≥3 升级、升华连续 ≥3 段、三条最小长度门槛）；集中 `src/linter/thresholds.ts` 且可被 `project-config.yaml` 覆盖 | `src/linter/thresholds.ts` + `project-config.linter.thresholds` |
+| 切分口径 | 句子 `。！？!?` + 换行；段落可配；对话 = `「」` / `""` / `''` 包裹 | `splitSentences` / `splitParagraphs(paragraphSplit)` / `collectDialogueSpans` |
+| 升华词典 | 独立文件 `config/anti-ai-elevation-phrases.yaml` + 独立 version | **12 条**，`version: 2026.01` |
+| `reports/linter.yaml` Schema | span 用 Unicode 码点偏移；顶部记录 `template_actions_version` / `elevation_phrases_version` / `disabled_rules`；evidence 按规则固定；Span 稳定性契约 | `src/schema/linter-report.ts`（OQ-53 记录 evidence 结构） |
+| Severity 与噪声 | high 展开 / medium 折叠 / low 日志；词频类只进 `low_severity_log`；每条规则可单关，关闭项不产出但写入 `disabled_rules` | Schema 层强制（`low` 不得进 `warnings[]`；`word_frequency` 不得进 `warnings[]`；关闭的规则不得出现在 `warnings[]`） |
+| 三条证明测试 | A 字节级稳定（`generated_at` 可注入）、B 语义文本零语义 warning、C rule/llm 同一 Schema | 全部落地并有独立用例 |
+
+### 实现解读
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-57 | **`project-config.yaml` 新增 `linter.thresholds`（可选覆盖层）**：阈值默认值集中在代码常量，项目配置只放被覆盖的项；覆盖项的键集合与常量键集合一一对应（有测试锁定）。 | 用户裁决"五条规则阈值可被 project-config.yaml 覆盖，常量集中 src/linter/thresholds.ts"。 | 这是 Story 8 对 `project-config.yaml` 的唯一扩展。 |
+| I-58 | **默认 severity**：五条规则的 warning 默认 `medium`；模板动作按词表条目自带的 `severity`（首版给"仿佛整个世界 / 时间仿佛静止"两条 high）；同一 action 命中 ≥3 次升级为 `high`。 | §25.3（high 展开 / medium 折叠 / low 日志）+ 用户裁决的升级规则。 | `low` 一律走 `low_severity_log`。 |
+| I-59 | **词频类诊断**用 4-gram 词频（中文无分词依赖），阈值 `thresholds.wordFrequencyMinOccurrences`（默认 3，0 = 关闭），**只进 `low_severity_log`**。 | §25.1（词频类只 low、不默认弹给用户）+ Story 8 裁决。 | 未新增配置键，复用 thresholds。 |
+| I-60 | **"段尾"的定义**：段落最后 **16 个非空白码点**内出现升华词典条目即视为该段"以升华句收尾"。 | 用户裁决"连续段尾升华模式"未给窗口口径。 | 见 OQ-54；窗口是常量，后续可调。 |
+| I-61 | **`reports/linter.yaml` 采用"单文件、末次覆盖"**，并在文件顶部写 `# Last linted scene: ...` 与词表版本注释。 | 与 Manifest（I-45 / OQ-49）保持同一约定。 | 若需要"每场一份"，与 OQ-49 一并裁决。 |
+| I-62 | `linter:` 字段值域 `rule | llm` 共用一个 Schema；`rule` 报告强制两个词表版本非空，`llm` 报告允许为 `null`。 | 用户裁决测试 C。 | Story 9 直接复用，不建平行结构。 |
+| I-63 | 词表加载失败（两处都不存在或词表非法）时**明确报错**，不静默降级成"没有词表"。 | 需求规格 §25.1 / §26 要求冻结词表；静默降级会让 Linter 形同虚设。 | `AntiAiVocabError`。 |

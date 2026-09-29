@@ -1,0 +1,34 @@
+# Last linted scene: scene-005 (rule linter)
+# template_actions@2026.01 (repo_default) / elevation_phrases@2026.01 (repo_default)
+# Story 8：只报告问题，不自动 Rewrite（需求规格 §27）
+schema_version: "0.1"
+scene_id: scene-005
+generated_at: 2026-09-29T15:26:42.706Z
+linter: rule
+template_actions_version: "2026.01"
+elevation_phrases_version: "2026.01"
+disabled_rules: []
+warnings:
+  - id: LINT_001
+    linter: rule
+    rule: sentence_length_variance
+    severity: medium
+    span:
+      start: 0
+      end: 159
+    text: ""
+    message: 句长变异系数 0.20 低于阈值 0.3（句子节奏过于均匀，共 7 句）
+    evidence:
+      cv: 0.204
+      mean: 22.14
+      stddev: 4.52
+      sentence_count: 7
+      lengths:
+        - 24
+        - 14
+        - 28
+        - 17
+        - 23
+        - 24
+        - 25
+low_severity_log: []

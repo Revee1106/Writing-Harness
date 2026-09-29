@@ -47,6 +47,16 @@ import {
   runProseWriter,
   runProseWriterAll,
 } from '../writer/writer.ts'
+import {
+  RULE_LINTER_ID,
+  RuleLinterPreconditionError,
+  loadLinterReport,
+  runRuleLinter,
+  runRuleLinterAll,
+} from '../linter/rule-linter.ts'
+import { LinterReportValidationError, SEVERITY_DISPLAY } from '../schema/linter-report.ts'
+import { AntiAiVocabError } from '../schema/anti-ai-vocab.ts'
+import { REPO_DEFAULT_ANTI_AI_ELEVATION_REL_PATH, REPO_DEFAULT_ANTI_AI_TEMPLATE_ACTIONS_REL_PATH } from '../io/paths.ts'
 import { ContextManifestValidationError } from '../schema/context-manifest.ts'
 import {
   StyleProfileValidationError,
@@ -84,6 +94,7 @@ import { normalizeForEvidence } from '../interpreter/interpreter.ts'
  *         breakdown / scenes show / state show / coverage show（Story 5，Scene Breakdown + Story State + Coverage）
  *         context / style add / style show（Story 6，Context Compiler + Style Samples）
  *         write / drafts show（Story 7，Prose Writer）
+ *         lint / lint show（Story 8，Rule Anti-AI Linter）
  * Gate 3 的交互命令属于 Story 10。
  */
 
@@ -111,6 +122,8 @@ const USAGE = `Short-story-first Writing Harness v0.1 — 项目 / Seed / Gate 1
   harness style show <projectId>        显示 style/profile.yaml 摘要
   harness write <projectId> [选项]      Prose Writer：按 Scene 生成 drafts/scene-NNN.md
   harness drafts show <projectId>       显示已生成正文的长度与检查摘要
+  harness lint <projectId> [选项]       Rule Anti-AI Linter：确定性 / 统计型检查（不自动 Rewrite）
+  harness lint show <projectId>         显示 reports/linter.yaml
   harness help                          显示本帮助
 
 通用选项：
@@ -138,6 +151,11 @@ gate1 选项（必须给出一种选择）：
                             delete:SEED_A002           删除错误分类
   --provider <name>       ${PROVIDER_NAMES.join(' / ')}（默认 auto：有 fixtures 用 recorded，否则用环境变量）
   --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/seed-interpreter）
+
+lint 选项：
+  --scene <scene-###>     只检查这一场（默认检查全部 Scene，磁盘保留最后一场报告）
+  --plan                  只读预览：完整检查但不写 reports/linter.yaml
+  --json                  以 JSON 输出报告
 
 write 选项：
   --scene <scene-###>     只写这一场（默认按 order 逐场写全部）
@@ -245,7 +263,10 @@ function parseCli(argv: string[]): ParsedCli {
     },
   })
   const [command, second, third] = positionals
+  // lint 既是 `lint <projectId>` 也是 `lint show <projectId>`：只有第二位置参数正好是 "show" 时按子命令解析
+  const lintShowForm = command === 'lint' && second === 'show'
   const isSubcommandForm =
+    lintShowForm ||
     command === 'seed' ||
     command === 'config' ||
     command === 'proposals' ||
@@ -1020,6 +1041,90 @@ function runDraftsShowCommand(parsed: ParsedCli): number {
   return 0
 }
 
+
+function printLinterReport(
+  report: NonNullable<ReturnType<typeof loadLinterReport>>,
+  meta: { readonly templateActions?: string | undefined; readonly elevationPhrases?: string | undefined },
+): void {
+  const counts = { high: 0, medium: 0, low: 0 }
+  for (const warning of report.warnings) counts[warning.severity] += 1
+  process.stdout.write(
+    `${report.scene_id}  linter=${report.linter}  warnings: high ${counts.high} / medium ${counts.medium}（low 仅日志）\n`,
+  )
+  process.stdout.write(
+    `  template_actions@${String(report.template_actions_version)}  elevation_phrases@${String(report.elevation_phrases_version)}  disabled_rules: ${report.disabled_rules.join(', ') || '（无）'}\n`,
+  )
+  if (meta.templateActions !== undefined) process.stdout.write(`  词表：${meta.templateActions}\n`)
+  if (meta.elevationPhrases !== undefined) process.stdout.write(`  升华词典：${meta.elevationPhrases}\n`)
+  for (const warning of report.warnings) {
+    const span = warning.span === null ? '-' : `${warning.span.start}-${warning.span.end}`
+    process.stdout.write(
+      `  [${warning.severity}/${SEVERITY_DISPLAY[warning.severity]}] ${warning.id} ${warning.rule} ${span}\n      ${warning.message}\n`,
+    )
+  }
+  if (report.warnings.length === 0) process.stdout.write('  （无 warning：未发现确定性 / 统计型 AI 痕迹）\n')
+  if (report.low_severity_log.length > 0) {
+    process.stdout.write(`  low_severity_log（不弹给用户）：\n`)
+    for (const entry of report.low_severity_log) {
+      process.stdout.write(`    ${entry.id} ${entry.kind}: ${entry.message}\n`)
+    }
+  }
+}
+
+function runLintCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const sceneRaw = parsed.values.scene
+  const dryRun = parsed.values.plan === true
+
+  if (typeof sceneRaw === 'string') {
+    const result = runRuleLinter({
+      paths,
+      repoRoot: REPO_ROOT,
+      sceneId: sceneRaw,
+      dryRun,
+    })
+    if (parsed.values.json === true) {
+      process.stdout.write(`${JSON.stringify(result.report, null, 2)}\n`)
+    } else {
+      printLinterReport(result.report, {
+        templateActions: `${result.templateActions.version}（${result.templateActions.scope}, ${result.templateActions.count} 条）`,
+        elevationPhrases: `${result.elevationPhrases.version}（${result.elevationPhrases.scope}, ${result.elevationPhrases.count} 条）`,
+      })
+    }
+    process.stdout.write(
+      result.written ? `已写入：${paths.linterReport}\n` : '[plan] 只读预览：未写 reports/linter.yaml\n',
+    )
+    return 0
+  }
+
+  const all = runRuleLinterAll({ paths, repoRoot: REPO_ROOT, dryRun })
+  if (parsed.values.json === true) {
+    process.stdout.write(`${JSON.stringify(all.reports, null, 2)}\n`)
+  } else {
+    for (const report of all.reports) printLinterReport(report, {})
+    for (const failure of all.failures) process.stdout.write(`[失败] ${failure.sceneId}: ${failure.message}\n`)
+  }
+  process.stdout.write(
+    dryRun
+      ? `[plan] 只读预览：${all.reports.length} 场已检查，未写盘\n`
+      : `已检查 ${all.reports.length} 场（失败 ${all.failures.length} 场）；报告保留最后一场：${paths.linterReport}\n`,
+  )
+  return all.failures.length === 0 ? 0 : 1
+}
+
+function runLintShowCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const report = loadLinterReport(paths)
+  if (report === null) {
+    process.stdout.write('（没有 reports/linter.yaml；请先执行 harness lint）\n')
+    return 0
+  }
+  printLinterReport(report, {})
+  return 0
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseCli(argv)
 
@@ -1068,6 +1173,9 @@ async function main(argv: string[]): Promise<number> {
     case 'drafts':
       if (parsed.subcommand === 'show') return runDraftsShowCommand(parsed)
       throw new UsageError(`未知子命令：drafts ${parsed.subcommand ?? ''}`)
+    case 'lint':
+      if (parsed.subcommand === 'show') return runLintShowCommand(parsed)
+      return runLintCommand(parsed)
     case 'style':
       if (parsed.subcommand === 'add') return runStyleAddCommand(parsed)
       if (parsed.subcommand === 'show') return runStyleShowCommand(parsed)
@@ -1111,7 +1219,10 @@ try {
     error instanceof ContextManifestValidationError ||
     error instanceof StyleProfileValidationError ||
     error instanceof UnresolvedOrphanError ||
-    error instanceof ProseWriterError
+    error instanceof ProseWriterError ||
+    error instanceof RuleLinterPreconditionError ||
+    error instanceof LinterReportValidationError ||
+    error instanceof AntiAiVocabError
   ) {
     process.stderr.write(`错误：${error.message}\n`)
     process.exitCode = 1

@@ -38,5 +38,7 @@ projects/<project_id>/
 - `demo-01/`、`demo-02/` 也已完成 Story 7：`drafts/scene-00N.md`（各 5 场正文，**零硬检查失败**）。
   fixture 正文刻意压缩（约 110～200 码点/场）以便离线复现，因此篇幅软检查会给出
   `LENGTH_DEVIATION` 提示；这正是"target_length 只做外部校验"的演示。
-  这两个项目可直接作为 Story 8 / Story 9（Linter + Rewrite）的输入。
+- `demo-01/`、`demo-02/` 也已完成 Story 8：`reports/linter.yaml`（Rule Linter 报告，
+  含词表版本 / `disabled_rules` / 结构化 warning 与 `low_severity_log`）。
+  这两个项目可直接作为 Story 9（LLM Linter + Local Rewrite）的输入。
 - 其余目录中的项目属于本地创作数据；是否提交由作者决定（当前仓库未对 `projects/**` 设忽略规则）。

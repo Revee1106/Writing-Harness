@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { deepFreeze } from '../core/freeze.ts'
 import { ID_PATTERNS } from '../core/ids.ts'
+import { linterThresholdOverridesSchema } from '../linter/thresholds.ts'
 
 /**
  * `project-config.yaml` 最小 Schema —— Story 1 验收增强项（D6 裁决）。
@@ -67,9 +68,15 @@ export const projectConfigSchema = z.strictObject({
     target_length: z.number().int().positive().nullable(),
   }),
   linter: z.strictObject({
+    /** 五条默认规则的单独开关（需求规格 §25.1 / §26：可关闭单条规则）。 */
     rules: z.strictObject(
       Object.fromEntries(LINTER_RULE_KEYS.map((key) => [key, z.boolean()])) as Record<LinterRuleKey, z.ZodBoolean>,
     ),
+    /**
+     * Story 8 起始会裁决：Rule Linter 阈值可被项目配置覆盖
+     * （默认值集中在 `src/linter/thresholds.ts`；这里只放被覆盖的项）。
+     */
+    thresholds: linterThresholdOverridesSchema.optional(),
   }),
   /** 需求规格 §19.1 原文结构。 */
   draft_context: z.strictObject({

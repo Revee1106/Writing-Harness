@@ -1,0 +1,54 @@
+# 段尾升华词典（仓库级默认）
+#
+# 依据：需求规格 §25.1 / 架构设计 §26 的 Rule Linter 默认规则之一"连续段尾升华模式"。
+# 位置：与模板动作词表同样的 fallback 规则（OQ-07）：
+#   projects/<project_id>/config/anti-ai-elevation-phrases.yaml → 本文件
+#
+# 口径（Story 8 起始会裁决）：
+# - **字面匹配，不解释为正则**；
+# - 判定"段尾"= 该段最后 16 个非空白码点内出现任一 phrase；
+# - 连续 ≥3 段命中即触发（阈值可在 project-config.yaml 覆盖）；
+# - **本词典有独立 version**，运行时会写进 reports/linter.yaml 的 elevation_phrases_version。
+#
+# schema_version: "0.1"
+# version: "2026.01"
+
+schema_version: "0.1"
+version: "2026.01"
+phrases:
+  - id: EL_001
+    pattern: 也许，这就是
+    severity: medium
+  - id: EL_002
+    pattern: 而她不知道的是
+    severity: medium
+  - id: EL_003
+    pattern: 从那天起，一切都变了
+    severity: medium
+  - id: EL_004
+    pattern: 有些事，一旦错过就是一辈子
+    severity: medium
+  - id: EL_005
+    pattern: 而这一切，才刚刚开始
+    severity: medium
+  - id: EL_006
+    pattern: 他终于明白
+    severity: medium
+  - id: EL_007
+    pattern: 生活还要继续
+    severity: medium
+  - id: EL_008
+    pattern: 只是，他再也没有回去过
+    severity: medium
+  - id: EL_009
+    pattern: 也许答案并不重要
+    severity: medium
+  - id: EL_010
+    pattern: 而真正的故事，是从这里开始的
+    severity: medium
+  - id: EL_011
+    pattern: 有些告别是没有声音的
+    severity: medium
+  - id: EL_012
+    pattern: 一切都已经不同了
+    severity: medium
