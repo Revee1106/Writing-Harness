@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { PROJECT_FILE_NAMES, projectPaths } from '../io/paths.ts'
 import {
@@ -12,6 +12,11 @@ import {
 } from '../project/project.ts'
 import { DRAFT_CONTEXT_MAX_CHARS_RECOMMENDED, TARGET_LENGTH_UNIT } from '../schema/project-config.ts'
 import { runGate1, Gate1PreconditionError } from '../gate1/service.ts'
+import { runStoryDeveloper, StoryDeveloperOutputError, UnresolvableSeedRefError } from '../developer/developer.ts'
+import { computeSeedPreservationRate, ProposalValidationError, conflictResolutionSchema } from '../schema/proposal.ts'
+import { loadSeed, loadProposals, saveProposals, proposalsExist } from '../project/project.ts'
+import { ProjectNotFoundError } from '../project/project.ts'
+import { DEFAULT_RECORDED_FIXTURES_REL_PATH } from '../providers/index.ts'
 import { Gate1OperationError, Gate1AlreadyClosedError, gate1OperationSchema, type Gate1Operation } from '../gate1/operations.ts'
 import { PROVIDER_NAMES, resolveProvider, type ProviderName } from '../providers/index.ts'
 import { ProviderConfigError, RecordedProviderMissError } from '../providers/types.ts'
@@ -24,6 +29,7 @@ import { normalizeForEvidence } from '../interpreter/interpreter.ts'
  * Node 24 可直接执行 TypeScript，无需编译（`pnpm harness ...`）。
  * 命令面：init / seed set / seed show / config show（Story 1）
  *         gate1（Story 2，Seed Interpreter + Author Gate 1）
+ *         develop（Story 3，Story Developer + Proposal）
  * Gate 2 / Gate 3 的交互命令属于 Story 4 / 10。
  */
 
@@ -38,6 +44,8 @@ const USAGE = `Short-story-first Writing Harness v0.1 — 项目 / Seed / Gate 1
   harness seed show <projectId> [选项]  显示 seed.yaml
   harness config show <projectId> [选项] 显示 project-config.yaml
   harness gate1 <projectId> [选项]      Seed Interpreter → Author Gate 1
+  harness develop <projectId> [选项]    Story Developer → 2～3 个 Proposal
+  harness proposals show <projectId>    显示 proposals.yaml 摘要与 Seed Preservation Rate
   harness help                          显示本帮助
 
 通用选项：
@@ -65,6 +73,12 @@ gate1 选项（必须给出一种选择）：
                             delete:SEED_A002           删除错误分类
   --provider <name>       ${PROVIDER_NAMES.join(' / ')}（默认 auto：有 fixtures 用 recorded，否则用环境变量）
   --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/seed-interpreter）
+
+develop 选项：
+  --plan                  只读预览：生成 Proposal 但不写 proposals.yaml
+  --style <text>          可选风格偏好（进入 Prompt Contract）
+  --provider <name>       ${PROVIDER_NAMES.join(' / ')}
+  --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/story_developer）
 
 输出选项：
   --json                  以 JSON 输出
@@ -110,10 +124,11 @@ function parseCli(argv: string[]): ParsedCli {
       op: { type: 'string', multiple: true },
       provider: { type: 'string' },
       fixtures: { type: 'string' },
+      style: { type: 'string' },
     },
   })
   const [command, second, third] = positionals
-  const isSubcommandForm = command === 'seed' || command === 'config'
+  const isSubcommandForm = command === 'seed' || command === 'config' || command === 'proposals'
   return {
     command,
     subcommand: isSubcommandForm ? second : undefined,
@@ -326,6 +341,105 @@ async function runGate1Command(parsed: ParsedCli): Promise<number> {
   return 0
 }
 
+
+function providerFor(parsed: ParsedCli, defaultFixtureSubdir: string): ReturnType<typeof resolveProvider> {
+  const providerNameRaw = parsed.values.provider
+  const providerName = typeof providerNameRaw === 'string' ? (providerNameRaw as ProviderName) : 'auto'
+  const fixturesRaw = parsed.values.fixtures
+  return resolveProvider({
+    name: providerName,
+    fixturesDir:
+      typeof fixturesRaw === 'string' ? resolve(fixturesRaw) : join(REPO_ROOT, DEFAULT_RECORDED_FIXTURES_REL_PATH, '..', defaultFixtureSubdir),
+    repoRoot: REPO_ROOT,
+  })
+}
+
+function printProposalSummary(
+  result: Awaited<ReturnType<typeof runStoryDeveloper>>,
+  rawSeedAnchorIds: readonly string[],
+): void {
+  process.stdout.write(`provider=${result.provider} model=${result.model} contract=${result.contract}@${result.contractVersion}\n`)
+  process.stdout.write(`input_sha256=${result.inputSha256}\n\n`)
+  for (const proposal of result.file.proposals) {
+    const rate = computeSeedPreservationRate(proposal, rawSeedAnchorIds)
+    process.stdout.write(`${proposal.proposal_id}  ${proposal.title}（${proposal.genre}）\n`)
+    process.stdout.write(`  核心冲突：${proposal.core_conflict}\n`)
+    process.stdout.write(`  真相/转折：${proposal.truth_or_turn}\n`)
+    process.stdout.write(`  结局：${proposal.ending}\n`)
+    process.stdout.write(`  POV：${proposal.pov.join(' / ')}  目标篇幅：${proposal.target_length}\n`)
+    process.stdout.write(
+      `  seed_fidelity：preserved ${proposal.seed_fidelity.preserved.length} / altered ${proposal.seed_fidelity.altered.length} / added ${proposal.seed_fidelity.added.length} / risk ${proposal.seed_fidelity.risk.length}\n`,
+    )
+    process.stdout.write(
+      `  conflicts：${proposal.conflicts.length}${proposal.conflicts.length === 0 ? '' : `（${proposal.conflicts.map((conflict) => `${conflict.id}:${conflict.resolution}`).join(', ')}）`}\n`,
+    )
+    process.stdout.write(
+      `  Seed Preservation Rate：${rate.rate === null ? 'null' : `${rate.rate_percent}%`}（${rate.numerator}/${rate.denominator}）\n`,
+    )
+  }
+  for (const notice of result.notices) {
+    process.stdout.write(`  [${notice.code}] ${notice.message}\n`)
+  }
+}
+
+async function runDevelopCommand(parsed: ParsedCli): Promise<number> {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const seed = loadSeed(paths)
+  const resolved = providerFor(parsed, 'story_developer')
+  const styleRaw = parsed.values.style
+
+  const result = await runStoryDeveloper({
+    provider: resolved.provider,
+    seed,
+    stylePreference: typeof styleRaw === 'string' ? styleRaw : undefined,
+  })
+
+  if (parsed.values.json === true) {
+    process.stdout.write(`${JSON.stringify({ ...result, provider_name: resolved.name, written: parsed.values.plan !== true }, null, 2)}\n`)
+  } else {
+    printProposalSummary(result, seed.story_seed.raw_seed_anchor_ids)
+  }
+
+  if (parsed.values.plan === true) {
+    process.stdout.write('\n[plan] 只读预览：未写 proposals.yaml\n')
+    return 0
+  }
+  saveProposals(paths, result.file)
+  process.stdout.write(`\n已写入：${paths.proposals}\n`)
+  return 0
+}
+
+async function runProposalsShowCommand(parsed: ParsedCli): Promise<number> {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const seed = loadSeed(paths)
+  const file = loadProposals(paths)
+  if (parsed.values.json === true) {
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          ...file,
+          preservation: file.proposals.map((proposal) =>
+            computeSeedPreservationRate(proposal, seed.story_seed.raw_seed_anchor_ids),
+          ),
+        },
+        null,
+        2,
+      )}\n`,
+    )
+    return 0
+  }
+  process.stdout.write(`# ${paths.proposals}\nschema_version: ${file.schema_version}\nproposals: ${file.proposals.length}\n\n`)
+  for (const proposal of file.proposals) {
+    const rate = computeSeedPreservationRate(proposal, seed.story_seed.raw_seed_anchor_ids)
+    process.stdout.write(
+      `${proposal.proposal_id}  ${proposal.title}  SPR=${rate.rate === null ? 'null' : `${rate.rate_percent}%`} (${rate.numerator}/${rate.denominator})  conflicts=${proposal.conflicts.length}\n`,
+    )
+  }
+  return 0
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseCli(argv)
 
@@ -346,6 +460,11 @@ async function main(argv: string[]): Promise<number> {
       throw new UsageError(`未知子命令：config ${parsed.subcommand ?? ''}`)
     case 'gate1':
       return runGate1Command(parsed)
+    case 'develop':
+      return runDevelopCommand(parsed)
+    case 'proposals':
+      if (parsed.subcommand === 'show') return runProposalsShowCommand(parsed)
+      throw new UsageError(`未知子命令：proposals ${parsed.subcommand ?? ''}`)
     default:
       throw new UsageError(`未知命令：${parsed.command}`)
   }
@@ -364,7 +483,11 @@ try {
     error instanceof Gate1PreconditionError ||
     error instanceof ProviderConfigError ||
     error instanceof RecordedProviderMissError ||
-    error instanceof InterpreterOutputError
+    error instanceof InterpreterOutputError ||
+    error instanceof StoryDeveloperOutputError ||
+    error instanceof UnresolvableSeedRefError ||
+    error instanceof ProposalValidationError ||
+    error instanceof ProjectNotFoundError
   ) {
     process.stderr.write(`错误：${error.message}\n`)
     process.exitCode = 1

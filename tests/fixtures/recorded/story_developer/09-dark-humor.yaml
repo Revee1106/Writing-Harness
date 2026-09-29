@@ -1,0 +1,75 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/09-dark-humor.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "dc257094d10bbe4673104d4af327518f83add602f2e3cd581fc4fc78bbb3edcf"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '打赏的人认识父亲'
+        genre: '黑色幽默'
+        core_premise: '葬礼直播的打赏榜第一名，是父亲生前的老友'
+        core_conflict: '小儿子靠葬礼赚钱，而第一个掏钱的人比所有亲戚都更懂父亲'
+        truth_or_turn: '打赏留言里写着父亲生前借出去的一笔钱：老友用打赏的方式还了'
+        character_arc: '小儿子从"想红"变成"不知道该不该关掉直播"'
+        ending: '他关了直播，把那三万退回给榜一，亲戚们这才开始哭'
+        pov: [CH_SON]
+        target_length: 8000
+        tone: '荒诞、讽刺'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '父亲葬礼上亲戚们为遗产争吵'
+            - seed_ref: SEED_F002
+              value_in_proposal: '小儿子一直低头看手机'
+            - seed_ref: SEED_F003
+              value_in_proposal: '姑姑抢过了手机'
+            - seed_ref: SEED_F004
+              value_in_proposal: '小儿子在直播葬礼'
+            - seed_ref: SEED_F005
+              value_in_proposal: '小儿子已经收到三万块打赏'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '打赏榜第一名是父亲生前的老友，用打赏还一笔旧账'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增旧账会把荒诞喜剧拉向温情和解，可能偏离用户写的讽刺基调'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '亲戚开始抢镜'
+        genre: '黑色幽默'
+        core_premise: '发现直播能赚钱后，亲戚们的争吵立刻变成了表演'
+        core_conflict: '遗产争夺现场变成流量争夺现场'
+        truth_or_turn: '最先抢过手机的姑姑要求分账，因为她刚刚在镜头前哭得最好'
+        character_arc: '小儿子从"被抓住"变成"冷眼看着所有人排队出镜"'
+        ending: '直播被封，亲戚们开始互相指责是谁举报的'
+        pov: [CH_SON]
+        target_length: 8000
+        tone: '闹剧、多声部'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '父亲葬礼上亲戚们为遗产争吵'
+            - seed_ref: SEED_F002
+              value_in_proposal: '小儿子一直低头看手机'
+            - seed_ref: SEED_F003
+              value_in_proposal: '姑姑抢过了手机'
+            - seed_ref: SEED_F004
+              value_in_proposal: '小儿子在直播葬礼'
+            - seed_ref: SEED_F005
+              value_in_proposal: '小儿子已经收到三万块打赏'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '姑姑要求从打赏收入里分成'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '亲戚集体转型直播偏向纯闹剧，可能让父亲的葬礼失去重量'
+              related_addition_refs: [ADD_001]
+        conflicts: []

@@ -91,7 +91,7 @@ describe('验收 A：至少 10 个 Seed，完全离线可复现', () => {
   it('离线验收不触网：Provider 只有 recorded，且 fixture 目录存在', async () => {
     const provider = recordedProvider()
     expect(provider.id).toBe('recorded')
-    expect(provider.size).toBe(12)
+    expect(provider.size).toBe(14)
     // 不存在的输入会 MISS（说明回放层不会静默去调网络）
     await expect(
       provider.complete({
@@ -192,13 +192,15 @@ describe('验收 C：Gate 1 修改能正确更新 source / origin', () => {
 })
 
 describe('验收 D：raw_seed_anchor_ids 首次冻结后，Gate 1 升降级不重算', () => {
+  // 注意：delete 原始锚点会同步移出 anchors（解读 I-18 / OQ-29 第 5 条 / OQ-30），
+  // 因此本组只覆盖"不改 anchors"的五种操作；delete 另有专门用例。
   const OPERATION_SETS = [
     ['accept_all'],
     ['skip'],
     ['promote', 'SEED_A001'],
     ['demote', 'SEED_F001'],
     ['edit', 'SEED_F001'],
-    ['delete', 'SEED_F001'],
+    ['delete', 'SEED_A001'],
   ] as const
 
   for (const [kind, id] of OPERATION_SETS) {
@@ -227,6 +229,30 @@ describe('验收 D：raw_seed_anchor_ids 首次冻结后，Gate 1 升降级不�
       expect(loadSeed(paths).story_seed.raw_seed_anchor_ids).toEqual(frozen)
     })
   }
+
+  it('delete 原始锚点时，该锚点同步退出分母（OQ-29 第 5 条不变量）', async () => {
+    const root = tempRoot()
+    const rawInput = readFileSync(story2SeedPath('04-warmth.txt'), 'utf8')
+    createProject({ projectsRoot: root.dir, projectId: 'acc-anchor-delete', rawInput })
+    const paths = projectPaths(root.dir, 'acc-anchor-delete')
+    const plan = await runGate1({ paths, provider: recordedProvider(), operations: [], dryRun: true })
+    const frozen = [...plan.candidateSeed.story_seed.raw_seed_anchor_ids]
+    const result = await runGate1({
+      paths,
+      provider: recordedProvider(),
+      operations: [{ kind: 'delete', id: 'SEED_F001' }],
+    })
+    expect(result.anchorsBefore).toEqual(frozen)
+    expect(result.anchorsAfter).toEqual(frozen.filter((id) => id !== 'SEED_F001'))
+    const seed = loadSeed(paths)
+    expect(seed.story_seed.raw_seed_anchor_ids).toEqual(result.anchorsAfter)
+    // 第 5 条不变量：锚点必须仍指向现存条目
+    const live = new Set([...seed.story_seed.fixed_by_user, ...seed.story_seed.ambiguous].map((item) => item.id))
+    for (const anchorId of seed.story_seed.raw_seed_anchor_ids) {
+      expect(live.has(anchorId), anchorId).toBe(true)
+    }
+    expect(checkSeedInvariants(seed.story_seed)).toEqual([])
+  })
 
   it('anchors 只包含首次 Interpreter 提取的 origin=raw_seed 锚点（分母不漂移，§10.1）', async () => {
     const root = tempRoot()

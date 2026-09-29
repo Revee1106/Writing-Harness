@@ -34,6 +34,12 @@ export const recordedInteractionSchema = z.strictObject({
   contract_version: z.string().min(1),
   /** 该 fixture 对应的 Seed 文件（相对 tests/fixtures/seeds 的路径），供 fixtures:refresh 复核哈希。 */
   seed: z.string().min(1).optional(),
+  /**
+   * fixture 元数据：该契约的输入依赖 Gate 1 之后的状态时，在这里声明复现所需的操作
+   * （仅用于工具链重建输入，不参与运行时的契约输入）。
+   */
+  gate1_ops: z.array(z.record(z.string(), z.unknown())).optional(),
+  style_preference: z.string().optional(),
   input_sha256: z.string().regex(/^[0-9a-f]{64}$/, 'input_sha256 必须是 64 位小写十六进制'),
   response: z.strictObject({
     model: z.string().min(1),

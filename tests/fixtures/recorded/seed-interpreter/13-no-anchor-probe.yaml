@@ -1,0 +1,16 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story3/13-no-anchor-probe.txt
+input_sha256: "a7d80ea3f0c315c2464cc2a79eb74f5b5c1cc2b142eec137f0ef5426c4878dc7"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user: []
+    ambiguous:
+      - value: '长椅上的两个人是什么关系'
+        evidence: '两个人坐在公园长椅上'
+      - value: '他们为什么不说话'
+        evidence: '谁也没有说话'
+    open_questions:
+      - value: '他们会不会开口'
+      - value: '他们在等谁'

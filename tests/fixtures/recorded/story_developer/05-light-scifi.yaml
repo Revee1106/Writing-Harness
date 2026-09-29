@@ -1,0 +1,82 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/05-light-scifi.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "6f6d514fc1993d18c99e6b597d10ab5536595cb7d39db86cf89d520567b66568"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '到期前一天'
+        genre: '轻科幻'
+        core_premise: '女儿必须在备份到期前决定：要不要让母亲再"活"一次'
+        core_conflict: '打开意味着再失去一次，不打开意味着永远失去'
+        truth_or_turn: '到期提醒是母亲在备份里预设的：她想让女儿在最后一刻自己决定'
+        character_arc: '女儿从"不敢打开"变成"亲手按下关闭"'
+        ending: '她打开备份听完一句话，然后在到期前关闭了它'
+        pov: [CH_DAUGHTER]
+        target_length: 11000
+        tone: '冷静、冷光质感'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '母亲临终前把记忆备份交给了女儿'
+            - seed_ref: SEED_F002
+              value_in_proposal: '母亲说想她的时候就打开'
+            - seed_ref: SEED_F003
+              value_in_proposal: '女儿三年没敢打开'
+            - seed_ref: SEED_F004
+              value_in_proposal: '备份有到期时间'
+            - seed_ref: SEED_F005
+              value_in_proposal: '女儿收到母亲本人发来的提醒'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '提醒是母亲在备份里预设的，只能在到期前触发一次'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '"预设提醒"是新增机制，可能让读者把注意力放在规则说明而不是女儿的选择上'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '再备份一次'
+        genre: '轻科幻'
+        core_premise: '女儿没有打开备份，而是把母亲留下的提醒又备份了一遍，让等待本身延续下去'
+        core_conflict: '续期能让母亲"在"得更久，却让她自己永远无法开始告别'
+        truth_or_turn: '备份公司的续期条款要求用女儿自己的记忆做抵押，她签了字'
+        character_arc: '女儿从"拒绝面对"变成"自愿被困"'
+        ending: '她签下续期，系统提示下次到期时间是二十年后'
+        pov: [CH_DAUGHTER]
+        target_length: 10000
+        tone: '疏离、循环感'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '母亲临终前把记忆备份交给了女儿'
+            - seed_ref: SEED_F002
+              value_in_proposal: '母亲说想她的时候就打开'
+            - seed_ref: SEED_F003
+              value_in_proposal: '女儿三年没敢打开'
+            - seed_ref: SEED_F005
+              value_in_proposal: '女儿收到母亲本人发来的提醒'
+          altered:
+            - seed_ref: SEED_F004
+              original: '备份到期前一天'
+              changed_to: '备份到期前一天，她选择了续期'
+          added:
+            - id: ADD_001
+              value: '备份公司的续期需要用女儿自己的记忆做抵押'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增的"续期抵押"是用户未决定的设定，需要用户确认后才能成为故事约束'
+              related_addition_refs: [ADD_001]
+        conflicts:
+          - id: CONF_001
+            seed_ref: SEED_F004
+            proposal_field: ending
+            user_value: '备份到期前一天'
+            proposal_value: '备份到期前一天她选择续期'
+            resolution: pending

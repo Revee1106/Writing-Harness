@@ -1,0 +1,89 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/01-emotion.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "f2c73fb7a950ccd4428b1decbbc06ab3cfbf30491ad27678475ede3d1b44f4c3"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '没发出去的那条消息'
+        genre: '现代情感'
+        core_premise: '两个都还爱着对方的人，用"等对方先开口"的方式互相惩罚'
+        core_conflict: '谁都不肯先认错，沉默被当成了答案'
+        truth_or_turn: '男方当晚写过一条道歉消息又删掉了；女方等的就是那条消息'
+        character_arc: '女方从"只要他认错就留下"变成"明白自己也在用分手逼他"'
+        ending: '两人没有复合，女方搬走，男方手机里留着那条没发出的草稿'
+        pov: [CH_WOMAN]
+        target_length: 8000
+        tone: '克制、留白'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '两人确实是情侣，且都深爱对方'
+            - seed_ref: SEED_F002
+              value_in_proposal: '冲突起因是一件小事'
+            - seed_ref: SEED_F003
+              value_in_proposal: '女方提出了分手'
+            - seed_ref: SEED_F004
+              value_in_proposal: '女方的真实想法是只要男方认错就愿意留下'
+            - seed_ref: SEED_F005
+              value_in_proposal: '男方认为对方每次都小题大做'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '男方当晚写过一条道歉消息，又删掉了'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增的"删掉的消息"可能把主题从"沟通失败"偏移成"证据型遗憾"，削弱用户原意'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '认错之后'
+        genre: '现代情感'
+        core_premise: '男方终于认错，但女方发现自己在意的从来不是这一次争吵'
+        core_conflict: '女方不满的是长期被当成"小题大做"，而男方直到最后一刻才听懂'
+        truth_or_turn: '女方提出分手并不是要挟，而是已经做好的决定；男方认错时她反而松了口气'
+        character_arc: '男方从"不服气"变成"终于听懂"，但听懂已经太晚'
+        ending: '男方认错，女方平静地离开，两人第一次把话说完了'
+        pov: [CH_MAN]
+        target_length: 9000
+        tone: '冷静、对话密集'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '两人都深爱对方，这一点没有变'
+            - seed_ref: SEED_F002
+              value_in_proposal: '争吵本身是一件小事'
+            - seed_ref: SEED_F005
+              value_in_proposal: '男方一直认为对方小题大做'
+          altered:
+            - seed_ref: SEED_F003
+              original: '女方提出分手'
+              changed_to: '女方提出分手，但这次不是为了逼他认错'
+            - seed_ref: SEED_F004
+              original: '只要男方认错她就愿意留下'
+              changed_to: '她曾经这么想，但争吵当晚已经改变'
+          added:
+            - id: ADD_001
+              value: '过去两年里类似的争吵已经发生过很多次'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增"长期积怨"设定可能让用户明写的"因为一件小事争吵"变成长期矛盾，属于改变用户核心的风险'
+              related_addition_refs: [ADD_001]
+        conflicts:
+          - id: CONF_001
+            seed_ref: SEED_F003
+            proposal_field: core_premise
+            user_value: '女方提出分手'
+            proposal_value: '女方提出分手，但并非要挟'
+            resolution: pending
+          - id: CONF_002
+            seed_ref: SEED_F004
+            proposal_field: character_arc
+            user_value: '只要男方认错她就愿意留下'
+            proposal_value: '她曾经这么想，但当晚已经改变'
+            resolution: pending

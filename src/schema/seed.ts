@@ -35,7 +35,13 @@ export const gate1StatusSchema = z.enum(GATE1_STATUSES)
 export const fixedByUserItemSchema = z
   .strictObject({
     ...statusItemShape,
-    id: z.string().regex(ID_PATTERNS.seedItem, 'Seed item ID 必须是 SEED_F/SEED_A/SEED_Q + 3 位数字（解读 I-16）'),
+    // OQ-29 裁决：fixed_by_user[].id ∈ SEED_F### ∪ SEED_A###（Gate 1 提升项保留 SEED_A 原 ID）
+    id: z
+      .string()
+      .regex(
+        /^SEED_[FA]\d{3}$/,
+        'fixed_by_user 的 id 必须是 SEED_F### 或 SEED_A###（OQ-29 裁决：提升项保留原 ID）',
+      ),
     status: z.literal('USER_GIVEN'),
     origin: originSchema,
   })
@@ -51,8 +57,8 @@ export type FixedByUserItem = z.infer<typeof fixedByUserItemSchema>
  * OQ-04 裁决：这是 Interpreter 的中间态，不属于四状态模型 —— 用 `source: interpreter` 标注，**不设 status**。
  */
 export const ambiguousItemSchema = z.strictObject({
-  // 解读 I-16：也允许被用户降级的原始锚点（保留 `SEED_F###` 原 ID）
-  id: z.string().regex(ID_PATTERNS.seedItem, 'Seed item ID 必须是 SEED_F/SEED_A/SEED_Q + 3 位数字（解读 I-16）'),
+  // OQ-29 裁决：ambiguous[].id ∈ SEED_F### ∪ SEED_A###（被降级的原始锚点保留 SEED_F 原 ID）
+  id: z.string().regex(/^SEED_[FA]\d{3}$/, 'ambiguous 的 id 必须是 SEED_F### 或 SEED_A###（OQ-29 裁决）'),
   value: z.string().min(1),
   source: z.literal('interpreter'),
   source_ref: resolvableRefSchema.nullish(),
@@ -125,6 +131,21 @@ export function checkSeedInvariants(seed: StorySeed): SeedInvariantIssue[] {
       code: 'GATE1_ITEMS_BEFORE_GATE1',
       message: 'gate1_status=pending 时不得存在 source=user_gate1 的项：该来源只能由 Gate 1 用户主动提升产生（需求规格 §5.1）',
     })
+  }
+
+  // OQ-29 裁决新增的第 5 条不变量：积分母里的锚点必须仍然存在于 fixed_by_user ∪ ambiguous 中。
+  // 例外的唯一来源是"用户显式删除该条目"—— 详见解读 I-18 与 OQ-30。
+  const liveIds = new Set<string>([
+    ...seed.fixed_by_user.map((item) => item.id),
+    ...seed.ambiguous.map((item) => item.id),
+  ])
+  for (const anchorId of seed.raw_seed_anchor_ids) {
+    if (!liveIds.has(anchorId)) {
+      issues.push({
+        code: 'ANCHOR_WITHOUT_ITEM',
+        message: `raw_seed_anchor_ids 中的 ${anchorId} 已不存在于 fixed_by_user 或 ambiguous；锚点必须仍指向一个现存条目（OQ-29 裁决第 5 条）。若确实要删除原始锚点，必须同时把它从 raw_seed_anchor_ids 移除（解读 I-18）`,
+      })
+    }
   }
 
   return issues

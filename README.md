@@ -40,7 +40,8 @@ src/
   providers/  LLMProvider 接口 + RecordedProvider（离线回放）+ OpenAI 兼容 Provider
   interpreter/Seed Interpreter（Prompt Contract / 解析 / ID 分配 / 原文可追溯校验）
   gate1/      Author Gate 1（六种操作 / gate1_status 迁移 / 服务）
-  prompts/    版本化 Prompt Contract（seed_interpreter@0.1.md）
+  developer/  Story Developer（Proposal 生成 / ID 规范化 / seed_fidelity 与冲突检查）
+  prompts/    版本化 Prompt Contract（seed_interpreter@0.1.md / story_developer@0.1.md）
   cli/        CLI 入口
 scripts/      fixture 哈希刷新工具
 tests/
@@ -71,7 +72,12 @@ pnpm harness gate1 demo-02 --accept-all           # 接受全部（gate1_status=
 pnpm harness gate1 demo-02 --skip                 # 跳过 Gate 1（gate1_status=skipped）
 pnpm harness gate1 demo-02 --op promote:SEED_A001 --op 'edit:SEED_F001=新表述'
 
-# fixture 与 Seed 文本一致性（离线回放依赖）
+# Story Developer → 2～3 个 Proposal（Story 3）
+pnpm harness develop demo-02 --plan               # 只读预览：方案 + seed_fidelity + Rate，不写盘
+pnpm harness develop demo-02                      # 写入 proposals.yaml
+pnpm harness proposals show demo-02               # 方案摘要 + Seed Preservation Rate
+
+# fixture 与 Seed 文本 / Gate 1 状态一致性（离线回放依赖）
 pnpm fixtures:check
 pnpm fixtures:refresh
 ```
@@ -86,7 +92,8 @@ Node 24 可直接执行 TypeScript，CLI 无需构建步骤。
 | Story | 内容 | 状态 |
 |---|---|---|
 | Story 1 | Project Model + Story Seed | ✅ 完成 |
-| Story 2 | Seed Interpreter + Gate 1 | ✅ 完成（209 项测试全绿） |
+| Story 2 | Seed Interpreter + Gate 1 | ✅ 完成 |
+| Story 3 | Story Developer + Proposal | ✅ 完成（271 项测试全绿） |
 | Story 3 | Story Developer + Proposal | 未开始 |
 | Story 4 | Blueprint Confirm / Merge / Edit（Gate 2） | 未开始 |
 | Story 5 | Scene Breakdown + Story State + Coverage Check | 未开始 |

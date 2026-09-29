@@ -1,0 +1,86 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/02-mystery.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "7dd494346a0eb1f586a34de635cd804033b329c885f7e5a4b644a6ca59465c60"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '定时消息'
+        genre: '现代悬疑'
+        core_premise: '妻子生前设置的定时消息，让男人以为死者还在回话'
+        core_conflict: '男人想继续相信这是妻子，又必须面对这是程序的事实'
+        truth_or_turn: '那三个字出自妻子生前写好的一串定时消息，第二条本该在他生日那天发出'
+        character_arc: '男人从"等一个回音"变成"主动把下一句等下去"'
+        ending: '他等到生日那天，第二条消息如期到来，他没有再回复'
+        pov: [CH_MAN]
+        target_length: 10000
+        tone: '冷静、缓慢加压'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '妻子已经去世'
+            - seed_ref: SEED_F002
+              value_in_proposal: '男人每天给妻子发微信'
+            - seed_ref: SEED_F003
+              value_in_proposal: '某天他收到了回复'
+            - seed_ref: SEED_F004
+              value_in_proposal: '回复只有三个字'
+            - seed_ref: SEED_F005
+              value_in_proposal: '他不敢再发第二条'
+            - seed_ref: SEED_F006
+              value_in_proposal: '他开始每天检查手机'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '妻子的手机里存着一串定时消息，会按日期依次发出'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '"定时消息"是新增的技术设定，可能把悬疑重心从"情感如何延展"移到"机关如何解释"'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '替她说话的人'
+        genre: '现代悬疑'
+        core_premise: '回复并不是机器发的，而是妻子的妹妹在用姐姐的账号维持一个谎言'
+        core_conflict: '妹妹想让姐夫好过一点，却把他困在一个永远不会结束的等待里'
+        truth_or_turn: '"我知道"是妹妹回的：她读到了姐夫每天发来的消息，而姐姐临终前并不知道这些'
+        character_arc: '妹妹从"替姐姐守着"变成"必须亲手结束这个骗局"'
+        ending: '妹妹注销了账号，男人在发出一百条消息后收到"该用户不存在"'
+        pov: [CH_SISTER]
+        target_length: 9500
+        tone: '冷硬、短句'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '妻子已经去世'
+            - seed_ref: SEED_F002
+              value_in_proposal: '男人每天给妻子发微信'
+            - seed_ref: SEED_F003
+              value_in_proposal: '某天他收到了回复'
+            - seed_ref: SEED_F005
+              value_in_proposal: '他不敢再发第二条'
+            - seed_ref: SEED_F006
+              value_in_proposal: '他开始每天检查手机'
+          altered:
+            - seed_ref: SEED_F004
+              original: '回复只有三个字'
+              changed_to: '回复只有三个字，但那不是妻子写的'
+          added:
+            - id: ADD_001
+              value: '妻子的妹妹知道账号密码，并一直在看这些消息'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增"妹妹"这一角色承担了原 Seed 没有的关系线，可能让重心从夫妻关系偏移到家庭关系'
+              related_addition_refs: [ADD_001]
+        conflicts:
+          - id: CONF_001
+            seed_ref: SEED_F004
+            proposal_field: truth_or_turn
+            user_value: '回复只有三个字'
+            proposal_value: '回复只有三个字，但并非妻子所写'
+            resolution: pending

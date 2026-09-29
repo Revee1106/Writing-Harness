@@ -94,9 +94,11 @@ export interface Gate1ApplyResult {
   readonly seed: SeedFile
   readonly gate1Status: 'confirmed' | 'skipped' | 'partial'
   readonly appliedOperations: readonly Gate1Operation[]
-  /** 冻结前后的 anchor 集合必须逐项相同（Story 2 验收：Gate 1 升降级不重算）。 */
+  /** 冻结前后的 anchor 集合：除"用户显式删除的锚点"外必须逐项相同（Story 2 验收 + OQ-29 第 5 条）。 */
   readonly anchorsBefore: readonly string[]
   readonly anchorsAfter: readonly string[]
+  /** 因用户显式 delete 而退出分母的锚点（唯一允许的 anchor 变化，解读 I-18）。 */
+  readonly removedAnchorIds: readonly string[]
 }
 
 /**
@@ -137,12 +139,14 @@ export function applyGate1Operations(
   const anchorsBefore = [...seed.story_seed.raw_seed_anchor_ids]
   let storySeed: StorySeed = {
     ...seed.story_seed,
+    raw_seed_anchor_ids: [...seed.story_seed.raw_seed_anchor_ids],
     fixed_by_user: seed.story_seed.fixed_by_user.map((item) => ({ ...item })),
     ambiguous: seed.story_seed.ambiguous.map((item) => ({ ...item })),
     open_questions: seed.story_seed.open_questions.map((item) => ({ ...item })),
   }
 
   const touched = new Set<string>()
+  const removedAnchorIds: string[] = []
 
   for (const operation of parsedOperations) {
     switch (operation.kind) {
@@ -154,6 +158,13 @@ export function applyGate1Operations(
         const removed = removeEverywhere(storySeed, operation.id)
         if (!removed) {
           throw new Gate1OperationError(`delete 的目标不存在：${operation.id}`)
+        }
+        // 解读 I-18（OQ-30）：用户显式删除的原始锚点必须同时退出 raw_seed_anchor_ids，
+        // 否则会违反 OQ-29 第 5 条不变量（锚点必须指向现存条目）。
+        // 注意：demote 不走这条路径 —— §8.2 规定降级"不删除历史 anchor"。
+        if (storySeed.raw_seed_anchor_ids.includes(operation.id)) {
+          storySeed.raw_seed_anchor_ids = storySeed.raw_seed_anchor_ids.filter((id) => id !== operation.id)
+          removedAnchorIds.push(operation.id)
         }
         touched.add(operation.id)
         break
@@ -232,6 +243,7 @@ export function applyGate1Operations(
     appliedOperations: parsedOperations,
     anchorsBefore,
     anchorsAfter: [...next.story_seed.raw_seed_anchor_ids],
+    removedAnchorIds,
   }) as Gate1ApplyResult
 }
 

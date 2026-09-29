@@ -1,0 +1,22 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story3/12-distinctness-probe.txt
+input_sha256: "0bb1b78139e8c4c37281492c0a6d3af3db5013df2dab775d5094c1bbce0a9e00"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '他每天晚上都去同一家便利店'
+        evidence: '每天晚上都去同一家便利店'
+      - value: '他每次买同一款啤酒'
+        evidence: '买同一款啤酒'
+      - value: '店员换了一个又一个'
+        evidence: '店员换了一个又一个'
+      - value: '有店员建议他换一种，他拒绝了'
+        evidence: '店员问他要不要试试别的，他说不用。'
+    ambiguous:
+      - value: '他为什么只喝这一款啤酒'
+        evidence: '同一款啤酒'
+    open_questions:
+      - value: '这个习惯会不会被打破'
+      - value: '店员还会不会再问'

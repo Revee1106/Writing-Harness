@@ -1,0 +1,86 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/06-open-ending.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "fa2a58abea8d429429d5737e89321f16f3d158d70708734d7dfa4fc50ec8007a"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '他先拆了'
+        genre: '开放结局'
+        core_premise: '重病中的儿子决定不再等母亲，自己拆开了那封信'
+        core_conflict: '拆信违背父亲的嘱咐，但不拆他将带着它进手术室'
+        truth_or_turn: '信里没有秘密，只有一句照顾好你妈；父亲把秘密留给了自己'
+        character_arc: '他从"守着规矩"变成"承认自己也需要被交代"'
+        ending: '他把信折好放回抽屉，给母亲打了个电话，什么也没说'
+        pov: [CH_SON]
+        target_length: 8000
+        tone: '压抑、第一人称'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '父亲已经去世'
+            - seed_ref: SEED_F002
+              value_in_proposal: '父亲留下一封没有署名的信'
+            - seed_ref: SEED_F003
+              value_in_proposal: '父亲嘱咐儿子在母亲走后再拆'
+            - seed_ref: SEED_F004
+              value_in_proposal: '母亲身体很好'
+            - seed_ref: SEED_F005
+              value_in_proposal: '儿子把信锁进抽屉'
+            - seed_ref: SEED_F006
+              value_in_proposal: '二十年后儿子得了重病'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '信里只有一句托付，没有隐藏的真相'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '"信里没有秘密"会掏空二十年的悬念，可能让读者觉得铺垫落空'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '留在抽屉里'
+        genre: '开放结局'
+        core_premise: '儿子始终没有拆信，他把这封信留给了母亲的未来'
+        core_conflict: '他要决定这封信属于自己还是属于母亲'
+        truth_or_turn: '他最终把信寄给了母亲，母亲又把信锁回同一个抽屉，两人谁都没拆'
+        character_arc: '他从"继承一个谜"变成"把谜交还给该拿它的人"'
+        ending: '信在抽屉里等到母亲八十岁那年，两人一起把它烧了'
+        pov: [CH_SON]
+        target_length: 7500
+        tone: '冷、克制到结尾'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '父亲已经去世'
+            - seed_ref: SEED_F002
+              value_in_proposal: '父亲留下一封没有署名的信'
+            - seed_ref: SEED_F003
+              value_in_proposal: '父亲嘱咐儿子在母亲走后再拆'
+            - seed_ref: SEED_F004
+              value_in_proposal: '母亲身体很好'
+            - seed_ref: SEED_F006
+              value_in_proposal: '二十年后儿子得了重病'
+          altered:
+            - seed_ref: SEED_F005
+              original: '儿子把信锁进抽屉'
+              changed_to: '儿子把信寄给了母亲，母亲又锁回同一个抽屉'
+          added:
+            - id: ADD_001
+              value: '母亲知道有这封信，并一直假装不知道'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增"母亲一直知道"会改变父亲托付的私密性'
+              related_addition_refs: [ADD_001]
+        conflicts:
+          - id: CONF_001
+            seed_ref: SEED_F005
+            proposal_field: ending
+            user_value: '儿子把信锁进抽屉'
+            proposal_value: '儿子把信寄给母亲，母亲锁回同一个抽屉'
+            resolution: pending

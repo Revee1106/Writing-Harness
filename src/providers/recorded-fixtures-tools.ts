@@ -1,19 +1,24 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { hashContractInput } from '../core/hash.ts'
-import { parseRecordedInteraction } from './recorded.ts'
+import { parseRecordedInteraction, RecordedProvider, type RecordedInteraction } from './recorded.ts'
 
 /**
- * recorded fixture 的哈希复核工具（Story 2）。
+ * recorded fixture 的哈希复核工具（Story 2 / Story 3）。
  *
- * 每个 fixture 都声明它对应的 Seed 文件（`seed: story2/01-emotion.txt`）；
- * 本工具据此重算 `input_sha256`，保证 **fixture 与 Seed 文本不会静默漂移**：
- * - `check`：只检查，不写入（测试用）；
- * - `refresh`：把哈希写回 fixture 文件（Seed 文本调整后使用）。
+ * 每个 fixture 都声明它对应的 Seed 文件（`seed: story2/01-emotion.txt`），
+ * 并按契约重建"运行时会发给 Provider 的结构化输入"，据此重算 `input_sha256`，
+ * 保证 **fixture 与 Seed 文本 / Gate 1 状态不会静默漂移**。
+ *
+ * 契约的输入构造是显式注册的（不靠猜）：
+ * - `seed_interpreter` → `{ raw_input }`
+ * - `story_developer`  → 用 recorded interpreter fixture 复现 Gate 1 之后的 seed 状态，
+ *   再走 `buildDeveloperInput()`；因此 fixture 需要额外声明 `gate1_ops`（fixture 元数据）。
  */
 
 export interface FixtureCheckEntry {
   readonly file: string
+  readonly contract: string
   readonly seedFile: string | undefined
   readonly expectedSha256: string | undefined
   readonly actualSha256: string | undefined
@@ -24,6 +29,30 @@ export interface FixtureCheckEntry {
 export interface FixtureToolOptions {
   readonly fixturesDir: string
   readonly seedsDir: string
+  /** seed-interpreter fixture 目录：story_developer 复核需要用它复现 Gate 1 状态。 */
+  readonly interpreterFixturesDir: string
+}
+
+type InputBuilder = (context: {
+  interaction: RecordedInteraction
+  rawInput: string
+  interpreterFixturesDir: string
+}) => Promise<Readonly<Record<string, unknown>>> | Readonly<Record<string, unknown>>
+
+const INPUT_BUILDERS: Record<string, InputBuilder> = {
+  seed_interpreter: ({ rawInput }) => ({ raw_input: rawInput }),
+  story_developer: async ({ interaction, rawInput, interpreterFixturesDir }) => {
+    const { buildDeveloperInput } = await import('../developer/developer.ts')
+    const { applyGate1Operations, gate1OperationSchema, seedFromInterpreterResult } = await import('../gate1/operations.ts')
+    const { runSeedInterpreter } = await import('../interpreter/interpreter.ts')
+    const provider = RecordedProvider.fromDirectory(interpreterFixturesDir)
+    const interpreter = await runSeedInterpreter({ provider, rawInput })
+    const candidate = seedFromInterpreterResult(rawInput, interpreter)
+    // fixture 元数据解析为正式的 Gate 1 操作（非法元数据直接报错，而不是被忽略）
+    const operations = (interaction.gate1_ops ?? []).map((operation) => gate1OperationSchema.parse(operation))
+    const applied = applyGate1Operations(candidate, operations)
+    return buildDeveloperInput(applied.seed, interaction.style_preference)
+  },
 }
 
 function listFixtureFiles(fixturesDir: string): string[] {
@@ -32,49 +61,84 @@ function listFixtureFiles(fixturesDir: string): string[] {
     .sort()
 }
 
-export function checkRecordedFixtures(options: FixtureToolOptions): FixtureCheckEntry[] {
-  return listFixtureFiles(options.fixturesDir).map((file) => {
+export async function checkRecordedFixtures(options: FixtureToolOptions): Promise<FixtureCheckEntry[]> {
+  const entries: FixtureCheckEntry[] = []
+  for (const file of listFixtureFiles(options.fixturesDir)) {
     const filePath = join(options.fixturesDir, file)
-    const text = readFileSync(filePath, 'utf8')
-    const interaction = parseRecordedInteraction(text, filePath)
+    const interaction = parseRecordedInteraction(readFileSync(filePath, 'utf8'), filePath)
+    const base = {
+      file,
+      contract: interaction.contract,
+      actualSha256: interaction.input_sha256,
+    }
+
     if (interaction.seed === undefined) {
-      return {
-        file,
+      entries.push({
+        ...base,
         seedFile: undefined,
         expectedSha256: undefined,
-        actualSha256: interaction.input_sha256,
         ok: false,
         problem: '缺少 seed 字段：无法复核该 fixture 与 Seed 文本是否一致',
-      }
+      })
+      continue
     }
-    const seedPath = join(options.seedsDir, interaction.seed)
-    let expected: string
-    try {
-      const rawInput = readFileSync(seedPath, 'utf8')
-      expected = hashContractInput(interaction.contract, interaction.contract_version, { raw_input: rawInput })
-    } catch (error) {
-      return {
-        file,
+
+    const builder = INPUT_BUILDERS[interaction.contract]
+    if (builder === undefined) {
+      entries.push({
+        ...base,
         seedFile: interaction.seed,
         expectedSha256: undefined,
-        actualSha256: interaction.input_sha256,
         ok: false,
-        problem: `读取 Seed 文件失败：${seedPath}（${(error as Error).message}）`,
-      }
+        problem: `契约 ${interaction.contract} 没有注册输入构造函数，无法复核哈希`,
+      })
+      continue
     }
-    return {
-      file,
-      seedFile: interaction.seed,
-      expectedSha256: expected,
-      actualSha256: interaction.input_sha256,
-      ok: expected === interaction.input_sha256,
-      problem: expected === interaction.input_sha256 ? undefined : 'input_sha256 与 Seed 文本不一致，请运行 pnpm fixtures:refresh',
+
+    let rawInput: string
+    try {
+      rawInput = readFileSync(join(options.seedsDir, interaction.seed), 'utf8')
+    } catch (error) {
+      entries.push({
+        ...base,
+        seedFile: interaction.seed,
+        expectedSha256: undefined,
+        ok: false,
+        problem: `读取 Seed 文件失败：${(error as Error).message}`,
+      })
+      continue
     }
-  })
+
+    try {
+      const input = await builder({ interaction, rawInput, interpreterFixturesDir: options.interpreterFixturesDir })
+      const expected = hashContractInput(interaction.contract, interaction.contract_version, input)
+      entries.push({
+        ...base,
+        seedFile: interaction.seed,
+        expectedSha256: expected,
+        ok: expected === interaction.input_sha256,
+        problem:
+          expected === interaction.input_sha256
+            ? undefined
+            : 'input_sha256 与当前 Seed 文本 / Gate 1 状态不一致，请运行 pnpm fixtures:refresh',
+      })
+    } catch (error) {
+      entries.push({
+        ...base,
+        seedFile: interaction.seed,
+        expectedSha256: undefined,
+        ok: false,
+        problem: `重建输入失败：${(error as Error).message}`,
+      })
+    }
+  }
+  return entries
 }
 
-export function refreshRecordedFixtures(options: FixtureToolOptions & { write: boolean }): FixtureCheckEntry[] {
-  const entries = checkRecordedFixtures(options)
+export async function refreshRecordedFixtures(
+  options: FixtureToolOptions & { write: boolean },
+): Promise<FixtureCheckEntry[]> {
+  const entries = await checkRecordedFixtures(options)
   if (!options.write) return entries
 
   for (const entry of entries) {

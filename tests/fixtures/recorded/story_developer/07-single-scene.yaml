@@ -1,0 +1,71 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/07-single-scene.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "4f714f1f03e0d0e4dc0c898b1f1505e441386f148cfb2b40dc04a1bf6a5882bb"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '谁先按铃'
+        genre: '单场景对白'
+        core_premise: '三个人被卡在两层楼之间，老人用一个条件逼他们面对今天'
+        core_conflict: '先按铃的人要承认自己想出去，也就承认自己还想继续这段关系'
+        truth_or_turn: '老人其实什么都不知道，他只是想让自己今天不至于一个人待着'
+        character_arc: '男方从"不按"变成"为了让老人出去而按下"'
+        ending: '男方按下铃，老人讲了一个与两人无关的故事，电梯门开了'
+        pov: [CH_HUSBAND]
+        target_length: 5000
+        tone: '密闭、对话驱动'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '电梯停在两层楼之间'
+            - seed_ref: SEED_F002
+              value_in_proposal: '电梯里有一对刚办完离婚手续的夫妻'
+            - seed_ref: SEED_F003
+              value_in_proposal: '电梯里还有一位陌生老人'
+            - seed_ref: SEED_F004
+              value_in_proposal: '老人提出谁先按铃就把今天的事讲给谁听'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '老人并不知道这对夫妻的事，他只是想找人说话'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '把老人的动机改成孤独会减弱场景的寓言感'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '老人先按'
+        genre: '单场景对白'
+        core_premise: '老人自己按了铃，因为他发现这对夫妻谁都不会先动'
+        core_conflict: '夫妻两人被一个陌生人替他们做了决定，被迫听别人的故事'
+        truth_or_turn: '老人讲的是自己离婚那天也困在电梯里的事：他等了一辈子，没人先按'
+        character_arc: '女方从"坚持不先动"变成"先开口问了一句"'
+        ending: '门开了，两人走出去，女方回头问了老人一句后来呢'
+        pov: [CH_WIFE]
+        target_length: 5000
+        tone: '荒诞、口语'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '电梯停在两层楼之间'
+            - seed_ref: SEED_F002
+              value_in_proposal: '电梯里有一对刚办完离婚手续的夫妻'
+            - seed_ref: SEED_F003
+              value_in_proposal: '电梯里还有一位陌生老人'
+            - seed_ref: SEED_F004
+              value_in_proposal: '老人提出谁先按铃就把今天的事讲给谁听'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '老人当年也在电梯里离过婚，等了很久没人先按铃'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '让老人成为同类人会把重心从夫妻关系转移到老人的往事'
+              related_addition_refs: [ADD_001]
+        conflicts: []

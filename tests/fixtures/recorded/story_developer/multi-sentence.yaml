@@ -1,0 +1,86 @@
+contract: story_developer
+contract_version: "0.1"
+seed: multi-sentence.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "f76c1db6c79082613fac77c7a3ce14deb09ace122987aeb20ac857f9eb3ecf67"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '两个人都在等'
+        genre: '现代情感'
+        core_premise: '两个人都深爱对方，也都在等对方先开口'
+        core_conflict: '沉默被双方同时理解为对方不在乎'
+        truth_or_turn: '男方那晚打好了认错的电话，又按掉了；他不知道女方也在等这通电话'
+        character_arc: '女方从"等他认错"变成"承认自己也在赌气"'
+        ending: '两人谁都没有先开口，分手成为事实，各自把话留在了心里'
+        pov: [CH_WOMAN]
+        target_length: 9000
+        tone: '克制、双线内心'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '两人是情侣且都深爱对方'
+            - seed_ref: SEED_F002
+              value_in_proposal: '争吵起因是一件小事'
+            - seed_ref: SEED_F003
+              value_in_proposal: '女方提出了分手'
+            - seed_ref: SEED_F004
+              value_in_proposal: '女方只要男方认错就愿意留下'
+            - seed_ref: SEED_F005
+              value_in_proposal: '男方认为对方每次都小题大做'
+            - seed_ref: SEED_F006
+              value_in_proposal: '两个人都在等对方先开口'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '男方当晚打好了电话又按掉'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增未拨出的电话可能把主题从双向沉默偏移成单一遗憾'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '谁先开口'
+        genre: '现代情感'
+        core_premise: '分手之后，两人开始了一场关于"谁先开口"的长期拉锯'
+        core_conflict: '先开口的人要承担"是我求回来的"这一代价'
+        truth_or_turn: '真正让女方留下的不是认错，而是男方第一次说出自己也被伤到了'
+        character_arc: '男方从"不服气"变成"先说出自己的委屈"'
+        ending: '男方先开口，但说的不是道歉，女方因此留了下来'
+        pov: [CH_MAN]
+        target_length: 9000
+        tone: '冷静、以对白推进'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '两人都深爱对方'
+            - seed_ref: SEED_F002
+              value_in_proposal: '争吵起因是一件小事'
+            - seed_ref: SEED_F004
+              value_in_proposal: '女方只要男方认错就愿意留下'
+            - seed_ref: SEED_F005
+              value_in_proposal: '男方认为对方每次都小题大做'
+            - seed_ref: SEED_F006
+              value_in_proposal: '两个人都在等对方先开口'
+          altered:
+            - seed_ref: SEED_F003
+              original: '女方提出分手'
+              changed_to: '女方提出分手，但两人并未真的分开'
+          added:
+            - id: ADD_001
+              value: '男方在那次争吵里也被伤到了，只是一直没说'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增男方受伤会让"错了就该认错"的道德重心变成双方各有过失'
+              related_addition_refs: [ADD_001]
+        conflicts:
+          - id: CONF_001
+            seed_ref: SEED_F003
+            proposal_field: ending
+            user_value: '女方提出分手'
+            proposal_value: '女方提出分手，但两人并未真的分开'
+            resolution: pending

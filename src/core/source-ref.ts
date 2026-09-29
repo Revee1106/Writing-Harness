@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ID_PATTERNS, isStableId } from './ids.ts'
+import { PROPOSAL_FIELD_PATHS, parseProposalFieldPath } from './proposal-field-paths.ts'
 
 /**
  * Blueprint `source_refs` 统一结构 —— 需求规格 §7.2 / §9.3；架构设计 §7。
@@ -36,14 +37,25 @@ export function checkSourceRefSemantics(ref: { type: SourceRefType; ref_id: stri
         })
       }
       break
-    case 'proposal':
+    case 'proposal': {
       if (!ID_PATTERNS.proposalFieldPath.test(ref.ref_id)) {
         issues.push({
           path: ['ref_id'],
           message: `type=proposal 的 ref_id 必须为 "<proposal_id>.<field_path>"，例如 PROP_A.core_premise，收到 "${ref.ref_id}"（需求规格 §9.3）`,
         })
+        break
+      }
+      // 需求规格 §9.3："ref_id 必须可解析到真实 Proposal 和字段路径"。
+      // 字段路径受白名单约束（Story 3 提议，见 core/proposal-field-paths.ts / OQ-31）。
+      if (parseProposalFieldPath(ref.ref_id) === null) {
+        const fieldPath = ref.ref_id.slice(ref.ref_id.indexOf('.') + 1)
+        issues.push({
+          path: ['ref_id'],
+          message: `type=proposal 的字段路径 "${fieldPath}" 不在白名单内；允许的路径：${PROPOSAL_FIELD_PATHS.join(' / ')}`,
+        })
       }
       break
+    }
     case 'user_edit':
     case 'blueprint_gate2':
       // Story 1 只要求非空；记录载体与深层可解析性由 OQ-10 在 Story 4 收口。

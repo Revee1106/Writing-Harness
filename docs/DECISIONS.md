@@ -62,3 +62,29 @@
 |---|---|---|
 | H-1 | `recordUsage()` 现在返回前调用 `deepFreeze()` | 对已冻结项是零成本无操作；对手工构造项补上冻结，保证"使用过的项不可被改写"。已加测试。 |
 | H-2 | 状态机新增显式优先级断言块（7 条） | 把 ①使用→F3/F4/F5 先于 ⑦F1、②A1 先于 ③NOOP 等优先级钉死。已加测试。 |
+
+---
+
+## 五、Story 3 实现解读（I-18 … I-21）与用户裁决落地
+
+### 用户裁决（OQ-29 / I-17 / OQ-25–28 / Story 3 三项提议）
+
+| 事项 | 裁决结果 | 落地 |
+|---|---|---|
+| OQ-29 保留原 ID | 接受，并补 5 条约束 | `fixed_by_user[].id ∈ SEED_F∪SEED_A`、`ambiguous[].id ∈ SEED_F∪SEED_A`、`open_questions[].id 严格 SEED_Q`、`raw_seed_anchor_ids 严格 SEED_F`、**新增不变量** `raw_seed_anchor_ids ⊆ (fixed_by_user ∪ ambiguous).id`（`ANCHOR_WITHOUT_ITEM`） |
+| I-17 | 同意删除 `GATE1_ITEM_IN_ANCHOR_SET` | 已删除；§8.2 保证改由结构路径 + 服务断言 + 测试承担 |
+| OQ-25 / 26 / 27 / 28 | 全部接受当前方案 | 无需改动 |
+| 差异度判定 | 采纳 5 维度 + 2/3 规则 | `checkProposalDistinctness()`，warning 不阻塞 |
+| SPR 边界 | 采纳 | `computeSeedPreservationRate()` |
+| 字段路径白名单 | 采纳并冻结 | `src/core/proposal-field-paths.ts` |
+
+### 实现解读
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-18 | **`delete` 原始锚点时同步移出 `raw_seed_anchor_ids`**；`demote` 不动锚点（§8.2）。服务层断言"anchors 只能因被删除而收缩，永不新增"。 | OQ-29 第 5 条不变量；§8.2 只约束升降级。 | 唯一允许的 anchor 变化；见 OQ-30。 |
+| I-19 | **Proposal 的 ID 由 Harness 规范化**：`PROP_A/B/C` 按方案顺序，`ADD_###`/`RISK_###`/`CONF_###` 按各自数组顺序重编号；`risk.related_addition_refs` 通过"模型原 ID → 规范 ID"映射重写，无法解析则报错而不是猜。 | §9.1 的 ID 形态 + I-13 的一致性。 | 模型写错编号不会破坏可追溯性。 |
+| I-20 | **`proposal_id` 不由模型输出**，由 Harness 按顺序分配 `PROP_A/B/C`。 | §9.3 的引用形态需要稳定的 proposal_id。 | 与 I-13 同一原则。 |
+| I-21 | **`pov` 元素必须是 `CH_*` 角色 ID，长度 ∈ {1,2}**；`target_length` 为正整数（单位：中文字数）。 | §11.3 的 POV 规则按 §11「Blueprint 是 Scene Breakdown 的唯一故事规划来源」同样约束 Proposal；D6 已裁决 target_length 单位为中文字数。 | 文档未在 §9.1 重复说明，属于一致性约束。 |
+| I-22 | **`altered` 必须与 `conflicts` 成对出现**（Prompt Contract 明文要求）；Schema 层不做强制（因为 `resolution` 可由用户在 Gate 2 直接改写），但开发者服务会对 `resolution=pending` 的冲突发出 `CONFLICT_PENDING` 提醒。 | §9.2「conflicts[] 必须能回答…Gate 2 最终处理结果」+ §9.1 的 altered 语义。 | Story 4 在 Gate 2 收口 resolution。 |
+| I-23 | **Story Developer 的离线 fixture 采用 `gate1_status=skipped` 作为规范状态**（除一个 `partial`+promote 变体），因为 `skip` 是唯一"不修改 Interpreter 结果"的 Gate 1 出口。 | §5.1 skip 语义；离线可复现要求。 | fixture 元数据 `gate1_ops` 记录该状态，供 `fixtures:check` 复核。 |

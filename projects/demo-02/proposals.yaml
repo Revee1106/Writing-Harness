@@ -1,0 +1,81 @@
+schema_version: "0.1"
+proposals:
+  - proposal_id: PROP_A
+    title: 三种铃声
+    genre: 单场景对白
+    core_premise: 三个人在电梯里，谁先按铃谁就先承认自己还想被听见
+    core_conflict: 夫妻两人把按铃让给对方，老人只想有人跟他说话
+    truth_or_turn: 老人年轻时也在这栋楼里离过婚，他认得那种沉默
+    character_arc: 男方从"不先动"变成"为了老人按下铃"
+    ending: 男方按铃，老人讲完故事，门开了，两人第一次并肩走出去
+    pov:
+      - CH_HUSBAND
+    target_length: 5000
+    tone: 密闭、三人对话
+    seed_fidelity:
+      preserved:
+        - seed_ref: SEED_F001
+          value_in_proposal: 电梯停在两层楼之间
+        - seed_ref: SEED_F002
+          value_in_proposal: 电梯里有一对刚办完离婚手续的夫妻
+        - seed_ref: SEED_F003
+          value_in_proposal: 电梯里还有一位陌生老人
+        - seed_ref: SEED_F004
+          value_in_proposal: 老人提出谁先按铃就把今天的事讲给谁听
+        - seed_ref: SEED_A001
+          value_in_proposal: 用户在 Gate 1 主动提升的约束：这场戏要有一个明确的外部触发
+      altered: []
+      added:
+        - id: ADD_001
+          value: 老人年轻时也在这栋楼办过离婚
+          status: PROPOSED
+          source: harness
+      risk:
+        - id: RISK_001
+          value: 新增老人往事会让场景重心从夫妻关系转移到老人身上
+          related_addition_refs:
+            - ADD_001
+    conflicts: []
+  - proposal_id: PROP_B
+    title: 不按铃的人
+    genre: 单场景对白
+    core_premise: 三个人直到门被外面的人打开，谁都没有按铃
+    core_conflict: 沉默变成了一场三个人的比试，而代价是所有人的时间
+    truth_or_turn: 电梯的故障广播一直在响，只是没人愿意承认它在倒计时
+    character_arc: 女方从"等对方动"变成"先开口说话，但没有按铃"
+    ending: 维修人员从外面打开门，三人依次走出去，谁也没有讲故事
+    pov:
+      - CH_WIFE
+    target_length: 5000
+    tone: 静止、长镜头
+    seed_fidelity:
+      preserved:
+        - seed_ref: SEED_F001
+          value_in_proposal: 电梯停在两层楼之间
+        - seed_ref: SEED_F002
+          value_in_proposal: 电梯里有一对刚办完离婚手续的夫妻
+        - seed_ref: SEED_F003
+          value_in_proposal: 电梯里还有一位陌生老人
+        - seed_ref: SEED_A001
+          value_in_proposal: 用户提升的约束在这里体现为外部触发：门由外面的人打开
+      altered:
+        - seed_ref: SEED_F004
+          original: 老人提出谁先按铃就把今天的事讲给谁听
+          changed_to: 老人提出问题后，三个人谁都没有按铃
+      added:
+        - id: ADD_001
+          value: 电梯广播在倒计时，只是没人理会
+          status: PROPOSED
+          source: harness
+      risk:
+        - id: RISK_001
+          value: 谁都没按铃会否掉老人提出的规则，属于改动用户已明确内容的风险
+          related_addition_refs:
+            - ADD_001
+    conflicts:
+      - id: CONF_001
+        seed_ref: SEED_F004
+        proposal_field: ending
+        user_value: 老人提出谁先按铃就把今天的事讲给谁听
+        proposal_value: 三人最终谁都没有按铃
+        resolution: pending

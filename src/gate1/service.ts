@@ -88,10 +88,13 @@ export async function runGate1(options: RunGate1Options): Promise<Gate1RunResult
 
   const applied = applyGate1Operations(candidateSeed, operations)
   const ruleId = assertGate1StatusTransition('pending', applied.gate1Status)
-  if (applied.anchorsBefore.join(',') !== applied.anchorsAfter.join(',')) {
-    // 结构性断言：Gate 1 只读 anchor，从不重算（需求规格 §8.2）
+  // 结构性断言（需求规格 §8.2；OQ-29 第 5 条；解读 I-18）：
+  // anchors 永不新增（Gate 1 只读首次冻结值），唯一允许的变化是"用户显式删除的锚点退出分母"。
+  const permittedAnchors = applied.anchorsBefore.filter((id) => !applied.removedAnchorIds.includes(id))
+  const addedAnchors = applied.anchorsAfter.filter((id) => !applied.anchorsBefore.includes(id))
+  if (addedAnchors.length > 0 || applied.anchorsAfter.join(',') !== permittedAnchors.join(',')) {
     throw new Gate1OperationError(
-      `Gate 1 不允许改写 raw_seed_anchor_ids（§8.2）：before=[${applied.anchorsBefore.join(', ')}] after=[${applied.anchorsAfter.join(', ')}]`,
+      `Gate 1 不允许改写 raw_seed_anchor_ids（§8.2）：before=[${applied.anchorsBefore.join(', ')}] after=[${applied.anchorsAfter.join(', ')}] removed=[${applied.removedAnchorIds.join(', ')}]`,
     )
   }
 

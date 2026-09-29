@@ -1,0 +1,63 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/11-evidence-probe.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "432d1986618131fa6b1b009cc442ac81a96633958c533a72088d80ebb2f2e157"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '半卷胶卷'
+        genre: '静物式短篇'
+        core_premise: '旧相机里那半卷胶卷成了两个人之间唯一没说完的话'
+        core_conflict: '我想冲洗，她说不用了：两人对结束的定义不同'
+        truth_or_turn: '胶卷里最后一格是她在收拾行李那天拍的窗外'
+        character_arc: '我从"想留住"变成"接受她把相机留给我就是告别"'
+        ending: '我没有冲洗那卷胶卷，把相机放回了柜子'
+        pov: [CH_NARRATOR]
+        target_length: 5000
+        tone: '缓慢、物象'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '她把旧相机留给了我'
+            - seed_ref: SEED_F002
+              value_in_proposal: '她不再拍照了'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '胶卷最后一格拍的是窗外'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增最后一格的意象可能让故事从关系留白转向造物式的抒情'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '冲洗那天'
+        genre: '静物式短篇'
+        core_premise: '我最终把那半卷胶卷洗了出来，发现里面全是空白'
+        core_conflict: '空白意味着她早就停了，而我一直以为她只是暂时不拍'
+        truth_or_turn: '胶卷之所以只有半卷，是因为她把后半段剪下来带走了'
+        character_arc: '我从"等她回来"变成"承认她带走了自己要带的东西"'
+        ending: '我把洗出的空白照片装进相册，寄了一张给她'
+        pov: [CH_NARRATOR]
+        target_length: 5000
+        tone: '动作、克制'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '她把旧相机留给了我'
+            - seed_ref: SEED_F002
+              value_in_proposal: '她不再拍照了'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '胶卷的后半段被她剪走带走了'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增剪走胶卷是一个具体的因果解释，可能过度说明原本的留白'
+              related_addition_refs: [ADD_001]
+        conflicts: []

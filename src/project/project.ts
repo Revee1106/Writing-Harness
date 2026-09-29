@@ -10,6 +10,7 @@ import {
   type ProjectConfig,
 } from '../schema/project-config.ts'
 import { createEmptySeed, validateSeedFile, type SeedFile } from '../schema/seed.ts'
+import { validateProposalsFile, type ProposalsFile } from '../schema/proposal.ts'
 
 /**
  * 项目存储层（Story 1）—— 文件优先，无数据库（架构设计 §33.2）。
@@ -161,4 +162,25 @@ export function setRawSeedInput(
     story_seed: { ...current.story_seed, raw_input: rawInput },
   }) as SeedFile
   return saveSeed(paths, next)
+}
+
+// ---------------------------------------------------------------------------
+// proposals.yaml（Story 3）—— 同一套"写入前校验、读取后校验"的规则
+// ---------------------------------------------------------------------------
+
+export function loadProposals(paths: ProjectPaths): ProposalsFile {
+  if (!existsSync(paths.proposals)) {
+    throw new ProjectNotFoundError(`找不到 ${paths.proposals}（尚未运行 Story Developer）`)
+  }
+  return validateProposalsFile(readYamlFile(paths.proposals))
+}
+
+export function saveProposals(paths: ProjectPaths, file: ProposalsFile): ProposalsFile {
+  const validated = validateProposalsFile(file)
+  writeYamlFile(paths.proposals, validated)
+  return validated
+}
+
+export function proposalsExist(paths: ProjectPaths): boolean {
+  return existsSync(paths.proposals)
 }

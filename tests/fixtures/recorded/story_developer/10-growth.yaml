@@ -1,0 +1,75 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/10-growth.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "b0bd83fff509f539979a37cd9676d6fdc9244570235d91857e89fc39b262c059"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '角落里哭的人'
+        genre: '成长'
+        core_premise: '她办展那天，母亲站在角落里哭，而她一直以为母亲反对'
+        core_conflict: '她想让母亲承认，又怕承认之后要面对这三年的账'
+        truth_or_turn: '母亲从第一年起就一直偷偷买她的画，用买菜的钱'
+        character_arc: '她从"证明自己"变成"看见母亲的害怕"'
+        ending: '展览结束，她把自己的第一张画送给母亲，母亲说了句太贵了'
+        pov: [CH_SHE]
+        target_length: 7000
+        tone: '明亮、克制'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '她三十岁辞掉稳定工作去学画画'
+            - seed_ref: SEED_F002
+              value_in_proposal: '所有人都说她疯了'
+            - seed_ref: SEED_F003
+              value_in_proposal: '第一年她靠给人画头像付房租'
+            - seed_ref: SEED_F004
+              value_in_proposal: '第三年她办了自己的展'
+            - seed_ref: SEED_F005
+              value_in_proposal: '母亲站在角落里哭'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '母亲从第一年起偷偷买她的画'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增母亲偷偷支持会让母女冲突提前化解，可能削弱所有人都说她疯了的孤立感'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '她还差一年'
+        genre: '成长'
+        core_premise: '画展办成了，但一张画都没卖出去，成长没有兑现成结果'
+        core_conflict: '她要决定第四年还要不要继续画'
+        truth_or_turn: '母亲哭不是因为感动，是因为她终于明白女儿不会回头了'
+        character_arc: '她从"等一个承认"变成"不再需要别人承认"'
+        ending: '她把展厅的灯关掉，第二天照常去给人画头像'
+        pov: [CH_SHE]
+        target_length: 7000
+        tone: '冷硬、写实'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '她三十岁辞掉稳定工作去学画画'
+            - seed_ref: SEED_F002
+              value_in_proposal: '所有人都说她疯了'
+            - seed_ref: SEED_F003
+              value_in_proposal: '第一年她靠给人画头像付房租'
+            - seed_ref: SEED_F004
+              value_in_proposal: '第三年她办了自己的展'
+            - seed_ref: SEED_F005
+              value_in_proposal: '母亲站在角落里哭'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '展览一张画都没有卖出去'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '零成交会把故事从成长推向失败者的坚持，可能偏离用户原意'
+              related_addition_refs: [ADD_001]
+        conflicts: []

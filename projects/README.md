@@ -26,4 +26,6 @@ projects/<project_id>/
 - `demo-01/` 是 Story 1 的端到端示例项目（真实 Seed，用于后续 Story 与 M1 验证）。
 - `demo-02/` 是 Story 2 的端到端示例：已跑过 Seed Interpreter + Gate 1（含一次用户提升，
   见 `fixed_by_user` 中 `source: user_gate1` 的条目），可直接作为 Story 3（Story Developer）的输入。
+- `demo-01/`、`demo-02/` 均已跑过 Story 3，产出 `proposals.yaml`（每个 2 个差异明显的方案、
+  含 seed_fidelity / conflicts / Seed Preservation Rate）。这两个项目可直接作为 Story 4（Gate 2）的输入。
 - 其余目录中的项目属于本地创作数据；是否提交由作者决定（当前仓库未对 `projects/**` 设忽略规则）。

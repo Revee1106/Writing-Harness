@@ -1,0 +1,78 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/08-twist.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "ad098ddbc14103fff19d8b68229c6c0dafa6c5b9b44135e8f8d973773b7ca74c"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '邻居读到了最后一页'
+        genre: '强反转'
+        core_premise: '被邻居称赞深情的男人，让邻居在借书时读到了日记最后一页'
+        core_conflict: '邻居要不要说出去，而说出来毁掉的是一个已经结案的体面'
+        truth_or_turn: '日记最后一页不是悔恨，是计算：他写下来，是因为他确定有人会看到'
+        character_arc: '邻居从"替他难过"变成"成了他计划的一部分"'
+        ending: '邻居什么也没说，只是从此不再去他家'
+        pov: [CH_NEIGHBOR]
+        target_length: 9000
+        tone: '阴冷、旁观视角'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '妻子去世一年'
+            - seed_ref: SEED_F002
+              value_in_proposal: '他每天写日记记录思念'
+            - seed_ref: SEED_F003
+              value_in_proposal: '邻居都说他深情'
+            - seed_ref: SEED_F004
+              value_in_proposal: '日记最后一页写着他把妻子的药换了'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '最后一页是他故意留给外人看的'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '"故意被看到"会把故事从罪行暴露改成表演型犯罪，主题偏向新增内容'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '他自己报了警'
+        genre: '强反转'
+        core_premise: '写下最后一页的当天，他带着日记走进派出所'
+        core_conflict: '他要的是被记住，而不是被同情'
+        truth_or_turn: '他写日记不是为了思念，而是为了让这一年的每一页都能证明他清醒地做过什么'
+        character_arc: '他从"被称赞的深情丈夫"变成"主动交出名声的人"'
+        ending: '他认罪，邻居在法庭外第一次意识到自己夸了一个凶手一年'
+        pov: [CH_HUSBAND]
+        target_length: 8000
+        tone: '干冷、短句'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '妻子去世一年'
+            - seed_ref: SEED_F002
+              value_in_proposal: '他每天写日记记录思念'
+            - seed_ref: SEED_F004
+              value_in_proposal: '日记最后一页写着他把妻子的药换了'
+          altered:
+            - seed_ref: SEED_F003
+              original: '邻居都说他深情'
+              changed_to: '邻居都说他深情，而这正是他计划中的一部分'
+          added:
+            - id: ADD_001
+              value: '他写日记是为了留下清醒的证据'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '"主动认罪"会移除秘密即将被发现的悬置感，可能过早释放张力'
+              related_addition_refs: [ADD_001]
+        conflicts:
+          - id: CONF_001
+            seed_ref: SEED_F003
+            proposal_field: character_arc
+            user_value: '邻居都说他深情'
+            proposal_value: '邻居的称赞是他计划的一部分'
+            resolution: pending

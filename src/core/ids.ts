@@ -25,8 +25,20 @@ export const ID_PATTERNS = {
   seedQuestion: /^SEED_Q\d{3}$/,
   /** 需求规格 §7.2：type=seed 的 source_ref 可指向任意 Seed item */
   seedItem: /^SEED_[FAQ]\d{3}$/,
-  /** 需求规格 §9.3：Proposal 字段路径引用 */
-  proposalFieldPath: /^PROP_[A-Z0-9]+\.[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*$/,
+  /** 需求规格 §9.1：Proposal 标识（示例 PROP_A / PROP_B / PROP_C） */
+  proposalId: /^PROP_[A-Z0-9]+$/,
+  /**
+   * 需求规格 §9.3：Proposal 字段路径引用 `<proposal_id>.<field_path>`。
+   * Story 3 扩展：允许 `[N]` 下标段（§9.1 的 seed_fidelity.added / risk 是列表，
+   * 用户裁决要求 `seed_fidelity.added[N]` / `seed_fidelity.risk[N]` 可被引用）。
+   */
+  proposalFieldPath: /^PROP_[A-Z0-9]+\.[a-z][a-z0-9_]*(?:\[[0-9]+\])?(?:\.[a-z][a-z0-9_]*(?:\[[0-9]+\])?)*$/,
+  /** 需求规格 §9.1 seed_fidelity.added[].id */
+  proposalAddition: /^ADD_\d{3}$/,
+  /** 需求规格 §9.1 seed_fidelity.risk[].id */
+  proposalRisk: /^RISK_\d{3}$/,
+  /** 需求规格 §9.1 conflicts[].id */
+  proposalConflict: /^CONF_\d{3}$/,
   /** 需求规格 §11.1：Blueprint 可引用项（含 BP_STR_* / BP_FS_* / BP_ARC_* / BP_THEME_* / BP_STYLE_* / BP_CONFLICT_*） */
   blueprintItem: /^BP_[A-Z0-9_]+$/,
   character: /^CH_[A-Z0-9_]+$/,
@@ -54,7 +66,11 @@ export const STABLE_ID_PATTERN_NAMES = [
   'seedAnchorFixed',
   'seedAmbiguous',
   'seedQuestion',
+  'proposalId',
   'proposalFieldPath',
+  'proposalAddition',
+  'proposalRisk',
+  'proposalConflict',
   'blueprintItem',
   'character',
   'observableBehaviorHint',

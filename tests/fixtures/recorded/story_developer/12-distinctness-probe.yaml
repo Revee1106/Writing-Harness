@@ -1,0 +1,71 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story3/12-distinctness-probe.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "a972b5c05c70ba914dd80a7194c989ff2b2abbacc48199568dbcc1676282d527"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '同一款啤酒（一）'
+        genre: '都市日常'
+        core_premise: '店员想弄明白这位客人为什么只喝同一款啤酒'
+        core_conflict: '他想打破客人的习惯，客人不需要被打破'
+        truth_or_turn: '客人说不用，是因为这一款是他父亲生前常买的'
+        character_arc: '店员从"想改变他"变成"替他留着那两罐"'
+        ending: '店员从此每周进货时多留两罐'
+        pov: [CH_CLERK]
+        target_length: 4000
+        tone: '平缓'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '他每天晚上都去同一家便利店'
+            - seed_ref: SEED_F002
+              value_in_proposal: '他每次买同一款啤酒'
+            - seed_ref: SEED_F003
+              value_in_proposal: '店员换了一个又一个'
+            - seed_ref: SEED_F004
+              value_in_proposal: '有店员建议他换一种，他拒绝了'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '那款啤酒是他父亲生前常买的'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增父亲的动机把重复行为解释得过于完整'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '同一款啤酒（二）'
+        genre: '都市日常'
+        core_premise: '店员想弄明白这位客人为什么只喝同一款啤酒'
+        core_conflict: '他想打破客人的习惯，客人不需要被打破'
+        truth_or_turn: '客人说不用，是因为这一款是他父亲生前常买的'
+        character_arc: '店员从"想改变他"变成"替他留着那两罐"'
+        ending: '店员从此每周进货时多留两罐'
+        pov: [CH_CLERK]
+        target_length: 4000
+        tone: '疏离'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '他每天晚上都去同一家便利店'
+            - seed_ref: SEED_F002
+              value_in_proposal: '他每次买同一款啤酒'
+            - seed_ref: SEED_F003
+              value_in_proposal: '店员换了一个又一个'
+            - seed_ref: SEED_F004
+              value_in_proposal: '有店员建议他换一种，他拒绝了'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '那款啤酒是他父亲生前常买的'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增父亲的动机把重复行为解释得过于完整'
+              related_addition_refs: [ADD_001]
+        conflicts: []

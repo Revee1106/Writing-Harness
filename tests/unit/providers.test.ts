@@ -45,10 +45,10 @@ describe('确定性哈希（Story 2）', () => {
 })
 
 describe('RecordedProvider（离线回放）', () => {
-  it('12 个 fixture 全部加载成功，键唯一', () => {
+  it('14 个 seed-interpreter fixture 全部加载成功，键唯一', () => {
     const provider = RecordedProvider.fromDirectory(FIXTURES_DIR)
-    expect(provider.size).toBe(12)
-    expect(new Set(provider.keys()).size).toBe(12)
+    expect(provider.size).toBe(14)
+    expect(new Set(provider.keys()).size).toBe(14)
   })
 
   it('按 contract + 契约版本 + 输入哈希命中，返回固定回应', async () => {
@@ -95,15 +95,23 @@ describe('RecordedProvider（离线回放）', () => {
 })
 
 describe('fixture 与 Seed 文本不漂移（fixtures:check 的库内版本）', () => {
-  it('每个 fixture 声明的 seed 文件都存在，且 input_sha256 与当前文本一致', () => {
-    const entries = checkRecordedFixtures({ fixturesDir: FIXTURES_DIR, seedsDir: SEEDS_DIR })
-    expect(entries).toHaveLength(12)
+  it('每个 fixture 声明的 seed 文件都存在，且 input_sha256 与当前文本一致', async () => {
+    const entries = await checkRecordedFixtures({
+      fixturesDir: FIXTURES_DIR,
+      seedsDir: SEEDS_DIR,
+      interpreterFixturesDir: FIXTURES_DIR,
+    })
+    expect(entries).toHaveLength(14)
     const failing = entries.filter((entry) => !entry.ok)
     expect(failing.map((entry) => `${entry.file}: ${entry.problem ?? ''}`)).toEqual([])
   })
 
-  it('Story 2 的 10 个类型化 Seed 全部在 fixture 集合中', () => {
-    const entries = checkRecordedFixtures({ fixturesDir: FIXTURES_DIR, seedsDir: SEEDS_DIR })
+  it('Story 2 的 10 个类型化 Seed 全部在 fixture 集合中', async () => {
+    const entries = await checkRecordedFixtures({
+      fixturesDir: FIXTURES_DIR,
+      seedsDir: SEEDS_DIR,
+      interpreterFixturesDir: FIXTURES_DIR,
+    })
     const seeds = entries.map((entry) => entry.seedFile).filter((value): value is string => value !== undefined)
     for (const name of SEED_FIXTURES_DIR_STORY2) {
       expect(seeds).toContain(`story2/${name}`)

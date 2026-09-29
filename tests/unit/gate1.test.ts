@@ -153,17 +153,15 @@ describe('raw_seed_anchor_ids 首次冻结后不重算（Story 2 验收）', () 
     expect(checkSeedInvariants(seed.story_seed)).toEqual([])
   })
 
-  it('六种操作任意组合，anchors 逐项不变', async () => {
+  it('除 delete 之外的每一种操作，anchors 逐项不变（§8.2）', async () => {
     const seed = await candidateSeed(EMOTION_SEED)
     const operationSets: Gate1Operation[][] = [
       [{ kind: 'accept_all' }],
       [{ kind: 'skip' }],
-      [{ kind: 'delete', id: 'SEED_F001' }],
       [{ kind: 'promote', id: 'SEED_A001' }],
       [{ kind: 'demote', id: 'SEED_F003' }],
       [{ kind: 'edit', id: 'SEED_F005', value: '改写后的内容' }],
       [
-        { kind: 'delete', id: 'SEED_F002' },
         { kind: 'promote', id: 'SEED_A002' },
         { kind: 'demote', id: 'SEED_F004' },
         { kind: 'edit', id: 'SEED_A001', value: '改过的模糊项' },
@@ -175,6 +173,28 @@ describe('raw_seed_anchor_ids 首次冻结后不重算（Story 2 验收）', () 
       expect(result.anchorsAfter).toEqual(seed.story_seed.raw_seed_anchor_ids)
       expect(checkSeedInvariants(result.seed.story_seed)).toEqual([])
     }
+  })
+
+  it('delete 原始锚点会同步移出 anchors（解读 I-18 / OQ-29 第 5 条 / OQ-30）', async () => {
+    const seed = await candidateSeed(EMOTION_SEED)
+    const result = applyGate1Operations(seed, [
+      { kind: 'delete', id: 'SEED_F001' },
+      { kind: 'delete', id: 'SEED_A001' },
+    ])
+    // SEED_F001 是原始锚点：条目不存在后不允许继续留在分母里
+    expect(result.anchorsAfter).toEqual(['SEED_F002', 'SEED_F003', 'SEED_F004', 'SEED_F005'])
+    // SEED_A001 本来就不是锚点：删除它不影响分母
+    expect(result.seed.story_seed.raw_seed_anchor_ids).not.toContain('SEED_A001')
+    expect(checkSeedInvariants(result.seed.story_seed)).toEqual([])
+  })
+
+  it('delete 非锚点条目（提升后再删除）不会触碰 anchors', async () => {
+    const seed = await candidateSeed(EMOTION_SEED)
+    const result = applyGate1Operations(seed, [
+      { kind: 'delete', id: 'SEED_A002' },
+      { kind: 'delete', id: 'SEED_Q001' },
+    ])
+    expect(result.anchorsAfter).toEqual(result.anchorsBefore)
   })
 
   it('提升后再次提升（同一 ID）不会进入 anchors；原始锚点降级再提升也不改变 anchors', async () => {
@@ -311,7 +331,7 @@ describe('Gate 1 服务（写盘、前置条件、离线可复现）', () => {
 
   it('fixture 目录可通过参数注入（离线验收的入口）', async () => {
     const provider = recordedProvider()
-    expect(provider.size).toBe(12)
+    expect(provider.size).toBe(14)
     expect(join(RECORDED_FIXTURES_DIR, '01-emotion.yaml')).toContain('seed-interpreter')
   })
 })

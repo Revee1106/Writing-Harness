@@ -1,0 +1,55 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story3/13-no-anchor-probe.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "7acd09a93b07fa32647a77fbcfc5879c34cab4d66bd158fe08a6923d45369f30"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '先开口的人'
+        genre: '极短篇'
+        core_premise: '两张长椅上的沉默，比任何对话都长'
+        core_conflict: '谁先开口，谁就先承认自己在乎'
+        truth_or_turn: '两人其实都在等同一个人出现'
+        character_arc: '其中一人从"不动"变成"站起来走了"'
+        ending: '一个人先走了，另一个人继续坐着'
+        pov: [CH_A]
+        target_length: 3000
+        tone: '安静'
+        seed_fidelity:
+          preserved: []
+          altered: []
+          added:
+            - id: ADD_001
+              value: '两人在等同一个人'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '在没有任何用户锚点的情况下故事完全由 Harness 提供，须经用户确认才能成为事实'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '等人的长椅'
+        genre: '极短篇'
+        core_premise: '两张长椅上的两个人，各自在等一件不会发生的事'
+        core_conflict: '他们都在意对方，却都把沉默当成礼貌'
+        truth_or_turn: '其中一人等的人已经来过又走了'
+        character_arc: '另一个人从"陪着坐着"变成"开口问了一句"'
+        ending: '天黑了，两人一起离开长椅'
+        pov: [CH_B]
+        target_length: 3000
+        tone: '微冷'
+        seed_fidelity:
+          preserved: []
+          altered: []
+          added:
+            - id: ADD_001
+              value: '其中一人等的人已经来过又走了'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '同样没有任何用户锚点：Seed Preservation Rate 分母为 0，无法评估是否保留用户核心'
+              related_addition_refs: [ADD_001]
+        conflicts: []

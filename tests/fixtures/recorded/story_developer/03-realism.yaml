@@ -1,0 +1,86 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/03-realism.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "86ae2cf9b91d29cbe4b6c1f1749880930836b3f6f8550c2ddf06bc8d6794da7e"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '打折的排骨'
+        genre: '现实题材'
+        core_premise: '一个被裁员的中年男人，用一顿饭的时间维持住"今天只是放假"的样子'
+        core_conflict: '他想保住体面，而这顿饭的每一处细节都在拆穿他'
+        truth_or_turn: '妻子早就从打折排骨和提前回家读出了答案，她在等他先开口'
+        character_arc: '他从"瞒住今天"变成"说出下一笔房贷要怎么还"'
+        ending: '饭吃完，他终于开口，妻子只说了一句"明天我陪你去"'
+        pov: [CH_HUSBAND]
+        target_length: 9000
+        tone: '白描、克制'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '他被裁员了'
+            - seed_ref: SEED_F002
+              value_in_proposal: '他买了打折的排骨'
+            - seed_ref: SEED_F003
+              value_in_proposal: '他回家做饭'
+            - seed_ref: SEED_F004
+              value_in_proposal: '妻子问他今天怎么这么早'
+            - seed_ref: SEED_F005
+              value_in_proposal: '他说公司放了半天假'
+            - seed_ref: SEED_F006
+              value_in_proposal: '房贷还有十九年'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '妻子早就从细节看出他失业，只是在等他先开口'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '新增"妻子早已知道"会让冲突提前降温，可能削弱"隐瞒"本身带来的张力'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '两个人都没说'
+        genre: '现实题材'
+        core_premise: '夫妻两人各自藏着一件坏事，这顿饭谁都不敢先开口'
+        core_conflict: '他藏的是失业，她藏的是自己刚签下的离职补偿协议'
+        truth_or_turn: '妻子今天也提前回家，因为她同样被裁了；两人都在演"正常的一天"'
+        character_arc: '两人从"各自维持"变成"同一刻同时放弃伪装"'
+        ending: '两人在同一张桌子上先后说出真相，然后一起沉默地吃完了那顿排骨'
+        pov: [CH_HUSBAND, CH_WIFE]
+        target_length: 8000
+        tone: '压迫、室内感'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '他被裁员了'
+            - seed_ref: SEED_F002
+              value_in_proposal: '他买了打折的排骨'
+            - seed_ref: SEED_F003
+              value_in_proposal: '他回家做饭'
+            - seed_ref: SEED_F005
+              value_in_proposal: '他说公司放了半天假'
+            - seed_ref: SEED_F006
+              value_in_proposal: '房贷还有十九年'
+          altered:
+            - seed_ref: SEED_F004
+              original: '妻子问他今天怎么这么早'
+              changed_to: '妻子问他今天怎么这么早，因为她也刚提前回家'
+          added:
+            - id: ADD_001
+              value: '妻子当天同样被裁员，也提前回了家'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '让妻子同时失业会分走主角困境的重心，可能偏离用户写的"他被裁员"这一核心'
+              related_addition_refs: [ADD_001]
+        conflicts:
+          - id: CONF_001
+            seed_ref: SEED_F004
+            proposal_field: core_conflict
+            user_value: '妻子问他今天怎么这么早'
+            proposal_value: '妻子问他今天怎么这么早，因为她也刚提前回家'
+            resolution: pending

@@ -1,0 +1,71 @@
+contract: story_developer
+contract_version: "0.1"
+seed: story2/04-warmth.txt
+gate1_ops: [{"kind": "skip"}]
+input_sha256: "6f0164a56dea971dd87deadb47ee04ed0b877c9c523083b27c4f4e993e384481"
+response:
+  model: recorded-story-developer-v0.1
+  text: |
+    proposals:
+      - title: '最后一页'
+        genre: '温情'
+        core_premise: '孙子在一个不识字的老人留下的本子里，读到用符号记下的全部期待'
+        core_conflict: '他想告诉奶奶结果，可奶奶已经听不到了'
+        truth_or_turn: '最后那行字不是奶奶写的，是邻居代笔，而她练了很久才学会写自己的名字'
+        character_arc: '他从"回来看看"变成"把这句话带走"'
+        ending: '他把本子带回城里放在书桌上，每年高考那天看一次'
+        pov: [CH_GRANDSON]
+        target_length: 6000
+        tone: '平缓、暖'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '奶奶不识字'
+            - seed_ref: SEED_F002
+              value_in_proposal: '奶奶把孙子每次考试的分数抄在本子上'
+            - seed_ref: SEED_F003
+              value_in_proposal: '孙子高考完那年回家'
+            - seed_ref: SEED_F004
+              value_in_proposal: '本子最后一页写着那句话'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '最后一页的字是邻居代笔，奶奶练了很久自己的名字'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '"邻居代笔"会稀释"不识字的奶奶亲手抄写"的力量'
+              related_addition_refs: [ADD_001]
+        conflicts: []
+      - title: '她还在等'
+        genre: '温情'
+        core_premise: '孙子回家时奶奶还活着，本子上的期待变成了一次当面兑现'
+        core_conflict: '他想报喜，又怕结果不如奶奶写下的那句话'
+        truth_or_turn: '那句话是奶奶让孙子念给她听、自己背下来的；她一直在等他自己念'
+        character_arc: '奶奶从"等着"变成"先说出来"'
+        ending: '成绩出来那天，奶奶先把本子翻到最后一页，让他自己念'
+        pov: [CH_GRANDSON]
+        target_length: 6000
+        tone: '明亮、日常'
+        seed_fidelity:
+          preserved:
+            - seed_ref: SEED_F001
+              value_in_proposal: '奶奶不识字'
+            - seed_ref: SEED_F002
+              value_in_proposal: '奶奶把孙子每次考试的分数抄在本子上'
+            - seed_ref: SEED_F003
+              value_in_proposal: '孙子高考完那年回家'
+            - seed_ref: SEED_F004
+              value_in_proposal: '本子最后一页写着那句话'
+          altered: []
+          added:
+            - id: ADD_001
+              value: '那句话是奶奶背下来的，她一直等着孙子念给她听'
+              status: PROPOSED
+              source: harness
+          risk:
+            - id: RISK_001
+              value: '把"发现"改成"当面兑现"会移除原 Seed 的时间距离感，主题向"陪伴"偏移'
+              related_addition_refs: [ADD_001]
+        conflicts: []
