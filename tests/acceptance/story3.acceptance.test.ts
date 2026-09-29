@@ -246,8 +246,10 @@ describe('验收 6：proposals.yaml 结构与产物边界', () => {
     saveProposals(paths, result.file)
 
     const topLevel = readdirSync(paths.dir).sort()
-    // 需求规格 §29 / 架构设计 §32 的项目文件树；Story 3 只新增 proposals.yaml
+    // 需求规格 §29 / 架构设计 §32 的项目文件树；Story 3 新增 proposals.yaml，
+    // Story 4 新增 blueprint-history（OQ-10 的 Gate 2 元数据目录）
     expect(topLevel).toEqual([
+      'blueprint-history',
       'config',
       'drafts',
       'history',

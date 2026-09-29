@@ -40,6 +40,15 @@ export const recordedInteractionSchema = z.strictObject({
    */
   gate1_ops: z.array(z.record(z.string(), z.unknown())).optional(),
   style_preference: z.string().optional(),
+  /** fixture 元数据：Gate 2 的字段计划 / 手改 / 冲突裁决（仅用于工具链重建输入）。 */
+  gate2_plan: z
+    .strictObject({
+      from: z.string().optional(),
+      fields: z.record(z.string(), z.string()).optional(),
+      edits: z.record(z.string(), z.string()).optional(),
+      resolutions: z.record(z.string(), z.string()).optional(),
+    })
+    .optional(),
   input_sha256: z.string().regex(/^[0-9a-f]{64}$/, 'input_sha256 必须是 64 位小写十六进制'),
   response: z.strictObject({
     model: z.string().min(1),

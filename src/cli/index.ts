@@ -13,6 +13,17 @@ import {
 import { DRAFT_CONTEXT_MAX_CHARS_RECOMMENDED, TARGET_LENGTH_UNIT } from '../schema/project-config.ts'
 import { runGate1, Gate1PreconditionError } from '../gate1/service.ts'
 import { runStoryDeveloper, StoryDeveloperOutputError, UnresolvableSeedRefError } from '../developer/developer.ts'
+import {
+  Gate2ConflictPendingError,
+  Gate2PreconditionError,
+  collectKnownGate2ActionIds,
+  collectKnownUserEditIds,
+  runGate2,
+} from '../gate2/service.ts'
+import { BlueprintBuilderOutputError, Gate2PlanError, MERGEABLE_FIELDS } from '../gate2/builder.ts'
+import { BlueprintValidationError } from '../schema/blueprint.ts'
+import { Gate2MetaValidationError } from '../schema/gate2-meta.ts'
+import { blueprintExists, loadBlueprint } from '../project/project.ts'
 import { computeSeedPreservationRate, ProposalValidationError, conflictResolutionSchema } from '../schema/proposal.ts'
 import { loadSeed, loadProposals, saveProposals, proposalsExist } from '../project/project.ts'
 import { ProjectNotFoundError } from '../project/project.ts'
@@ -30,7 +41,8 @@ import { normalizeForEvidence } from '../interpreter/interpreter.ts'
  * 命令面：init / seed set / seed show / config show（Story 1）
  *         gate1（Story 2，Seed Interpreter + Author Gate 1）
  *         develop（Story 3，Story Developer + Proposal）
- * Gate 2 / Gate 3 的交互命令属于 Story 4 / 10。
+ *         gate2 / blueprint show（Story 4，Blueprint Confirm / Merge / Edit）
+ * Gate 3 的交互命令属于 Story 10。
  */
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..')
@@ -46,6 +58,8 @@ const USAGE = `Short-story-first Writing Harness v0.1 — 项目 / Seed / Gate 1
   harness gate1 <projectId> [选项]      Seed Interpreter → Author Gate 1
   harness develop <projectId> [选项]    Story Developer → 2～3 个 Proposal
   harness proposals show <projectId>    显示 proposals.yaml 摘要与 Seed Preservation Rate
+  harness gate2 <projectId> [选项]      Author Gate 2：确认 / 合并 / 手改 → Blueprint
+  harness blueprint show <projectId>    显示当前 Blueprint 摘要
   harness help                          显示本帮助
 
 通用选项：
@@ -73,6 +87,18 @@ gate1 选项（必须给出一种选择）：
                             delete:SEED_A002           删除错误分类
   --provider <name>       ${PROVIDER_NAMES.join(' / ')}（默认 auto：有 fixtures 用 recorded，否则用环境变量）
   --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/seed-interpreter）
+
+gate2 选项（三选一或组合）：
+  --from <PROP_X>         以某个 Proposal 为全部字段来源（单来源确认）
+  --field <字段>=<来源>   逐字段指定来源（来源为 PROP_X 或 user）；合并时必须覆盖全部字段
+  --edit <字段>=<内容>    用户手写该字段（自动视为来源 user）
+  --resolve <PROP_X:CONF_NNN>=<kept_user|changed_user|dropped>
+                          裁决 USER_GIVEN 冲突（存在 pending 冲突时必须全部裁决）
+  --plan                  只读预览：完整构建但不写 blueprint.yaml / 快照 / meta
+  --provider <name>       ${PROVIDER_NAMES.join(' / ')}
+  --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/blueprint_builder）
+
+  可逐字段指定的字段：${MERGEABLE_FIELDS.join(' / ')}
 
 develop 选项：
   --plan                  只读预览：生成 Proposal 但不写 proposals.yaml
@@ -125,10 +151,14 @@ function parseCli(argv: string[]): ParsedCli {
       provider: { type: 'string' },
       fixtures: { type: 'string' },
       style: { type: 'string' },
+      from: { type: 'string' },
+      field: { type: 'string', multiple: true },
+      edit: { type: 'string', multiple: true },
+      resolve: { type: 'string', multiple: true },
     },
   })
   const [command, second, third] = positionals
-  const isSubcommandForm = command === 'seed' || command === 'config' || command === 'proposals'
+  const isSubcommandForm = command === 'seed' || command === 'config' || command === 'proposals' || command === 'blueprint'
   return {
     command,
     subcommand: isSubcommandForm ? second : undefined,
@@ -440,6 +470,105 @@ async function runProposalsShowCommand(parsed: ParsedCli): Promise<number> {
   return 0
 }
 
+
+function parseKeyValueList(
+  values: string[] | undefined,
+  flag: string,
+  options: { allowEmpty?: boolean } = {},
+): Record<string, string> {
+  const result: Record<string, string> = {}
+  if (values === undefined) return result
+  for (const raw of values) {
+    const index = raw.indexOf('=')
+    if (index <= 0) {
+      throw new UsageError(`${flag} 需要 <键>=<值> 形式，收到 "${raw}"`)
+    }
+    const key = raw.slice(0, index).trim()
+    const value = raw.slice(index + 1)
+    if (options.allowEmpty !== true && value.trim() === '') {
+      throw new UsageError(`${flag} 的值不能为空："${raw}"`)
+    }
+    result[key] = value
+  }
+  return result
+}
+
+function printBlueprintSummary(result: Awaited<ReturnType<typeof runGate2>>): void {
+  const { blueprint, meta, provenance, plan } = result
+  process.stdout.write(`provider=${result.provider} model=${result.model} blueprint_version=${blueprint.blueprint_version}\n`)
+  process.stdout.write(`mode=${plan.mode} gate2_action_id=${meta.gate2_action_id} 参与提案=${plan.participatingProposalIds.join(' / ') || '（无，用户手写）'}\n`)
+  process.stdout.write(`input_sha256=${result.inputSha256}\n\n`)
+  process.stdout.write(`title: ${blueprint.meta.title}（${blueprint.meta.genre}）  pov: ${blueprint.meta.pov.join(' / ')}  target_length: ${blueprint.meta.target_length}\n`)
+  process.stdout.write(`premise: ${blueprint.premise.value}\n`)
+  process.stdout.write(`core_conflict: ${blueprint.core_conflict.value}\n`)
+  process.stdout.write(`characters: ${blueprint.characters.map((character) => `${character.id}(内心可见=${character.inner_state_pov_visible.join(',')})`).join(' / ')}\n`)
+  process.stdout.write(`key_knowledge: ${blueprint.key_knowledge.length} 条  foreshadowing: ${blueprint.foreshadowing.length} 条\n`)
+  process.stdout.write(`seed_fidelity: preserved ${blueprint.seed_fidelity.preserved.length} / altered ${blueprint.seed_fidelity.altered.length} / added ${blueprint.seed_fidelity.added.length} / risk ${blueprint.seed_fidelity.risk.length}\n\n`)
+  process.stdout.write('字段来源：\n')
+  for (const entry of provenance) {
+    process.stdout.write(`  ${entry.field} ← ${entry.from}  [${entry.source_refs.map((ref) => `${ref.type}:${ref.ref_id}`).join(', ')}]\n`)
+  }
+  if (result.userEdits.length > 0) {
+    process.stdout.write(`user_edits: ${result.userEdits.map((edit) => `${edit.id}(${edit.field})`).join(', ')}\n`)
+  }
+  if (result.conflictResolutions.length > 0) {
+    process.stdout.write(`冲突裁决：${result.conflictResolutions.map((record) => `${record.proposal_id}.${record.id}=${record.resolution}`).join(', ')}\n`)
+  }
+}
+
+async function runGate2Command(parsed: ParsedCli): Promise<number> {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const fromRaw = parsed.values.from
+  const fields = parseKeyValueList(parsed.values.field as string[] | undefined, '--field')
+  const edits = parseKeyValueList(parsed.values.edit as string[] | undefined, '--edit')
+  const resolutions = parseKeyValueList(parsed.values.resolve as string[] | undefined, '--resolve')
+  const resolved = providerFor(parsed, 'blueprint_builder')
+
+  const result = await runGate2({
+    paths,
+    provider: resolved.provider,
+    fromProposal: typeof fromRaw === 'string' ? fromRaw : undefined,
+    fields,
+    edits,
+    resolutions,
+    dryRun: parsed.values.plan === true,
+  })
+
+  if (parsed.values.json === true) {
+    process.stdout.write(`${JSON.stringify({ ...result, provider_name: resolved.name }, null, 2)}\n`)
+    return 0
+  }
+
+  printBlueprintSummary(result)
+  if (result.written) {
+    process.stdout.write(`\n已写入当前版本：${result.paths.blueprint}\n`)
+    process.stdout.write(`快照：${result.paths.snapshot}\n`)
+    process.stdout.write(`Gate 2 元数据：${result.paths.meta}\n`)
+    process.stdout.write(`（可解析的 user_edit IDs：${collectKnownUserEditIds(paths).join(', ') || '无'}；Gate 2 动作：${collectKnownGate2ActionIds(paths).join(', ')}）\n`)
+  } else {
+    process.stdout.write('\n[plan] 只读预览：未写 blueprint.yaml / 快照 / meta\n')
+  }
+  return 0
+}
+
+function runBlueprintShowCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  if (!blueprintExists(paths)) {
+    throw new ProjectNotFoundError(`找不到 ${paths.blueprint}（尚未执行 Gate 2）`)
+  }
+  const blueprint = loadBlueprint(paths)
+  process.stdout.write(`# ${paths.blueprint}\nschema_version: ${blueprint.schema_version}\nblueprint_version: ${blueprint.blueprint_version}\n`)
+  process.stdout.write(`title: ${blueprint.meta.title}（${blueprint.meta.genre}）\npov: ${blueprint.meta.pov.join(' / ')}\ntarget_length: ${blueprint.meta.target_length}\n`)
+  process.stdout.write(`premise: ${blueprint.premise.value}\ncore_conflict: ${blueprint.core_conflict.value}\n`)
+  process.stdout.write(`structure: ${Object.values(blueprint.structure).map((item) => item.id).join(' / ')}\n`)
+  process.stdout.write(`key_knowledge: ${blueprint.key_knowledge.map((item) => `${item.id}@${item.reveal_at_structure}#${item.reveal_order}`).join(' / ') || '（无）'}\n`)
+  process.stdout.write(`foreshadowing: ${blueprint.foreshadowing.map((item) => `${item.id}(${item.setup_at_structure}→${item.payoff_at_structure})`).join(' / ') || '（无）'}\n`)
+  process.stdout.write(`seed_fidelity: preserved ${blueprint.seed_fidelity.preserved.length} / altered ${blueprint.seed_fidelity.altered.length} / added ${blueprint.seed_fidelity.added.length} / risk ${blueprint.seed_fidelity.risk.length}\n`)
+  return 0
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseCli(argv)
 
@@ -465,6 +594,11 @@ async function main(argv: string[]): Promise<number> {
     case 'proposals':
       if (parsed.subcommand === 'show') return runProposalsShowCommand(parsed)
       throw new UsageError(`未知子命令：proposals ${parsed.subcommand ?? ''}`)
+    case 'gate2':
+      return runGate2Command(parsed)
+    case 'blueprint':
+      if (parsed.subcommand === 'show') return runBlueprintShowCommand(parsed)
+      throw new UsageError(`未知子命令：blueprint ${parsed.subcommand ?? ''}`)
     default:
       throw new UsageError(`未知命令：${parsed.command}`)
   }
@@ -487,7 +621,13 @@ try {
     error instanceof StoryDeveloperOutputError ||
     error instanceof UnresolvableSeedRefError ||
     error instanceof ProposalValidationError ||
-    error instanceof ProjectNotFoundError
+    error instanceof ProjectNotFoundError ||
+    error instanceof Gate2PlanError ||
+    error instanceof Gate2ConflictPendingError ||
+    error instanceof Gate2PreconditionError ||
+    error instanceof BlueprintBuilderOutputError ||
+    error instanceof BlueprintValidationError ||
+    error instanceof Gate2MetaValidationError
   ) {
     process.stderr.write(`错误：${error.message}\n`)
     process.exitCode = 1

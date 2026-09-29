@@ -1,0 +1,221 @@
+schema_version: "0.1"
+blueprint_version: 1
+meta:
+  title: 三种铃声
+  genre: 单场景对白
+  pov:
+    - CH_HUSBAND
+  target_length: 5000
+premise:
+  id: BP_PREMISE_01
+  value: 三个人卡在两层楼之间，谁先按铃谁就先承认自己还想被听见
+  status: CONFIRMED
+  source_refs:
+    - type: proposal
+      ref_id: PROP_A.core_premise
+theme:
+  primary:
+    id: BP_THEME_01
+    value: 把选择让给对方，也是一种拒绝
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_conflict
+  secondary:
+    - id: BP_THEME_02
+      value: 陌生人可以替我们说出最难的话
+      source_refs:
+        - type: blueprint_gate2
+          ref_id: GATE2_001
+characters:
+  - id: CH_HUSBAND
+    name: 许江
+    role: 男方，刚办完离婚手续
+    desire: 想确认自己不是先低头的那一个
+    fear: 按铃就等于承认还想回去
+    contradiction: 他不想按铃，却一直盯着按钮
+    voice_hint: 话少，用动作代替回答
+    inner_state_pov_visible:
+      - CH_HUSBAND
+    observable_behavior_hints:
+      - id: OBH_HUSBAND_01
+        value: 犹豫时把手插进口袋
+        applicable_scene_types:
+          - conflict
+          - dialogue
+    relationships:
+      - id: REL_HUSBAND_WIFE
+        target: CH_WIFE
+        kind: ex_spouse
+        state: divorced_today
+        since_ref: BP_STR_BEG
+        source_refs:
+          - type: proposal
+            ref_id: PROP_A.core_conflict
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_premise
+  - id: CH_WIFE
+    name: 苏敏
+    role: 女方，刚办完离婚手续
+    desire: 想被挽留，但不愿先开口
+    fear: 留下来只是拖时间
+    contradiction: 她一直看着电梯门缝，却不看人
+    voice_hint: 语速平，问题很轻
+    inner_state_pov_visible: []
+    observable_behavior_hints:
+      - id: OBH_WIFE_01
+        value: 说话前先看一眼楼层显示
+        applicable_scene_types:
+          - dialogue
+    relationships:
+      - id: REL_WIFE_HUSBAND
+        target: CH_HUSBAND
+        kind: ex_spouse
+        state: divorced_today
+        since_ref: BP_STR_BEG
+        source_refs:
+          - type: proposal
+            ref_id: PROP_A.core_conflict
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_premise
+  - id: CH_OLD_MAN
+    name: 老人
+    role: 陌生老人，提出条件的人
+    desire: 今天有人听他讲完一件事
+    fear: 又要一个人回家
+    contradiction: 他给出一个条件，其实并不在意谁按
+    voice_hint: 慢，喜欢用问句
+    inner_state_pov_visible: []
+    observable_behavior_hints:
+      - id: OBH_OLD_MAN_01
+        value: 说话时用手杖敲地面打节拍
+        applicable_scene_types:
+          - dialogue
+    relationships:
+      - id: REL_OLD_MAN_HUSBAND
+        target: CH_HUSBAND
+        kind: stranger
+        state: met_today
+        since_ref: BP_STR_BEG
+        source_refs:
+          - type: blueprint_gate2
+            ref_id: GATE2_001
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_premise
+core_conflict:
+  id: BP_CONFLICT_01
+  value: 按铃的动作被读成"我还想要这段关系"
+  source_refs:
+    - type: proposal
+      ref_id: PROP_A.core_conflict
+arc:
+  start:
+    id: BP_ARC_START
+    value: 他把手插在口袋里，等对方先动
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.character_arc
+  shift:
+    id: BP_ARC_SHIFT
+    value: 他意识到老人也在等一个愿意听的人
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+  end:
+    id: BP_ARC_END
+    value: 他按下铃，把选择变成了行动
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.ending
+structure:
+  beginning:
+    id: BP_STR_BEG
+    value: 电梯停住，三个人各自沉默
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_premise
+  development:
+    id: BP_STR_DEV
+    value: 老人提出条件，夫妻两人互相推让
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_conflict
+  turning_point:
+    id: BP_STR_TURN
+    value: 老人说出自己也在这栋楼里离过婚
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+  climax:
+    id: BP_STR_CLIMAX
+    value: 他伸手按下呼叫铃
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+  ending:
+    id: BP_STR_END
+    value: 门开了，两人第一次并肩走出去
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.ending
+key_knowledge:
+  - id: K001
+    truth: 老人年轻时也在这栋楼里办过离婚，他认得那种沉默
+    truth_status: CONFIRMED
+    known_by:
+      CH_HUSBAND: false
+      CH_WIFE: false
+      CH_OLD_MAN: true
+    reader_knows: false
+    reveal_at_structure: BP_STR_TURN
+    reveal_order: 1
+    reveal_to:
+      - CH_HUSBAND
+      - CH_WIFE
+    reveal_to_reader: true
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+foreshadowing:
+  - id: BP_FS_001
+    value: 老人手杖敲地的节拍
+    setup_at_structure: BP_STR_BEG
+    setup_order: 1
+    payoff_at_structure: BP_STR_CLIMAX
+    payoff_order: 1
+    source_refs:
+      - type: blueprint_gate2
+        ref_id: GATE2_001
+style_direction:
+  id: BP_STYLE_01
+  narration: 单一空间内贴身第三人称，不离开电梯
+  dialogue: 三人对白为主，避免内心独白堆叠
+  rhythm: 短句，节奏靠对话推进
+  source_refs:
+    - type: proposal
+      ref_id: PROP_A.tone
+seed_fidelity:
+  preserved:
+    - seed_ref: SEED_F001
+      value_in_proposal: 电梯停在两层楼之间
+    - seed_ref: SEED_F002
+      value_in_proposal: 电梯里有一对刚办完离婚手续的夫妻
+    - seed_ref: SEED_F003
+      value_in_proposal: 电梯里还有一位陌生老人
+    - seed_ref: SEED_F004
+      value_in_proposal: 老人提出谁先按铃就把今天的事讲给谁听
+    - seed_ref: SEED_A001
+      value_in_proposal: 用户在 Gate 1 主动提升的约束：这场戏要有一个明确的外部触发
+  altered: []
+  added:
+    - id: ADD_001
+      value: 老人年轻时也在这栋楼办过离婚
+      status: PROPOSED
+      source: harness
+  risk:
+    - id: RISK_001
+      value: 新增老人往事会让场景重心从夫妻关系转移到老人身上
+      related_addition_refs:
+        - ADD_001

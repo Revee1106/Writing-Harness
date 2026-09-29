@@ -1,0 +1,114 @@
+contract: blueprint_builder
+contract_version: "0.1"
+seed: story2/03-realism.txt
+gate1_ops: [{"kind":"skip"}]
+gate2_plan: {"fields":{"title":"PROP_A","genre":"PROP_A","pov":"PROP_B","target_length":"PROP_B","premise":"PROP_A","theme":"PROP_B","characters":"PROP_B","core_conflict":"PROP_B","arc":"PROP_A","structure":"PROP_A","key_knowledge":"PROP_B","foreshadowing":"PROP_A","style_direction":"PROP_B"},"resolutions":{"PROP_B:CONF_001":"changed_user"}}
+input_sha256: "b1e8e3a28fa4e4174c1658929d07f680a1da6ec6a3240968f23a706b4381a504"
+response:
+  model: recorded-blueprint-builder-v0.1
+  text: |
+    meta:
+      title: '两个人都没说'
+      genre: '现实题材'
+      pov: [CH_HUSBAND, CH_WIFE]
+      target_length: 8000
+    premise:
+      value: '一个被裁员的中年男人，用一顿饭的时间维持住"今天只是放假"的样子'
+      derived_from: PROP_A.core_premise
+    theme:
+      primary:
+        value: '两个人各自藏着坏事，谁都不敢先开口'
+        derived_from: PROP_B.core_conflict
+      secondary:
+        - value: '体面是最先被牺牲的东西'
+          derived_from: harness
+    characters:
+      - id: CH_HUSBAND
+        name: '郑安'
+        role: '丈夫，当天被裁员'
+        desire: '把今天维持成普通的一天'
+        fear: '被看见自己撑不住'
+        contradiction: '他买了打折的排骨，却说自己只是提前下班'
+        voice_hint: '报账式短句，回避情绪词'
+        inner_state_pov_visible: [CH_HUSBAND]
+        observable_behavior_hints:
+          - value: '说话时反复看厨房的钟'
+            applicable_scene_types: [conflict, dialogue]
+            derived_from: PROP_B.core_premise
+        relationships:
+          - target: CH_WIFE
+            kind: spouse
+            state: married
+            since_ref: BP_STR_BEG
+            derived_from: PROP_B.core_conflict
+        derived_from: PROP_B.core_premise
+      - id: CH_WIFE
+        name: '何宁'
+        role: '妻子，当天同样被裁'
+        desire: '等丈夫先说出真相'
+        fear: '说了之后两人一起慌'
+        contradiction: '她提前回家，却假装是顺路买菜'
+        voice_hint: '语气平稳，问题都很具体'
+        inner_state_pov_visible: [CH_WIFE]
+        observable_behavior_hints:
+          - value: '洗菜时把水开得很大'
+            applicable_scene_types: [conflict]
+            derived_from: PROP_B.core_premise
+        relationships:
+          - target: CH_HUSBAND
+            kind: spouse
+            state: married
+            since_ref: BP_STR_BEG
+            derived_from: PROP_B.core_conflict
+        derived_from: PROP_B.core_premise
+    core_conflict:
+      value: '两个人都在演正常的一天，谁先说谁就先拆掉对方的体面'
+      derived_from: PROP_B.core_conflict
+    arc:
+      start:
+        value: '他把裁员当成需要瞒住的事'
+        derived_from: PROP_A.character_arc
+      shift:
+        value: '他在饭桌上第一次说到房贷的下一期'
+        derived_from: PROP_A.truth_or_turn
+      end:
+        value: '两人先后说出真相，然后一起沉默地吃完饭'
+        derived_from: PROP_A.ending
+    structure:
+      beginning:
+        value: '他买打折排骨回家做饭，妻子提前回来'
+        derived_from: PROP_A.core_premise
+      development:
+        value: '一顿饭里，两人用日常细节互相试探'
+        derived_from: PROP_A.core_conflict
+      turning_point:
+        value: '妻子问出那句"今天怎么这么早"背后的意思'
+        derived_from: PROP_A.truth_or_turn
+      climax:
+        value: '两人几乎同时说出自己被裁了'
+        derived_from: PROP_A.truth_or_turn
+      ending:
+        value: '排骨吃完，桌上只剩房贷的数字'
+        derived_from: PROP_A.ending
+    key_knowledge:
+      - truth: '妻子当天也被裁员，也提前回了家'
+        truth_status: CONFIRMED
+        known_by: {CH_HUSBAND: false, CH_WIFE: true}
+        reader_knows: false
+        reveal_at_structure: BP_STR_CLIMAX
+        reveal_order: 1
+        reveal_to: [CH_HUSBAND]
+        reveal_to_reader: true
+        derived_from: PROP_B.truth_or_turn
+    foreshadowing:
+      - value: '冰箱上贴着的还款计划表'
+        setup_at_structure: BP_STR_BEG
+        setup_order: 1
+        payoff_at_structure: BP_STR_END
+        payoff_order: 1
+        derived_from: PROP_A.core_conflict
+    style_direction:
+      narration: '双 POV 交替，每段只写当前 POV 能感知的部分'
+      dialogue: '餐桌对白为主，避免解释性旁白'
+      rhythm: '段落中等长度，高潮处切短'
+      derived_from: PROP_B.tone

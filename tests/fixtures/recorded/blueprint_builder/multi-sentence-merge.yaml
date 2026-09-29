@@ -1,0 +1,112 @@
+contract: blueprint_builder
+contract_version: "0.1"
+seed: multi-sentence.txt
+gate1_ops: [{"kind":"skip"}]
+gate2_plan: {"fields": {"title": "PROP_A", "genre": "PROP_A", "pov": "PROP_A", "target_length": "PROP_A", "premise": "PROP_A", "theme": "PROP_B", "characters": "PROP_A", "core_conflict": "PROP_A", "arc": "PROP_B", "structure": "PROP_B", "key_knowledge": "PROP_A", "foreshadowing": "PROP_A", "style_direction": "PROP_A"}, "resolutions": {"PROP_B:CONF_001": "kept_user"}}
+input_sha256: "f38875fcf1879efb464a60dc46ca470f7a99e997748a905f4d041b5718ef609f"
+response:
+  model: recorded-blueprint-builder-v0.1
+  text: |
+    meta:
+      title: '两个人都在等'
+      genre: '现代情感'
+      pov: [CH_WOMAN]
+      target_length: 9000
+    premise:
+      value: '两个都深爱对方的人，在同一个晚上各自等对方先开口'
+      derived_from: PROP_A.core_premise
+    theme:
+      primary:
+        value: '先开口的人要承担"是我求回来的"这一代价'
+        derived_from: PROP_B.core_conflict
+      secondary:
+        - value: '沉默被双方同时误读成不在乎'
+          derived_from: harness
+    characters:
+      - id: CH_WOMAN
+        name: '林晚'
+        role: '女方，提出分手的人'
+        desire: '想被认真对待，而不是被当成小题大做'
+        fear: '先开口就等于承认自己离不开他'
+        contradiction: '她提出分手，却每天都在等对方认错'
+        voice_hint: '越生气句子越短'
+        observable_behavior_hints:
+          - value: '不满时把杯子放回桌上，不再说话'
+            applicable_scene_types: [conflict, dialogue]
+            derived_from: PROP_A.core_premise
+        relationships:
+          - target: CH_MAN
+            kind: lover
+            state: together
+            since_ref: BP_STR_BEG
+            derived_from: PROP_A.core_conflict
+        derived_from: PROP_A.core_premise
+      - id: CH_MAN
+        name: '陈默'
+        role: '男方，认为对方小题大做的人'
+        desire: '想被承认自己也受了伤'
+        fear: '低头之后依然被当成不懂事'
+        contradiction: '他打了认错的电话又在接通前按掉'
+        voice_hint: '先讲道理，急了才说实话'
+        observable_behavior_hints:
+          - value: '紧张时反复擦手机屏幕'
+            applicable_scene_types: [dialogue]
+            derived_from: PROP_A.core_premise
+        relationships:
+          - target: CH_WOMAN
+            kind: lover
+            state: together
+            since_ref: BP_STR_BEG
+            derived_from: PROP_A.core_conflict
+        derived_from: PROP_A.core_premise
+    core_conflict:
+      value: '谁先开口，谁就先承认自己更在乎，也要承担"求回来"的代价'
+      derived_from: PROP_A.core_conflict
+    arc:
+      start:
+        value: '他把她的话当成又一次小题大做'
+        derived_from: PROP_B.character_arc
+      shift:
+        value: '他第一次说出自己那天也被伤到了'
+        derived_from: PROP_B.truth_or_turn
+      end:
+        value: '他先开口，她没有搬走'
+        derived_from: PROP_B.ending
+    structure:
+      beginning:
+        value: '一件小事升级成分手，两人各自回家'
+        derived_from: PROP_B.core_premise
+      development:
+        value: '冷战里两人反复回想同一个晚上'
+        derived_from: PROP_B.core_conflict
+      turning_point:
+        value: '她发现他记住了每一句话，却记错了重点'
+        derived_from: PROP_B.truth_or_turn
+      climax:
+        value: '他开口说出自己的委屈，而不是只认错'
+        derived_from: PROP_B.truth_or_turn
+      ending:
+        value: '她留了下来，两人第一次把话说完'
+        derived_from: PROP_B.ending
+    key_knowledge:
+      - truth: '男方那晚写过道歉消息又删掉了'
+        truth_status: CONFIRMED
+        known_by: {CH_WOMAN: false, CH_MAN: true}
+        reader_knows: false
+        reveal_at_structure: BP_STR_TURN
+        reveal_order: 1
+        reveal_to: [CH_WOMAN]
+        reveal_to_reader: true
+        derived_from: PROP_A.truth_or_turn
+    foreshadowing:
+      - value: '他手机里没有发出去的草稿'
+        setup_at_structure: BP_STR_BEG
+        setup_order: 1
+        payoff_at_structure: BP_STR_TURN
+        payoff_order: 1
+        derived_from: PROP_A.ending
+    style_direction:
+      narration: '贴身第三人称，只写她能感知到的部分'
+      dialogue: '对白占比高，短句，不解释情绪'
+      rhythm: '段落短，不跨场景跳时'
+      derived_from: PROP_A.tone

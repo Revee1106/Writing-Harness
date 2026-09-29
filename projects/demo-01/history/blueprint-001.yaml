@@ -1,0 +1,196 @@
+schema_version: "0.1"
+blueprint_version: 1
+meta:
+  title: 两个人都在等
+  genre: 现代情感
+  pov:
+    - CH_WOMAN
+  target_length: 9000
+premise:
+  id: BP_PREMISE_01
+  value: 两个都深爱对方的人，在同一个晚上各自等对方先开口
+  status: CONFIRMED
+  source_refs:
+    - type: proposal
+      ref_id: PROP_A.core_premise
+theme:
+  primary:
+    id: BP_THEME_01
+    value: 沉默被双方同时误读成不在乎
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_conflict
+  secondary:
+    - id: BP_THEME_02
+      value: 认错被当成输赢，而不是沟通
+      source_refs:
+        - type: blueprint_gate2
+          ref_id: GATE2_001
+characters:
+  - id: CH_WOMAN
+    name: 林晚
+    role: 女方，提出分手的人
+    desire: 想被认真对待，而不是被当成小题大做
+    fear: 先开口就等于承认自己离不开他
+    contradiction: 她提出分手，却每天都在等他认错
+    voice_hint: 越生气句子越短，最后只剩单字
+    inner_state_pov_visible:
+      - CH_WOMAN
+    observable_behavior_hints:
+      - id: OBH_WOMAN_01
+        value: 不满时不说话，只把杯子放回桌上
+        applicable_scene_types:
+          - conflict
+          - dialogue
+    relationships:
+      - id: REL_WOMAN_MAN
+        target: CH_MAN
+        kind: lover
+        state: together
+        since_ref: BP_STR_BEG
+        source_refs:
+          - type: proposal
+            ref_id: PROP_A.core_conflict
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_premise
+  - id: CH_MAN
+    name: 陈默
+    role: 男方，认为对方小题大做的人
+    desire: 想让这件事按"小事"处理过去
+    fear: 被反复指责，怀疑自己怎么做都不对
+    contradiction: 他打好了道歉的电话，却在接通前按掉
+    voice_hint: 讲道理时句子变长，被逼急时沉默
+    inner_state_pov_visible: []
+    observable_behavior_hints:
+      - id: OBH_MAN_01
+        value: 被指责时先看手机，再抬眼看对方
+        applicable_scene_types:
+          - conflict
+    relationships:
+      - id: REL_MAN_WOMAN
+        target: CH_WOMAN
+        kind: lover
+        state: together
+        since_ref: BP_STR_BEG
+        source_refs:
+          - type: proposal
+            ref_id: PROP_A.core_conflict
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_premise
+core_conflict:
+  id: BP_CONFLICT_01
+  value: 谁先开口，谁就先承认自己更在乎这段关系
+  source_refs:
+    - type: proposal
+      ref_id: PROP_A.core_conflict
+arc:
+  start:
+    id: BP_ARC_START
+    value: 两人都以为对方会先动
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.character_arc
+  shift:
+    id: BP_ARC_SHIFT
+    value: 她意识到自己也在用分手做要挟
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+  end:
+    id: BP_ARC_END
+    value: 她搬走，留下那条没被发出的消息
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.ending
+structure:
+  beginning:
+    id: BP_STR_BEG
+    value: 一件小事的争吵升级成分手
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_premise
+  development:
+    id: BP_STR_DEV
+    value: 两人各自等对方先开口，日常继续但话越来越少
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_conflict
+  turning_point:
+    id: BP_STR_TURN
+    value: 她发现他其实写了道歉又删掉
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+  climax:
+    id: BP_STR_CLIMAX
+    value: 两人同时拿起手机，又同时放下
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+  ending:
+    id: BP_STR_END
+    value: 她搬走，草稿留在他的手机里
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.ending
+key_knowledge:
+  - id: K001
+    truth: 男方当晚写过一条道歉消息并删掉了
+    truth_status: CONFIRMED
+    known_by:
+      CH_WOMAN: false
+      CH_MAN: true
+    reader_knows: false
+    reveal_at_structure: BP_STR_TURN
+    reveal_order: 1
+    reveal_to:
+      - CH_WOMAN
+    reveal_to_reader: true
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+foreshadowing:
+  - id: BP_FS_001
+    value: 他手机里那个一直没点开的对话框
+    setup_at_structure: BP_STR_BEG
+    setup_order: 1
+    payoff_at_structure: BP_STR_END
+    payoff_order: 1
+    source_refs:
+      - type: blueprint_gate2
+        ref_id: GATE2_001
+style_direction:
+  id: BP_STYLE_01
+  narration: 贴身第三人称，只写她能看到和听到的
+  dialogue: 对白占比高，短句，避免解释情绪
+  rhythm: 段落短，场景内不做时间跳跃
+  source_refs:
+    - type: proposal
+      ref_id: PROP_A.tone
+seed_fidelity:
+  preserved:
+    - seed_ref: SEED_F001
+      value_in_proposal: 两人是情侣且都深爱对方
+    - seed_ref: SEED_F002
+      value_in_proposal: 争吵起因是一件小事
+    - seed_ref: SEED_F003
+      value_in_proposal: 女方提出了分手
+    - seed_ref: SEED_F004
+      value_in_proposal: 女方只要男方认错就愿意留下
+    - seed_ref: SEED_F005
+      value_in_proposal: 男方认为对方每次都小题大做
+    - seed_ref: SEED_F006
+      value_in_proposal: 两个人都在等对方先开口
+  altered: []
+  added:
+    - id: ADD_001
+      value: 男方当晚打好了电话又按掉
+      status: PROPOSED
+      source: harness
+  risk:
+    - id: RISK_001
+      value: 新增未拨出的电话可能把主题从双向沉默偏移成单一遗憾
+      related_addition_refs:
+        - ADD_001

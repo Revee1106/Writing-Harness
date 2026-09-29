@@ -40,8 +40,9 @@ src/
   providers/  LLMProvider 接口 + RecordedProvider（离线回放）+ OpenAI 兼容 Provider
   interpreter/Seed Interpreter（Prompt Contract / 解析 / ID 分配 / 原文可追溯校验）
   gate1/      Author Gate 1（六种操作 / gate1_status 迁移 / 服务）
+  gate2/      Author Gate 2（字段计划 / 合并与装配 / 版本与快照 / 服务）
   developer/  Story Developer（Proposal 生成 / ID 规范化 / seed_fidelity 与冲突检查）
-  prompts/    版本化 Prompt Contract（seed_interpreter@0.1.md / story_developer@0.1.md）
+  prompts/    版本化 Prompt Contract（seed_interpreter@0.1.md / story_developer@0.1.md / blueprint_builder@0.1.md）
   cli/        CLI 入口
 scripts/      fixture 哈希刷新工具
 tests/
@@ -77,6 +78,14 @@ pnpm harness develop demo-02 --plan               # 只读预览：方案 + seed
 pnpm harness develop demo-02                      # 写入 proposals.yaml
 pnpm harness proposals show demo-02               # 方案摘要 + Seed Preservation Rate
 
+# Author Gate 2：确认 / 合并 / 手改 → Blueprint（Story 4）
+pnpm harness gate2 demo-02 --plan                    # 只读预览：字段来源 + 完整 Blueprint，不写盘
+pnpm harness gate2 demo-02 --from PROP_A             # 单来源确认
+pnpm harness gate2 demo-01 --field premise=PROP_A --field structure=PROP_B ...   # 逐字段合并
+pnpm harness gate2 demo-01 --edit premise='用户手写的核心前提'                    # 用户手写字段
+pnpm harness gate2 demo-01 --resolve PROP_B:CONF_001=kept_user                   # 裁决 USER_GIVEN 冲突
+pnpm harness blueprint show demo-02                  # 当前 Blueprint 摘要
+
 # fixture 与 Seed 文本 / Gate 1 状态一致性（离线回放依赖）
 pnpm fixtures:check
 pnpm fixtures:refresh
@@ -93,7 +102,8 @@ Node 24 可直接执行 TypeScript，CLI 无需构建步骤。
 |---|---|---|
 | Story 1 | Project Model + Story Seed | ✅ 完成 |
 | Story 2 | Seed Interpreter + Gate 1 | ✅ 完成 |
-| Story 3 | Story Developer + Proposal | ✅ 完成（271 项测试全绿） |
+| Story 3 | Story Developer + Proposal | ✅ 完成 |
+| Story 4 | Blueprint Confirm / Merge / Edit（Gate 2） | ✅ 完成（337 项测试全绿） |
 | Story 3 | Story Developer + Proposal | 未开始 |
 | Story 4 | Blueprint Confirm / Merge / Edit（Gate 2） | 未开始 |
 | Story 5 | Scene Breakdown + Story State + Coverage Check | 未开始 |

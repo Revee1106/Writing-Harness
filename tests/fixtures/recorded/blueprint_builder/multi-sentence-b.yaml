@@ -1,0 +1,112 @@
+contract: blueprint_builder
+contract_version: "0.1"
+seed: multi-sentence.txt
+gate1_ops: [{"kind":"skip"}]
+gate2_plan: {"from": "PROP_B", "resolutions": {"PROP_B:CONF_001": "kept_user"}}
+input_sha256: "41802620c59bed401ff0ccb4016301e072615649b414352f349a4da833b294c8"
+response:
+  model: recorded-blueprint-builder-v0.1
+  text: |
+    meta:
+      title: '谁先开口'
+      genre: '现代情感'
+      pov: [CH_MAN]
+      target_length: 9000
+    premise:
+      value: '分手之后，两个人开始了一场关于谁先开口的长期拉锯'
+      derived_from: PROP_B.core_premise
+    theme:
+      primary:
+        value: '先开口的人要承担"是我求回来的"这一代价'
+        derived_from: PROP_B.core_conflict
+      secondary:
+        - value: '两个人都需要被看见委屈，而不只是被判定对错'
+          derived_from: harness
+    characters:
+      - id: CH_MAN
+        name: '周迟'
+        role: '男方，先开口的人'
+        desire: '想被承认自己也受了伤'
+        fear: '低头之后依然被当成不懂事'
+        contradiction: '他一边说对方小题大做，一边把争吵的每一句都记住'
+        voice_hint: '先讲道理，急了才说实话'
+        observable_behavior_hints:
+          - value: '紧张时反复擦手机屏幕'
+            applicable_scene_types: [dialogue, conflict]
+            derived_from: PROP_B.core_premise
+        relationships:
+          - target: CH_WOMAN
+            kind: lover
+            state: together
+            since_ref: BP_STR_BEG
+            derived_from: PROP_B.core_conflict
+        derived_from: PROP_B.core_premise
+      - id: CH_WOMAN
+        name: '林晚'
+        role: '女方，提出分手的人'
+        desire: '想确认自己不是被敷衍的那一方'
+        fear: '留下来之后一切照旧'
+        contradiction: '她说要分手，但一直没搬走'
+        voice_hint: '平静地说最重的话'
+        observable_behavior_hints:
+          - value: '生气时会先去洗碗'
+            applicable_scene_types: [conflict]
+            derived_from: PROP_B.core_premise
+        relationships:
+          - target: CH_MAN
+            kind: lover
+            state: together
+            since_ref: BP_STR_BEG
+            derived_from: PROP_B.core_conflict
+        derived_from: PROP_B.core_premise
+    core_conflict:
+      value: '他必须先承认自己也被伤到，而不是只承认错'
+      derived_from: PROP_B.core_conflict
+    arc:
+      start:
+        value: '他把这次争吵当成又一次小题大做'
+        derived_from: PROP_B.character_arc
+      shift:
+        value: '他第一次说出自己那天也被伤到了'
+        derived_from: PROP_B.truth_or_turn
+      end:
+        value: '他先开口，她留了下来'
+        derived_from: PROP_B.ending
+    structure:
+      beginning:
+        value: '争吵与分手在同一天发生'
+        derived_from: PROP_B.core_premise
+      development:
+        value: '两人冷战中各自回忆同一个晚上'
+        derived_from: PROP_B.core_conflict
+      turning_point:
+        value: '他发现自己记住的每句话都不是重点'
+        derived_from: PROP_B.truth_or_turn
+      climax:
+        value: '他开口说的不是道歉，而是那天自己的委屈'
+        derived_from: PROP_B.truth_or_turn
+      ending:
+        value: '她没有搬走，两人第一次把话说完'
+        derived_from: PROP_B.ending
+    key_knowledge:
+      - truth: '男方在那次争吵里也被伤到了，只是一直没说'
+        truth_status: CONFIRMED
+        known_by: {CH_MAN: true, CH_WOMAN: false}
+        reader_knows: false
+        reveal_at_structure: BP_STR_CLIMAX
+        reveal_order: 1
+        reveal_to: [CH_WOMAN]
+        reveal_to_reader: true
+        derived_from: PROP_B.truth_or_turn
+    foreshadowing:
+      - value: '他擦手机屏幕的动作'
+        setup_at_structure: BP_STR_BEG
+        setup_order: 1
+        payoff_at_structure: BP_STR_CLIMAX
+        payoff_order: 1
+        derived_from: harness
+    style_direction:
+      narration: '贴男方视角，允许短促的内心闪回'
+      dialogue: '对白推动转折，避免总结式旁白'
+      rhythm: '短段落，转折点前后收紧句长'
+      derived_from: PROP_B.tone

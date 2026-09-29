@@ -1,0 +1,112 @@
+contract: blueprint_builder
+contract_version: "0.1"
+seed: story2/02-mystery.txt
+gate1_ops: [{"kind":"skip"}]
+gate2_plan: {"fields":{"title":"PROP_A","genre":"PROP_A","pov":"PROP_B","target_length":"PROP_A","premise":"PROP_A","theme":"PROP_A","characters":"PROP_B","core_conflict":"PROP_A","arc":"PROP_B","structure":"PROP_B","key_knowledge":"PROP_A","foreshadowing":"PROP_B","style_direction":"PROP_A"},"resolutions":{"PROP_B:CONF_001":"changed_user"}}
+input_sha256: "b233ed45e17e4b6a04f37f66c929c172c446e999892d923d7c0192008e6ec0bb"
+response:
+  model: recorded-blueprint-builder-v0.1
+  text: |
+    meta:
+      title: '替她说话的人'
+      genre: '现代悬疑'
+      pov: [CH_SISTER]
+      target_length: 9500
+    premise:
+      value: '男人每天给去世的妻子发微信，某天收到了回复'
+      derived_from: PROP_A.core_premise
+    theme:
+      primary:
+        value: '想让人好过一点的谎言，会把人困得更久'
+        derived_from: PROP_A.core_conflict
+      secondary:
+        - value: '未读的消息比读完的消息更长久'
+          derived_from: harness
+    characters:
+      - id: CH_SISTER
+        name: '陈雨'
+        role: '妻子的妹妹，替姐姐回消息的人'
+        desire: '让姐夫不要一个人垮掉'
+        fear: '谎言被拆穿的那天'
+        contradiction: '她一边维持账号，一边希望对方停止发消息'
+        voice_hint: '极短句，回避称呼'
+        observable_behavior_hints:
+          - value: '发消息前反复删改，最后只发三个字'
+            applicable_scene_types: [dialogue, interior]
+            derived_from: PROP_B.core_premise
+        relationships:
+          - target: CH_MAN
+            kind: in_law
+            state: caretaking_lie
+            since_ref: BP_STR_BEG
+            derived_from: PROP_B.core_conflict
+        derived_from: PROP_B.core_premise
+      - id: CH_MAN
+        name: '周维'
+        role: '丈夫，每天发消息的人'
+        desire: '想确认妻子还在某个地方'
+        fear: '承认对方已经不在了'
+        contradiction: '他不敢发第二条，却每天检查手机'
+        voice_hint: '自问自答式长句'
+        observable_behavior_hints:
+          - value: '看手机时先看电量'
+            applicable_scene_types: [interior]
+            derived_from: PROP_B.core_premise
+        relationships:
+          - target: CH_SISTER
+            kind: in_law
+            state: unaware
+            since_ref: BP_STR_BEG
+            derived_from: PROP_B.core_conflict
+        derived_from: PROP_B.core_premise
+    core_conflict:
+      value: '妹妹想让姐夫好过一点，却把他困在一个不会结束的等待里'
+      derived_from: PROP_A.core_conflict
+    arc:
+      start:
+        value: '她只是想让账号看起来还活着'
+        derived_from: PROP_B.character_arc
+      shift:
+        value: '她读到姐夫的第一百条消息，发现自己撑不住了'
+        derived_from: PROP_B.truth_or_turn
+      end:
+        value: '她注销账号，让等待有了终点'
+        derived_from: PROP_B.ending
+    structure:
+      beginning:
+        value: '男人照旧发消息，某天收到三个字的回复'
+        derived_from: PROP_B.core_premise
+      development:
+        value: '他开始每天检查手机，妹妹每天删改草稿'
+        derived_from: PROP_B.core_conflict
+      turning_point:
+        value: '妹妹意识到自己在替姐姐活着'
+        derived_from: PROP_B.truth_or_turn
+      climax:
+        value: '她决定停止回复，又忍不住发出最后一条'
+        derived_from: PROP_B.truth_or_turn
+      ending:
+        value: '账号注销，男人收到"该用户不存在"'
+        derived_from: PROP_B.ending
+    key_knowledge:
+      - truth: '回复是妻子的妹妹回的，不是妻子'
+        truth_status: CONFIRMED
+        known_by: {CH_SISTER: true, CH_MAN: false}
+        reader_knows: true
+        reveal_at_structure: BP_STR_TURN
+        reveal_order: 1
+        reveal_to: [CH_MAN]
+        reveal_to_reader: true
+        derived_from: PROP_A.truth_or_turn
+    foreshadowing:
+      - value: '回复的时间总在凌晨两点'
+        setup_at_structure: BP_STR_BEG
+        setup_order: 1
+        payoff_at_structure: BP_STR_TURN
+        payoff_order: 1
+        derived_from: PROP_B.truth_or_turn
+    style_direction:
+      narration: '贴身第三人称，妹妹视角，不写男方内心'
+      dialogue: '消息文本与对白交替，消息不加引号'
+      rhythm: '短段，按天推进'
+      derived_from: PROP_A.tone

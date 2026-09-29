@@ -88,3 +88,34 @@
 | I-21 | **`pov` 元素必须是 `CH_*` 角色 ID，长度 ∈ {1,2}**；`target_length` 为正整数（单位：中文字数）。 | §11.3 的 POV 规则按 §11「Blueprint 是 Scene Breakdown 的唯一故事规划来源」同样约束 Proposal；D6 已裁决 target_length 单位为中文字数。 | 文档未在 §9.1 重复说明，属于一致性约束。 |
 | I-22 | **`altered` 必须与 `conflicts` 成对出现**（Prompt Contract 明文要求）；Schema 层不做强制（因为 `resolution` 可由用户在 Gate 2 直接改写），但开发者服务会对 `resolution=pending` 的冲突发出 `CONFLICT_PENDING` 提醒。 | §9.2「conflicts[] 必须能回答…Gate 2 最终处理结果」+ §9.1 的 altered 语义。 | Story 4 在 Gate 2 收口 resolution。 |
 | I-23 | **Story Developer 的离线 fixture 采用 `gate1_status=skipped` 作为规范状态**（除一个 `partial`+promote 变体），因为 `skip` 是唯一"不修改 Interpreter 结果"的 Gate 1 出口。 | §5.1 skip 语义；离线可复现要求。 | fixture 元数据 `gate1_ops` 记录该状态，供 `fixtures:check` 复核。 |
+
+---
+
+## 六、Story 4 用户裁决落地与实现解读
+
+### 用户裁决
+
+| 事项 | 裁决 | 落地 |
+|---|---|---|
+| OQ-30 | 保持当前实现，并明确语义（delete 永久移出分母且不可经 Gate 2 恢复；demote 只改归属；edit 不改分母） | 已写入 OQ-30 表格 |
+| OQ-31/32/33/34 | 全部接受 | 无改动 |
+| OQ-10 | 新增 `projects/<id>/blueprint-history/<NNN>.meta.yaml`，与 `blueprint-<NNN>.yaml` 一一对应；含 `gate2_action_id: GATE2_<NNN>` 与 `user_edits[].id: EDIT_<NNN>`；不改 `blueprint.yaml` | `src/schema/gate2-meta.ts` + `src/io/paths.ts`（见解读 I-31） |
+| OQ-18 | `truth_status` v0.1 只允许 `CONFIRMED` | `TRUTH_STATUSES = ['CONFIRMED']` |
+| 合并粒度 | 逐字段指定来源 + 可手改；每条三条约束 | `resolveFieldPlan()` + `assembleBlueprint()`（见 I-32） |
+
+### 实现解读
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-24 | `key_knowledge.known_by` 除"key 必须是 character id"外，**必须包含 meta.pov 的每一个角色**（值可为 false）。 | §13「POV Filter 根据当前 scene.pov 查询 known_by[current_pov]」：缺键会让 POV Filter 无法回答"开场是否已知"。 | 与 OQ-08（允许非 POV 角色存在）不冲突：那是下限，这是完整性要求。 |
+| I-25 | `inner_state_pov_visible` 的取值必须是 `meta.pov` 的子集。 | §11.3 的字段语义是"哪些 POV 能看到这个角色的内心"，POV 维度之外的取值没有意义。 | 已在 Schema 校验。 |
+| I-26 | Blueprint 内容项的 `status` 只允许 `CONFIRMED`；例外是 `seed_fidelity.added[].status = PROPOSED`（结构与 Proposal 一致，OQ-01 要求）。 | §6.4（CONFIRMED = Gate 2 接受）+ Story 10 F / 架构设计 §34 的 P2 测试要求"Harness 新增内容必须保持 source=harness、status=PROPOSED"。 | 由 `scanBlueprint()` 递归强制执行，例外范围被精确限定在 `seed_fidelity` 子树。 |
+| I-27 | OBH / REL 的 ID 由 Harness 依角色 ID 生成：`OBH_<角色后缀>_<NN>`、`REL_<来源后缀>_<目标后缀>`（重复时追加 `_2`）。 | §11.1 示例 `OBH_LINYU_01` / `REL_LINYU_CHENMO` 只给了形态。 | 与 I-13/I-19 同一原则：ID 由 Harness 确定性分配。 |
+| I-28 | **参与本次 Gate 2 的提案若存在 `resolution=pending` 的冲突，则拒绝确认**，并逐条给出 `--resolve` 命令。 | §6.2「conflict 不自动覆盖、不自动合并，在 Gate 2 由用户处理」+ §9.2「resolution 记录 Gate 2 最终处理结果」+ Story 4 验收 7。 | 裁决只写入 meta，不回写 proposals.yaml（用户裁决）。 |
+| I-29 | `GATE2_<NNN>` 与 `blueprint_version` 一一对应；`EDIT_<NNN>` **跨版本全局递增**（扫描既有 meta 取最大值 + 1）。 | OQ-10 给出的 ID 形态 + `source_refs.type=user_edit` 必须可解析（§7.2）。 | 见 OQ-38。 |
+| I-30 | Blueprint Builder 的 `derived_from` 只允许三种：`<参与提案>.<字段>` / `user_edit:<字段>` / `harness`。 | 用户裁决"每个字段必须带 source_refs，指向 Proposal 字段路径或标记 user_edit"。 | `harness` 映射为 `{type: blueprint_gate2, ref_id: GATE2_<NNN>}`。 |
+| I-31 | **快照保持在 §29 冻结的 `history/blueprint-<NNN>.yaml`；新增的元数据写在 `blueprint-history/<NNN>.meta.yaml`；两者按同一 NNN 一一对应。** | OQ-10 要求新增 `blueprint-history/<NNN>.meta.yaml`，而 §29/§32 已冻结快照位置。 | 见 OQ-35；若改为同目录只需改 `src/io/paths.ts`。 |
+| I-32 | 合并时**每个字段的 `derived_from` 必须是该字段字段计划里指定的那个提案**（或 `harness` / 对应的 `user_edit`）；引用其它提案报错，不静默换源。 | 用户裁决三条之二（"字段在两 Proposal 都有且用户未指定 → 报错，不自动取 A"）的延伸：既然来源由用户逐字段指定，输出就不能偏离计划。 | 报错信息会点明"字段计划来源是 X，但输出声明 Y"。 |
+| I-33 | **manual 模式（全部字段用户手写）的 `seed_fidelity.preserved` 由 Seed 现存的 `raw_seed_anchor_ids` 直接构造**（id + 原文 value），`altered/added/risk` 为空。 | OQ-01 要求 Blueprint 顶层必须有 seed_fidelity；manual 模式没有参与提案可继承。 | 未新增字段；内容全部来自 Seed 本身，不虚构。 |
+| I-34 | **单 POV 的 `inner_state_pov_visible` 默认规则**：POV 角色自身为 `[self]`，非 POV 角色为 `[]`（空数组合法）；双 POV 必须显式。 | §11.3 只说"单 POV 时可由 Builder 默认填入 `[meta.pov[0]]`"，但若所有角色都填 `[meta.pov[0]]`，会与架构设计 §21 / Story 5 的"非当前 POV 角色的 desire/fear/contradiction 不得进入 Writer 输入"直接冲突。 | 这是对 §11.3 的**收窄解读**，请复核（见 OQ-39）。 |
+| I-35 | `blueprint_builder@0.1` 的结构化输入包含 `field_plan` / 参与提案 / `user_edits` / `conflict_resolutions`，**不含** `GATE2_<NNN>`；动作 ID 在装配阶段注入 `source_refs`。 | 让 recorded fixture 不随版本号变化，同时保证 `source_refs` 里的 Gate 2 动作可解析。 | fixture 可跨版本复用。 |

@@ -1,0 +1,112 @@
+contract: blueprint_builder
+contract_version: "0.1"
+seed: story2/04-warmth.txt
+gate1_ops: [{"kind":"skip"}]
+gate2_plan: {"fields":{"title":"user","genre":"user","pov":"user","target_length":"user","premise":"user","theme":"user","characters":"user","core_conflict":"user","arc":"user","structure":"user","key_knowledge":"user","foreshadowing":"user","style_direction":"user"},"edits":{"title":"最后一页的那句话","genre":"温情短篇","pov":"CH_GRANDSON","target_length":"6000","premise":"孙子回到老家，本子最后一页写着奶奶托人代笔的一句话","theme":"不识字的人如何把期待写下来","characters":"孙子与奶奶两人，奶奶在本子最后一页留下了话","core_conflict":"他想告诉奶奶结果，而奶奶已经不在了","arc":"从回来看看，到把这句话带回城里","structure":"从回家发现本子，到他把本子带回城里","key_knowledge":"最后一页不是奶奶亲笔，是邻居代笔","foreshadowing":"本子前几页的圈和数字","style_direction":"白描、少形容词、对白短"}}
+input_sha256: "8685fb90121a70f7781a085c82730ba5b00e79a56120c7d7c815f6a9baef2121"
+response:
+  model: recorded-blueprint-builder-v0.1
+  text: |
+    meta:
+      title: '最后一页的那句话'
+      genre: '温情短篇'
+      pov: [CH_GRANDSON]
+      target_length: 6000
+    premise:
+      value: '孙子回到老家，本子最后一页写着奶奶托人代笔的一句话'
+      derived_from: user_edit:premise
+    theme:
+      primary:
+        value: '不识字的人如何把期待写下来'
+        derived_from: user_edit:theme
+      secondary:
+        - value: '数字和圈也能是完整的句子'
+          derived_from: harness
+    characters:
+      - id: CH_GRANDSON
+        name: '孙子'
+        role: '高考完回家的年轻人'
+        desire: '想知道奶奶到底写了什么'
+        fear: '那句话是针对他的'
+        contradiction: '他想读懂，却不敢开口问人'
+        voice_hint: '短句，少用形容词'
+        observable_behavior_hints:
+          - value: '翻本子时先看页码'
+            applicable_scene_types: [interior, dialogue]
+            derived_from: user_edit:characters
+        relationships:
+          - target: CH_GRANDMOTHER
+            kind: grandparent
+            state: raised_by
+            since_ref: BP_STR_BEG
+            derived_from: user_edit:characters
+        derived_from: user_edit:characters
+      - id: CH_GRANDMOTHER
+        name: '奶奶'
+        role: '不识字的人'
+        desire: '把每次分数都留下来'
+        fear: '自己记不住孙子的事'
+        contradiction: '她不识字，却把本子记得最细'
+        voice_hint: '用问句和重复'
+        observable_behavior_hints:
+          - value: '写数字时把本子按得很紧'
+            applicable_scene_types: [interior]
+            derived_from: user_edit:characters
+        relationships:
+          - target: CH_GRANDSON
+            kind: grandparent
+            state: raised_by
+            since_ref: BP_STR_BEG
+            derived_from: user_edit:characters
+        derived_from: user_edit:characters
+    core_conflict:
+      value: '他想告诉奶奶结果，而奶奶已经不在了'
+      derived_from: user_edit:core_conflict
+    arc:
+      start:
+        value: '他从回来看看开始'
+        derived_from: user_edit:arc
+      shift:
+        value: '他读到最后一页，明白这句话不是留给他的答案'
+        derived_from: user_edit:arc
+      end:
+        value: '他把本子带回城里'
+        derived_from: user_edit:arc
+    structure:
+      beginning:
+        value: '回家整理旧物，发现本子'
+        derived_from: user_edit:structure
+      development:
+        value: '他一页页看过去的分数'
+        derived_from: user_edit:structure
+      turning_point:
+        value: '最后一页出现一句完整的话'
+        derived_from: user_edit:structure
+      climax:
+        value: '他意识到这句话是留给自己的'
+        derived_from: user_edit:structure
+      ending:
+        value: '他把本子带回城里放在书桌上'
+        derived_from: user_edit:structure
+    key_knowledge:
+      - truth: '最后一页不是奶奶亲笔，是邻居代笔'
+        truth_status: CONFIRMED
+        known_by: {CH_GRANDSON: false, CH_GRANDMOTHER: true}
+        reader_knows: false
+        reveal_at_structure: BP_STR_CLIMAX
+        reveal_order: 1
+        reveal_to: [CH_GRANDSON]
+        reveal_to_reader: true
+        derived_from: user_edit:key_knowledge
+    foreshadowing:
+      - value: '本子前几页的圈和数字'
+        setup_at_structure: BP_STR_BEG
+        setup_order: 1
+        payoff_at_structure: BP_STR_CLIMAX
+        payoff_order: 1
+        derived_from: user_edit:foreshadowing
+    style_direction:
+      narration: '白描，少形容词'
+      dialogue: '对白短，多为问句'
+      rhythm: '段落短，节奏慢'
+      derived_from: user_edit:style_direction

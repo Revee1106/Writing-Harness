@@ -11,6 +11,7 @@ import {
 } from '../schema/project-config.ts'
 import { createEmptySeed, validateSeedFile, type SeedFile } from '../schema/seed.ts'
 import { validateProposalsFile, type ProposalsFile } from '../schema/proposal.ts'
+import { validateBlueprint, type Blueprint } from '../schema/blueprint.ts'
 
 /**
  * 项目存储层（Story 1）—— 文件优先，无数据库（架构设计 §33.2）。
@@ -183,4 +184,25 @@ export function saveProposals(paths: ProjectPaths, file: ProposalsFile): Proposa
 
 export function proposalsExist(paths: ProjectPaths): boolean {
   return existsSync(paths.proposals)
+}
+
+// ---------------------------------------------------------------------------
+// blueprint.yaml（Story 4）
+// ---------------------------------------------------------------------------
+
+export function loadBlueprint(paths: ProjectPaths): Blueprint {
+  if (!existsSync(paths.blueprint)) {
+    throw new ProjectNotFoundError(`找不到 ${paths.blueprint}（尚未确认 Blueprint）`)
+  }
+  return validateBlueprint(readYamlFile(paths.blueprint))
+}
+
+export function saveBlueprint(paths: ProjectPaths, blueprint: Blueprint): Blueprint {
+  const validated = validateBlueprint(blueprint)
+  writeYamlFile(paths.blueprint, validated)
+  return validated
+}
+
+export function blueprintExists(paths: ProjectPaths): boolean {
+  return existsSync(paths.blueprint)
 }

@@ -1,0 +1,92 @@
+schema_version: "0.1"
+blueprint_version: 1
+gate2_action_id: GATE2_001
+created_at: 2026-09-29T14:39:06.330Z
+mode: single
+snapshot: blueprint-001.yaml
+source_proposal_ids:
+  - PROP_A
+field_sources:
+  - field: title
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.title
+  - field: genre
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.genre
+  - field: pov
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.pov
+  - field: target_length
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.target_length
+  - field: premise
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_premise
+  - field: theme
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_conflict
+      - type: blueprint_gate2
+        ref_id: GATE2_001
+  - field: characters
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_conflict
+      - type: proposal
+        ref_id: PROP_A.core_premise
+      - type: blueprint_gate2
+        ref_id: GATE2_001
+  - field: core_conflict
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_conflict
+  - field: arc
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.character_arc
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+      - type: proposal
+        ref_id: PROP_A.ending
+  - field: structure
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.core_premise
+      - type: proposal
+        ref_id: PROP_A.core_conflict
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+      - type: proposal
+        ref_id: PROP_A.ending
+  - field: key_knowledge
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.truth_or_turn
+  - field: foreshadowing
+    from: PROP_A
+    source_refs:
+      - type: blueprint_gate2
+        ref_id: GATE2_001
+  - field: style_direction
+    from: PROP_A
+    source_refs:
+      - type: proposal
+        ref_id: PROP_A.tone
+user_edits: []
+conflict_resolutions: []

@@ -38,6 +38,8 @@ export const REPO_DEFAULT_ANTI_AI_TEMPLATE_ACTIONS_REL_PATH = join('config', ANT
  */
 export const PROJECT_DIR_SUBDIRS = [
   'history',
+  /** OQ-10 / 解读 I-31：Gate 2 元数据目录（与 history/blueprint-<NNN>.yaml 按 NNN 一一对应）。 */
+  'blueprint-history',
   'scenes',
   'drafts',
   'style',
@@ -72,6 +74,9 @@ export interface ProjectPaths {
   readonly blueprint: string
   readonly storyState: string
   readonly historyDir: string
+  readonly blueprintHistoryDir: string
+  /** 历史 / 元数据的解析结果见 src/schema/gate2-meta.ts 的 snapshotFileName / metaFileName。 */
+  readonly blueprintHistoryMetaDir: string
   readonly scenesDir: string
   readonly draftsDir: string
   readonly styleDir: string
@@ -100,6 +105,8 @@ export function projectPaths(projectsRoot: string, projectId: string): ProjectPa
     blueprint: join(dir, PROJECT_FILE_NAMES.blueprint),
     storyState: join(dir, PROJECT_FILE_NAMES.storyState),
     historyDir: join(dir, 'history'),
+    blueprintHistoryDir: join(dir, 'blueprint-history'),
+    blueprintHistoryMetaDir: join(dir, 'blueprint-history'),
     scenesDir: join(dir, 'scenes'),
     draftsDir: join(dir, 'drafts'),
     styleDir,
