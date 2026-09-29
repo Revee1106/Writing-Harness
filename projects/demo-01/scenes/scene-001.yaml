@@ -1,0 +1,32 @@
+schema_version: "0.1"
+scene_id: scene-001
+order: 1
+pov: CH_WOMAN
+scene_type: dialogue
+purpose: 建立两人的日常与那件小事的引爆点
+target_length: 1500
+narrative_role_ref: BP_STR_BEG
+characters:
+  - CH_WOMAN
+  - CH_MAN
+location: 餐厅
+start_state: 两人还在为晚饭吃什么拌嘴
+conflict: 一件小事被反复提起，语气越来越短
+turn: 她放下筷子说出"那就分吧"
+end_state: 两人各自沉默，饭没吃完
+allowed_reveals: []
+director_notes:
+  - id: DIR_SCENE_001
+    instruction: 对白为主，叙述只保留动作与停顿
+    source: scene
+referenced_blueprint_items:
+  - BP_PREMISE_01
+  - BP_THEME_01
+  - CH_WOMAN
+  - CH_MAN
+  - REL_WOMAN_MAN
+proposed_additions:
+  - id: ADD_001
+    value: 那天晚饭吃的是她做的汤
+    status: PROPOSED
+    source: scene_breakdown

@@ -16,6 +16,8 @@ import { parseRecordedInteraction, RecordedProvider, type RecordedInteraction } 
  *   再走 `buildDeveloperInput()`；因此 fixture 需要额外声明 `gate1_ops`（fixture 元数据）。
  * - `blueprint_builder` → 在上一链条基础上再跑 Story Developer（recorded）得到 proposals，
  *   然后按 fixture 元数据 `gate2_plan` 解析字段计划并构造输入。
+ * - `scene_breakdown`   → 在 blueprint_builder 链条上再装配出 Blueprint（走 Gate 2 装配路径），
+ *   然后构造 Scene Breakdown 的输入。
  */
 
 export interface FixtureCheckEntry {
@@ -107,6 +109,58 @@ const INPUT_BUILDERS_EXTRA: Record<string, InputBuilder> = {
   },
 }
 
+const INPUT_BUILDERS_EXTRA2: Record<string, InputBuilder> = {
+  scene_breakdown: async ({ interaction, rawInput, interpreterFixturesDir }) => {
+    const { applyGate1Operations, gate1OperationSchema, seedFromInterpreterResult } = await import('../gate1/operations.ts')
+    const { runSeedInterpreter } = await import('../interpreter/interpreter.ts')
+    const { runStoryDeveloper } = await import('../developer/developer.ts')
+    const { buildSceneBreakdownInput } = await import('../scenes/service.ts')
+    const { projectPaths } = await import('../io/paths.ts')
+    const { createProject, saveProposals, saveSeed } = await import('../project/project.ts')
+    const { mkdtempSync, rmSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+
+    const recordedRoot = interpreterFixturesDir.replace(/seed-interpreter$/, '')
+    const runChain = async (): Promise<Record<string, unknown>> => {
+      const root = mkdtempSync(join(tmpdir(), 'fixture-scene-'))
+      try {
+        createProject({ projectsRoot: root, projectId: 'fixture', rawInput })
+        const paths = projectPaths(root, 'fixture')
+        const interpretation = await runSeedInterpreter({
+          provider: RecordedProvider.fromDirectory(interpreterFixturesDir),
+          rawInput,
+        })
+        const candidate = seedFromInterpreterResult(rawInput, interpretation)
+        const seed = applyGate1Operations(
+          candidate,
+          (interaction.gate1_ops ?? []).map((op) => gate1OperationSchema.parse(op)),
+        ).seed
+        saveSeed(paths, seed)
+        const developer = await runStoryDeveloper({
+          provider: RecordedProvider.fromDirectory(join(recordedRoot, 'story_developer')),
+          seed,
+        })
+        saveProposals(paths, developer.file)
+        const { runGate2 } = await import('../gate2/service.ts')
+        const blueprint = await runGate2({
+          paths,
+          provider: RecordedProvider.fromDirectory(join(recordedRoot, 'blueprint_builder')),
+          fromProposal: interaction.gate2_plan?.from,
+          fields: interaction.gate2_plan?.fields,
+          edits: interaction.gate2_plan?.edits,
+          resolutions: interaction.gate2_plan?.resolutions,
+          dryRun: true,
+        })
+        return buildSceneBreakdownInput(blueprint.blueprint)
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    }
+    return runChain()
+  },
+}
+
 function listFixtureFiles(fixturesDir: string): string[] {
   return readdirSync(fixturesDir)
     .filter((name) => name.endsWith('.yaml') || name.endsWith('.yml'))
@@ -135,7 +189,10 @@ export async function checkRecordedFixtures(options: FixtureToolOptions): Promis
       continue
     }
 
-    const builder: InputBuilder | undefined = INPUT_BUILDERS[interaction.contract] ?? INPUT_BUILDERS_EXTRA[interaction.contract]
+    const builder: InputBuilder | undefined =
+      INPUT_BUILDERS[interaction.contract] ??
+      INPUT_BUILDERS_EXTRA[interaction.contract] ??
+      INPUT_BUILDERS_EXTRA2[interaction.contract]
     if (builder === undefined) {
       entries.push({
         ...base,

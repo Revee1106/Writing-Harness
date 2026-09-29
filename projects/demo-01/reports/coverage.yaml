@@ -1,0 +1,12 @@
+schema_version: "0.1"
+blueprint_version: 1
+generated_at: 2026-09-29T14:46:07.719Z
+summary:
+  scenes: 5
+  structure_covered: 5
+  arc_covered: 3
+  reveals_resolved: 1
+  reveals_planned: 1
+  references_checked: 29
+  total_target_length: 7700
+warnings: []

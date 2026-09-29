@@ -1,0 +1,34 @@
+schema_version: "0.1"
+blueprint_version: 1
+confirmed_scenes: []
+occurred: []
+knowledge_state:
+  - blueprint_ref: K001
+    known_by:
+      CH_WOMAN: false
+      CH_MAN: true
+    reader_knows: false
+    occurred_reveal: false
+    last_updated_scene: null
+relationship_state:
+  - blueprint_ref: REL_WOMAN_MAN
+    state: together
+    last_updated_scene: null
+  - blueprint_ref: REL_MAN_WOMAN
+    state: together
+    last_updated_scene: null
+open_questions:
+  - seed_ref: SEED_Q001
+    value: 两人最终会不会和好
+    state: open
+    resolution_ref: null
+  - seed_ref: SEED_Q002
+    value: 谁先开口
+    state: open
+    resolution_ref: null
+foreshadowing_state:
+  - blueprint_ref: BP_FS_001
+    resolved_setup_scene: scene-001
+    resolved_payoff_scene: scene-005
+    state: planned
+state_rebuild_conflicts: []

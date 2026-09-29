@@ -1,0 +1,26 @@
+schema_version: "0.1"
+scene_id: scene-004
+order: 4
+pov: CH_HUSBAND
+scene_type: action
+purpose: 男方按下呼叫铃
+target_length: 900
+narrative_role_ref: BP_STR_CLIMAX
+characters:
+  - CH_HUSBAND
+  - CH_WIFE
+  - CH_OLD_MAN
+location: 电梯内（按铃瞬间）
+start_state: 他的手一直插在口袋里
+conflict: 按下去就意味着他先承认
+turn: 他伸手按下呼叫铃
+end_state: 铃声响起，三人都不说话
+allowed_reveals: []
+director_notes:
+  - id: DIR_SCENE_004
+    instruction: 动作写成一句，不加解释
+    source: scene
+referenced_blueprint_items:
+  - BP_ARC_SHIFT
+  - CH_HUSBAND
+proposed_additions: []

@@ -1,0 +1,25 @@
+schema_version: "0.1"
+scene_id: scene-002
+order: 2
+pov: CH_WOMAN
+scene_type: interior
+purpose: 呈现女方独自等待的心理过程
+target_length: 1600
+narrative_role_ref: BP_STR_DEV
+characters:
+  - CH_WOMAN
+location: 她的出租屋
+start_state: 她把手机放在桌上，没有锁屏
+conflict: 她想先等到对方的消息，又不想承认自己在等
+turn: 她把分手的话重新写成一条又删掉的消息
+end_state: 她把手机翻面，决定不再看
+allowed_reveals: []
+director_notes:
+  - id: DIR_SCENE_002
+    instruction: 贴身第三人称，句子越到后面越短
+    source: scene
+referenced_blueprint_items:
+  - BP_CONFLICT_01
+  - CH_WOMAN
+  - OBH_WOMAN_01
+proposed_additions: []

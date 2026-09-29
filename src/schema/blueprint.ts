@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { deepFreeze } from '../core/freeze.ts'
 import { ID_PATTERNS } from '../core/ids.ts'
 import { sourceRefSchema } from '../core/source-ref.ts'
+import { OBSERVABLE_HINT_TAGS, observableHintTagList } from '../core/scene-types.ts'
 import { seedFidelitySchema } from './proposal.ts'
 
 /**
@@ -74,9 +75,17 @@ export const themeSchema = z.strictObject({
 export const observableBehaviorHintSchema = z.strictObject({
   id: z.string().regex(ID_PATTERNS.observableBehaviorHint, 'OBH ID 必须形如 OBH_LINYU_01'),
   value: z.string().min(1),
+  /**
+   * OQ-36 / OQ-41 裁决：scene_type ∪ tone 的联合白名单
+   * （`dialogue` 是 scene_type，`conflict` 是 tone）。
+   */
   applicable_scene_types: z
     .array(z.string().min(1))
-    .min(1, 'observable hint 必须声明适用的 scene type（§11.3：只按匹配 Scene type 加载）'),
+    .min(1, 'observable hint 必须声明适用的 scene type（§11.3：只按匹配 Scene type 加载）')
+    .refine(
+      (tags) => tags.every((tag) => (OBSERVABLE_HINT_TAGS as readonly string[]).includes(tag)),
+      { error: () => ({ message: `applicable_scene_types 只能取 scene_type ∪ tone 的联合白名单：${observableHintTagList()}（OQ-36 / OQ-41）` }) },
+    ),
 })
 
 export const relationshipSchema = z.strictObject({

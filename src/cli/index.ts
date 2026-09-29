@@ -22,6 +22,19 @@ import {
 } from '../gate2/service.ts'
 import { BlueprintBuilderOutputError, Gate2PlanError, MERGEABLE_FIELDS } from '../gate2/builder.ts'
 import { BlueprintValidationError } from '../schema/blueprint.ts'
+import {
+  SceneBreakdownOutputError,
+  SceneBreakdownPreconditionError,
+  SceneRerunRequiredError,
+  loadCoverageReport,
+  loadScenes,
+  loadStoryState,
+  runSceneBreakdown,
+} from '../scenes/service.ts'
+import { SceneValidationError } from '../schema/scene.ts'
+import { CoverageValidationError } from '../scenes/coverage.ts'
+import { StoryStateValidationError } from '../schema/story-state.ts'
+import { unresolvedOrphans } from '../scenes/state.ts'
 import { Gate2MetaValidationError } from '../schema/gate2-meta.ts'
 import { blueprintExists, loadBlueprint } from '../project/project.ts'
 import { computeSeedPreservationRate, ProposalValidationError, conflictResolutionSchema } from '../schema/proposal.ts'
@@ -42,6 +55,7 @@ import { normalizeForEvidence } from '../interpreter/interpreter.ts'
  *         gate1（Story 2，Seed Interpreter + Author Gate 1）
  *         develop（Story 3，Story Developer + Proposal）
  *         gate2 / blueprint show（Story 4，Blueprint Confirm / Merge / Edit）
+ *         breakdown / scenes show / state show / coverage show（Story 5，Scene Breakdown + Story State + Coverage）
  * Gate 3 的交互命令属于 Story 10。
  */
 
@@ -60,6 +74,10 @@ const USAGE = `Short-story-first Writing Harness v0.1 — 项目 / Seed / Gate 1
   harness proposals show <projectId>    显示 proposals.yaml 摘要与 Seed Preservation Rate
   harness gate2 <projectId> [选项]      Author Gate 2：确认 / 合并 / 手改 → Blueprint
   harness blueprint show <projectId>    显示当前 Blueprint 摘要
+  harness breakdown <projectId> [选项]  Scene Breakdown → /scenes + story_state + coverage
+  harness scenes show <projectId>       显示 Scene 列表摘要
+  harness state show <projectId>        显示 story_state.yaml 摘要
+  harness coverage show <projectId>     显示 coverage 报告（结构化 warning）
   harness help                          显示本帮助
 
 通用选项：
@@ -87,6 +105,13 @@ gate1 选项（必须给出一种选择）：
                             delete:SEED_A002           删除错误分类
   --provider <name>       ${PROVIDER_NAMES.join(' / ')}（默认 auto：有 fixtures 用 recorded，否则用环境变量）
   --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/seed-interpreter）
+
+breakdown 选项：
+  --plan                  只读预览：完整解析但不写 /scenes、story_state、coverage
+  --rerun                 显式重跑（覆盖 /scenes/*.yaml；confirmed_scenes 不变；消失的 scene 产生 ORPHANED）
+  --note <scene-###>=<文本>  给某个 Scene 追加用户 director note（source=user；可重复）
+  --provider <name>       ${PROVIDER_NAMES.join(' / ')}
+  --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/scene_breakdown）
 
 gate2 选项（三选一或组合）：
   --from <PROP_X>         以某个 Proposal 为全部字段来源（单来源确认）
@@ -155,10 +180,13 @@ function parseCli(argv: string[]): ParsedCli {
       field: { type: 'string', multiple: true },
       edit: { type: 'string', multiple: true },
       resolve: { type: 'string', multiple: true },
+      rerun: { type: 'boolean' },
+      note: { type: 'string', multiple: true },
     },
   })
   const [command, second, third] = positionals
-  const isSubcommandForm = command === 'seed' || command === 'config' || command === 'proposals' || command === 'blueprint'
+  const isSubcommandForm =
+    command === 'seed' || command === 'config' || command === 'proposals' || command === 'blueprint' || command === 'scenes' || command === 'state' || command === 'coverage'
   return {
     command,
     subcommand: isSubcommandForm ? second : undefined,
@@ -569,6 +597,138 @@ function runBlueprintShowCommand(parsed: ParsedCli): number {
   return 0
 }
 
+
+function parseNotes(values: string[] | undefined): Record<string, string[]> {
+  const notes: Record<string, string[]> = {}
+  for (const raw of values ?? []) {
+    const index = raw.indexOf('=')
+    if (index <= 0) throw new UsageError(`--note 需要 <scene-###>=<文本> 形式，收到 "${raw}"`)
+    const key = raw.slice(0, index).trim()
+    const value = raw.slice(index + 1).trim()
+    if (value === '') throw new UsageError(`--note 的文本不能为空："${raw}"`)
+    notes[key] = [...(notes[key] ?? []), value]
+  }
+  return notes
+}
+
+function printBreakdownSummary(result: Awaited<ReturnType<typeof runSceneBreakdown>>): void {
+  process.stdout.write(`provider=${result.provider} model=${result.model} blueprint_version=${result.coverage.blueprint_version}\n`)
+  process.stdout.write(`scenes=${result.scenes.length} input_sha256=${result.inputSha256}\n\n`)
+  for (const scene of result.scenes) {
+    const reveals = scene.allowed_reveals.length > 0 ? ` allowed_reveals=${scene.allowed_reveals.join(',')}` : ''
+    process.stdout.write(
+      `${scene.scene_id}  order=${scene.order}  ${scene.scene_type}  pov=${scene.pov}  ${scene.narrative_role_ref}  ${scene.target_length}字${reveals}\n`,
+    )
+    process.stdout.write(`    purpose: ${scene.purpose}\n`)
+    process.stdout.write(`    ${scene.start_state} → ${scene.conflict} → ${scene.turn} → ${scene.end_state}\n`)
+    if (scene.proposed_additions.length > 0) {
+      process.stdout.write(`    proposed_additions（永久 PROPOSED）: ${scene.proposed_additions.map((item) => item.value).join(' / ')}\n`)
+    }
+    if (scene.director_notes.length > 0) {
+      process.stdout.write(`    director_notes: ${scene.director_notes.map((note) => `${note.id}[${note.source}]`).join(', ')}\n`)
+    }
+  }
+  process.stdout.write('\nCoverage：\n')
+  process.stdout.write(
+    `  structure ${result.coverage.summary.structure_covered}/5  arc ${result.coverage.summary.arc_covered}/3  reveals ${result.coverage.summary.reveals_resolved}/${result.coverage.summary.reveals_planned}  合计篇幅 ${result.coverage.summary.total_target_length}\n`,
+  )
+  for (const warning of result.coverage.warnings) {
+    process.stdout.write(`  [${warning.severity}] ${warning.id} ${warning.type}: ${warning.message}\n`)
+  }
+  if (result.coverage.warnings.length === 0) {
+    process.stdout.write('  （无 warning）\n')
+  }
+  const orphans = unresolvedOrphans(result.state)
+  if (orphans.length > 0) {
+    process.stdout.write(`\n未处理的 ORPHANED 重建冲突（禁止 Context Compile，§17.3）：${orphans.map((item) => item.id).join(', ')}\n`)
+  }
+}
+
+async function runBreakdownCommand(parsed: ParsedCli): Promise<number> {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const userNotes = parseNotes(parsed.values.note as string[] | undefined)
+  const resolved = providerFor(parsed, 'scene_breakdown')
+
+  const result = await runSceneBreakdown({
+    paths,
+    provider: resolved.provider,
+    userNotes,
+    rerun: parsed.values.rerun === true,
+    dryRun: parsed.values.plan === true,
+  })
+
+  if (parsed.values.json === true) {
+    process.stdout.write(`${JSON.stringify({ ...result, provider_name: resolved.name }, null, 2)}\n`)
+  } else {
+    printBreakdownSummary(result)
+  }
+
+  if (result.written) {
+    process.stdout.write(`\n已写入：${result.paths.scenesDir}/*.yaml\n`)
+    process.stdout.write(`Story State：${result.paths.storyState}\n`)
+    process.stdout.write(`Coverage：${result.paths.coverage}\n`)
+  } else {
+    process.stdout.write('\n[plan] 只读预览：未写 /scenes、story_state.yaml、reports/coverage.yaml\n')
+  }
+  return 0
+}
+
+function runScenesShowCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const scenes = loadScenes(paths)
+  if (scenes.length === 0) {
+    process.stdout.write('（没有 Scene；请先执行 harness breakdown）\n')
+    return 0
+  }
+  process.stdout.write(`# ${paths.scenesDir}（${scenes.length} 个 Scene）\n`)
+  for (const scene of scenes) {
+    process.stdout.write(
+      `${scene.scene_id}  order=${scene.order}  ${scene.scene_type}  pov=${scene.pov}  ${scene.narrative_role_ref}  ${scene.target_length}字  allowed_reveals=${scene.allowed_reveals.join(',') || '-'}\n`,
+    )
+  }
+  return 0
+}
+
+function runStateShowCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const state = loadStoryState(paths)
+  if (state === null) {
+    process.stdout.write('（没有 story_state.yaml；请先执行 harness breakdown）\n')
+    return 0
+  }
+  process.stdout.write(`# ${paths.storyState}\nschema_version: ${state.schema_version}\nblueprint_version: ${state.blueprint_version}\n`)
+  process.stdout.write(`confirmed_scenes: ${state.confirmed_scenes.join(', ') || '（空）'}\n`)
+  process.stdout.write(`occurred: ${state.occurred.length} 条\n`)
+  process.stdout.write(`knowledge_state: ${state.knowledge_state.map((item) => `${item.blueprint_ref}(reveal=${item.occurred_reveal}, scene=${item.last_updated_scene ?? '-'})`).join(' / ')}\n`)
+  process.stdout.write(`relationship_state: ${state.relationship_state.map((item) => `${item.blueprint_ref}=${item.state}`).join(' / ') || '（空）'}\n`)
+  process.stdout.write(`open_questions: ${state.open_questions.map((item) => `${item.seed_ref}=${item.state}`).join(' / ') || '（空）'}\n`)
+  process.stdout.write(`foreshadowing_state: ${state.foreshadowing_state.map((item) => `${item.blueprint_ref}(${item.resolved_setup_scene ?? '-'}→${item.resolved_payoff_scene ?? '-'}:${item.state})`).join(' / ') || '（空）'}\n`)
+  process.stdout.write(`state_rebuild_conflicts: ${state.state_rebuild_conflicts.length} 条（未处理 ${unresolvedOrphans(state).length} 条）\n`)
+  return 0
+}
+
+function runCoverageShowCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const report = loadCoverageReport(paths)
+  if (report === null) {
+    process.stdout.write('（没有 coverage 报告；请先执行 harness breakdown）\n')
+    return 0
+  }
+  process.stdout.write(`# ${paths.coverageReport}\nschema_version: ${report.schema_version}\nblueprint_version: ${report.blueprint_version}\n`)
+  process.stdout.write(
+    `summary: scenes=${report.summary.scenes} structure=${report.summary.structure_covered}/5 arc=${report.summary.arc_covered}/3 reveals=${report.summary.reveals_resolved}/${report.summary.reveals_planned} refs=${report.summary.references_checked} length=${report.summary.total_target_length}\n`,
+  )
+  for (const warning of report.warnings) {
+    process.stdout.write(`[${warning.severity}] ${warning.id} ${warning.type} ${warning.refs.join(',')}\n    ${warning.message}\n`)
+  }
+  if (report.warnings.length === 0) process.stdout.write('（无 warning）\n')
+  return 0
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseCli(argv)
 
@@ -599,6 +759,17 @@ async function main(argv: string[]): Promise<number> {
     case 'blueprint':
       if (parsed.subcommand === 'show') return runBlueprintShowCommand(parsed)
       throw new UsageError(`未知子命令：blueprint ${parsed.subcommand ?? ''}`)
+    case 'breakdown':
+      return runBreakdownCommand(parsed)
+    case 'scenes':
+      if (parsed.subcommand === 'show') return runScenesShowCommand(parsed)
+      throw new UsageError(`未知子命令：scenes ${parsed.subcommand ?? ''}`)
+    case 'state':
+      if (parsed.subcommand === 'show') return runStateShowCommand(parsed)
+      throw new UsageError(`未知子命令：state ${parsed.subcommand ?? ''}`)
+    case 'coverage':
+      if (parsed.subcommand === 'show') return runCoverageShowCommand(parsed)
+      throw new UsageError(`未知子命令：coverage ${parsed.subcommand ?? ''}`)
     default:
       throw new UsageError(`未知命令：${parsed.command}`)
   }
@@ -627,7 +798,13 @@ try {
     error instanceof Gate2PreconditionError ||
     error instanceof BlueprintBuilderOutputError ||
     error instanceof BlueprintValidationError ||
-    error instanceof Gate2MetaValidationError
+    error instanceof Gate2MetaValidationError ||
+    error instanceof SceneBreakdownOutputError ||
+    error instanceof SceneBreakdownPreconditionError ||
+    error instanceof SceneRerunRequiredError ||
+    error instanceof SceneValidationError ||
+    error instanceof CoverageValidationError ||
+    error instanceof StoryStateValidationError
   ) {
     process.stderr.write(`错误：${error.message}\n`)
     process.exitCode = 1

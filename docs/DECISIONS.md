@@ -119,3 +119,44 @@
 | I-33 | **manual 模式（全部字段用户手写）的 `seed_fidelity.preserved` 由 Seed 现存的 `raw_seed_anchor_ids` 直接构造**（id + 原文 value），`altered/added/risk` 为空。 | OQ-01 要求 Blueprint 顶层必须有 seed_fidelity；manual 模式没有参与提案可继承。 | 未新增字段；内容全部来自 Seed 本身，不虚构。 |
 | I-34 | **单 POV 的 `inner_state_pov_visible` 默认规则**：POV 角色自身为 `[self]`，非 POV 角色为 `[]`（空数组合法）；双 POV 必须显式。 | §11.3 只说"单 POV 时可由 Builder 默认填入 `[meta.pov[0]]`"，但若所有角色都填 `[meta.pov[0]]`，会与架构设计 §21 / Story 5 的"非当前 POV 角色的 desire/fear/contradiction 不得进入 Writer 输入"直接冲突。 | 这是对 §11.3 的**收窄解读**，请复核（见 OQ-39）。 |
 | I-35 | `blueprint_builder@0.1` 的结构化输入包含 `field_plan` / 参与提案 / `user_edits` / `conflict_resolutions`，**不含** `GATE2_<NNN>`；动作 ID 在装配阶段注入 `source_refs`。 | 让 recorded fixture 不随版本号变化，同时保证 `source_refs` 里的 Gate 2 动作可解析。 | fixture 可跨版本复用。 |
+
+---
+
+## 七、Story 5 用户裁决落地与实现解读
+
+### 用户裁决
+
+| 事项 | 裁决 | 落地 |
+|---|---|---|
+| OQ-39 | 接受收窄解读；**回写《架构设计》§11.3**（加入回写清单） | `src/gate2/assemble.ts`；回写清单见下 |
+| OQ-35 | 接受当前布局，并明确 `blueprint-history/` 是 v0.1 对 §29/§32 的扩展 | `docs/OPEN-QUESTIONS.md` OQ-35；回写清单加入《架构设计》§32、《需求规格》§29 |
+| OQ-40 | 不做内容一致性校验；只加 `meta.pov` 与 field_sources 中 pov 来源提案一致性的 **warning** | `src/gate2/service.ts` + 详见 I-39 |
+| OQ-36 | `scene_type` 严格 4 种；OBH 接受 scene_type ∪ tone 联合白名单 | `src/core/scene-types.ts`（tone 标签集见 OQ-41） |
+| OQ-11 | `{id: DIR_<source>_NNN, instruction, source}`，blueprint 来源带 blueprint_ref | `src/schema/scene.ts` |
+| OQ-13 | 采纳并加 `resolution_note: string | null` | `src/schema/story-state.ts` |
+| OQ-14 | proposed_additions 不回写、永久 PROPOSED、Compiler 全排除 | `src/schema/scene.ts`（Schema 级锁定 status/source） |
+| OQ-15 | length ±30%；ending 用 `narrative_role_ref=BP_STR_END`；arc 细节由 dsh 提议 | `src/scenes/coverage.ts` |
+| OQ-17 | 重跑需显式触发、覆盖 `/scenes/*.yaml`、`confirmed_scenes` 不变、消失 scene → ORPHANED | `runSceneBreakdown({rerun})` |
+
+### 实现解读
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-36 | Scene 的 `proposed_additions[].id` 采用 **每个 Scene 内独立编号** `ADD_###`。 | §14 未定义该条目的结构；§9.1 已有 `ADD_###` 形态。 | 与 Story 3 的"每份 Proposal 内独立编号"一致，不新增前缀。 |
+| I-37 | `narrative_role_ref` 允许 `BP_STR_*` 与 `BP_ARC_*`。 | §14 示例是 structure 位置；§16 的 Coverage 同时检查 structure 与 arc。 | 见 OQ-42。 |
+| I-38 | **arc 覆盖判定**：该 arc 位置被 Scene 直接引用，或其映射的 structure 位置已被覆盖（START→BEG、SHIFT→TURN、END→END）。 | Story 5 起始会"arc 由 dsh 提议细节"。 | 见 OQ-42；arc 值为空时跳过判定。 |
+| I-39 | **OQ-40 落地**：Gate 2 输出后比较 `meta.pov` 与该字段计划来源提案的 `pov`；不一致时产生 warning（不阻塞），在 CLI 打印、并写入 Gate 2 meta 的 `warnings`。 | OQ-40 裁决。 | 只提示，不做内容一致性校验。 |
+| I-40 | `director_notes[].id` 的 `DIR_<source>_NNN` **在整个项目内唯一**（跨 Scene 递增），而不是每个 Scene 内从 001 开始。 | OQ-11 要求 Manifest 的 `overrides.director_surface_ref` 与 `director_surface.id` 一对一引用；重复 ID 会破坏可解析性。 | `DIR_SCENE_*` 与 `DIR_USER_*` 各自独立递增。 |
+| I-41 | **Coverage 的 reveal_alignment 检查面向"Scene 中已声明的 `allowed_reveals`"**（每个 K 恰好被一个 Scene 覆盖），而不是重新推导一遍 Resolver 结果。 | §16 原文："对应 K ID 是否恰好出现在一个 Scene.allowed_reveals"。 | 这样即使有人手改 Scene，Coverage 依然能发现问题。 |
+| I-42 | Story State 的 `occurred` 排序：按 `scene_id → Scene.order`，同一 Scene 内按 ID 字典序；重放时同一 Scene 内按**原数组物理顺序**（§17.3）。 | §17.3 明文要求"同一 Scene 内按 occurred 数组物理顺序"。 | upsert 用 ID 去重，不产生重复记录。 |
+| I-43 | `referenced_blueprint_items` 与 `director_notes[].blueprint_ref` 接受 Blueprint 项 ID 的并集形态（`BP_*` / `K###` / `CH_*` / `OBH_*` / `REL_*`），"是否真实存在"由 Coverage 对照 Blueprint 校验。 | §16 的完整性检查是"Scene 是否引用不存在的 Blueprint ID"；Blueprint 项不止 `BP_*`。 | 新增 `ID_PATTERNS.blueprintItemRef`。 |
+
+### 回写清单（累计）
+
+| 目标文档 | 需要回写的内容 |
+|---|---|
+| 《架构设计》§11.1 | Blueprint 顶层新增 `seed_fidelity`（OQ-01） |
+| 《架构设计》§11.3 | 单 POV 的 `inner_state_pov_visible` 默认规则收窄为"POV 角色 `[self]`、非 POV 角色 `[]`"（OQ-39 / I-34） |
+| 《架构设计》§32、《需求规格》§29 | 新增 `blueprint-history/` 目录（Gate 2 元数据；OQ-10 / OQ-35） |
+| 《需求规格》§25.1 / 《架构设计》§26 | `anti-ai-template-actions.yaml` 明确为项目级 + 仓库级 fallback（OQ-07） |
+| 《需求规格》§11.3 | OBH 的 `applicable_scene_types` 明确为 scene_type ∪ tone 联合白名单（OQ-36 / OQ-41） |

@@ -1,0 +1,32 @@
+schema_version: "0.1"
+scene_id: scene-003
+order: 3
+pov: CH_WOMAN
+scene_type: dialogue
+purpose: 让女方发现男方也写过消息
+target_length: 1800
+narrative_role_ref: BP_STR_TURN
+characters:
+  - CH_WOMAN
+  - CH_MAN
+location: 他的公寓门口
+start_state: 她来取落下的充电器
+conflict: 两人都在装作只是来拿东西
+turn: 她看到他手机屏幕上那条删掉的草稿
+end_state: 她确认了他在等，但两人都没提这件事
+allowed_reveals:
+  - K001
+director_notes:
+  - id: DIR_SCENE_003
+    instruction: 不写他的内心，只写她的观察
+    source: scene
+referenced_blueprint_items:
+  - K001
+  - BP_STR_TURN
+  - CH_MAN
+  - OBH_MAN_01
+proposed_additions:
+  - id: ADD_001
+    value: 他去开门时手机留在桌上没有锁屏
+    status: PROPOSED
+    source: scene_breakdown

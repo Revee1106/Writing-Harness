@@ -1,0 +1,87 @@
+contract: scene_breakdown
+contract_version: "0.1"
+seed: story2/02-mystery.txt
+gate1_ops: [{"kind":"skip"}]
+gate2_plan: {"fields":{"title":"PROP_A","genre":"PROP_A","pov":"PROP_B","target_length":"PROP_A","premise":"PROP_A","theme":"PROP_A","characters":"PROP_B","core_conflict":"PROP_A","arc":"PROP_B","structure":"PROP_B","key_knowledge":"PROP_A","foreshadowing":"PROP_B","style_direction":"PROP_A"},"resolutions":{"PROP_B:CONF_001":"changed_user"}}
+input_sha256: "98f5e14a1b66269df31057577d419b661f21e1bf428dcac41fc7e4c9622566fd"
+response:
+  model: recorded-scene-breakdown-v0.1
+  text: |
+    scenes:
+      - pov: CH_SISTER
+        scene_type: interior
+        purpose: '交代姐姐去世、姐夫每天发消息'
+        target_length: 1500
+        narrative_role_ref: BP_STR_BEG
+        characters: [CH_MAN, CH_SISTER]
+        location: '姐姐生前的房子'
+        start_state: '男人照旧在凌晨发消息'
+        conflict: '妹妹看着那些消息，不知道该不该回'
+        turn: '她第一次回了三个字'
+        end_state: '她把手机放回原位'
+        referenced_blueprint_items: [BP_PREMISE_01, CH_MAN, CH_SISTER, REL_SISTER_MAN]
+        director_notes:
+          - '消息文本不加引号，与对白区分'
+        proposed_additions:
+          - '姐姐的手机一直留着充电器'
+      - pov: CH_SISTER
+        scene_type: interior
+        purpose: '展示男人每天检查手机的习惯'
+        target_length: 1600
+        narrative_role_ref: BP_STR_DEV
+        characters: [CH_MAN]
+        location: '男人的家'
+        start_state: '他把手机放在餐桌右侧'
+        conflict: '他不敢发第二条，却每天看电量'
+        turn: '他把电量一直保持在满格'
+        end_state: '他开始把手机带去上班'
+        referenced_blueprint_items: [BP_CONFLICT_01, CH_MAN, OBH_MAN_01]
+        director_notes:
+          - '不写内心，只写他放手机的位置'
+        proposed_additions: []
+      - pov: CH_SISTER
+        scene_type: dialogue
+        purpose: '妹妹意识到自己在替姐姐活着'
+        target_length: 1700
+        narrative_role_ref: BP_STR_TURN
+        characters: [CH_SISTER, CH_MAN]
+        location: '楼下便利店门口'
+        start_state: '她来还姐姐的充电器'
+        conflict: '他想聊姐姐，她只想快点走'
+        turn: '他提到那条凌晨的回复，她确认那是自己回的'
+        end_state: '她决定停止回复'
+        referenced_blueprint_items: [K001, CH_SISTER, CH_MAN, OBH_SISTER_01]
+        director_notes:
+          - '对白短，回避称呼'
+        proposed_additions: []
+      - pov: CH_SISTER
+        scene_type: dialogue
+        purpose: '她发出最后一条消息'
+        target_length: 1500
+        narrative_role_ref: BP_STR_CLIMAX
+        characters: [CH_SISTER, CH_MAN]
+        location: '她的出租屋 / 男人的手机（并置）'
+        start_state: '账号停留在注销页面'
+        conflict: '她既想结束，又怕他崩掉'
+        turn: '她删掉了草稿，改成一句话发出去'
+        end_state: '她按下注销'
+        referenced_blueprint_items: [BP_ARC_SHIFT, CH_SISTER, CH_MAN]
+        director_notes:
+          - '两条屏幕动作并置，不加解释'
+        proposed_additions:
+          - '注销后账号名变成一串数字'
+      - pov: CH_SISTER
+        scene_type: transition
+        purpose: '男人收到"该用户不存在"'
+        target_length: 1700
+        narrative_role_ref: BP_STR_END
+        characters: [CH_MAN, CH_SISTER]
+        location: '男人的家'
+        start_state: '他发出第一百条消息'
+        conflict: '他等着回复，而回执再也不会来'
+        turn: '屏幕提示该用户不存在'
+        end_state: '他把手机放回餐桌右侧'
+        referenced_blueprint_items: [BP_STR_END, BP_ARC_END, CH_MAN]
+        director_notes:
+          - '结尾只写屏幕与餐桌'
+        proposed_additions: []

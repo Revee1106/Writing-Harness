@@ -1,0 +1,32 @@
+schema_version: "0.1"
+scene_id: scene-005
+order: 5
+pov: CH_HUSBAND
+scene_type: transition
+purpose: 门开，两人第一次并肩走出
+target_length: 800
+narrative_role_ref: BP_STR_END
+characters:
+  - CH_HUSBAND
+  - CH_WIFE
+  - CH_OLD_MAN
+location: 电梯门外
+start_state: 维修人员从外面拉开门
+conflict: 走出去意味着今天真的结束了
+turn: 两人几乎同时迈步
+end_state: 三人各自离开，没有人讲故事
+allowed_reveals: []
+director_notes:
+  - id: DIR_SCENE_005
+    instruction: 结尾不写内心，只写脚步
+    source: scene
+referenced_blueprint_items:
+  - BP_STR_END
+  - BP_ARC_END
+  - CH_HUSBAND
+  - CH_WIFE
+proposed_additions:
+  - id: ADD_001
+    value: 维修人员只出现一句台词
+    status: PROPOSED
+    source: scene_breakdown

@@ -1,0 +1,28 @@
+schema_version: "0.1"
+scene_id: scene-001
+order: 1
+pov: CH_HUSBAND
+scene_type: interior
+purpose: 交代两人刚办完手续、进入电梯
+target_length: 800
+narrative_role_ref: BP_STR_BEG
+characters:
+  - CH_HUSBAND
+  - CH_WIFE
+location: 写字楼电梯内（刚进电梯）
+start_state: 两人各拿一份文件，站在电梯两侧
+conflict: 谁都不愿先开口，只能听见电梯运行的噪音
+turn: 老人走进电梯，站在按钮前
+end_state: 三人在电梯里沉默
+allowed_reveals: []
+director_notes:
+  - id: DIR_SCENE_001
+    instruction: 电梯是唯一空间，不切换地点
+    source: scene
+referenced_blueprint_items:
+  - BP_PREMISE_01
+  - CH_HUSBAND
+  - CH_WIFE
+  - CH_OLD_MAN
+  - REL_HUSBAND_WIFE
+proposed_additions: []

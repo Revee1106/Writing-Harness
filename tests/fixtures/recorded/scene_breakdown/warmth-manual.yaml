@@ -1,0 +1,87 @@
+contract: scene_breakdown
+contract_version: "0.1"
+seed: story2/04-warmth.txt
+gate1_ops: [{"kind":"skip"}]
+gate2_plan: {"fields":{"title":"user","genre":"user","pov":"user","target_length":"user","premise":"user","theme":"user","characters":"user","core_conflict":"user","arc":"user","structure":"user","key_knowledge":"user","foreshadowing":"user","style_direction":"user"},"edits":{"title":"最后一页的那句话","genre":"温情短篇","pov":"CH_GRANDSON","target_length":"6000","premise":"孙子回到老家，本子最后一页写着奶奶托人代笔的一句话","theme":"不识字的人如何把期待写下来","characters":"孙子与奶奶两人，奶奶在本子最后一页留下了话","core_conflict":"他想告诉奶奶结果，而奶奶已经不在了","arc":"从回来看看，到把这句话带回城里","structure":"从回家发现本子，到他把本子带回城里","key_knowledge":"最后一页不是奶奶亲笔，是邻居代笔","foreshadowing":"本子前几页的圈和数字","style_direction":"白描、少形容词、对白短"}}
+input_sha256: "692e960c11333c870dfc51df8785be5e45c21dc7dc551e83798e617b9c3eef9d"
+response:
+  model: recorded-scene-breakdown-v0.1
+  text: |
+    scenes:
+      - pov: CH_GRANDSON
+        scene_type: interior
+        purpose: '回家整理旧物，发现本子'
+        target_length: 1100
+        narrative_role_ref: BP_STR_BEG
+        characters: [CH_GRANDSON]
+        location: '老家的堂屋'
+        start_state: '他把箱子从柜顶搬下来'
+        conflict: '他不想整理，又不得不整理'
+        turn: '本子从一叠旧报纸里掉出来'
+        end_state: '他坐在地上翻开第一页'
+        referenced_blueprint_items: [BP_PREMISE_01, CH_GRANDSON, OBH_GRANDSON_01]
+        director_notes:
+          - '白描，少形容词'
+        proposed_additions: []
+      - pov: CH_GRANDSON
+        scene_type: interior
+        purpose: '一页页看过去的分数'
+        target_length: 1200
+        narrative_role_ref: BP_STR_DEV
+        characters: [CH_GRANDSON, CH_GRANDMOTHER]
+        location: '老家的堂屋'
+        start_state: '他按年份往下翻'
+        conflict: '数字记得太细，让他不敢往下看'
+        turn: '他发现每一页都有奶奶按出的指印'
+        end_state: '他翻到倒数第二页'
+        referenced_blueprint_items: [BP_CONFLICT_01, CH_GRANDMOTHER, BP_FS_001]
+        director_notes:
+          - '句子短，段落短'
+        proposed_additions:
+          - '本子的边角被翻得起了毛'
+      - pov: CH_GRANDSON
+        scene_type: interior
+        purpose: '最后一页出现一句完整的话'
+        target_length: 1300
+        narrative_role_ref: BP_STR_TURN
+        characters: [CH_GRANDSON, CH_GRANDMOTHER]
+        location: '老家的堂屋（黄昏）'
+        start_state: '他翻到最后一页'
+        conflict: '这句话不像是奶奶能写出来的'
+        turn: '他认出那不是奶奶的笔迹'
+        end_state: '他把本子合上，手心出汗'
+        referenced_blueprint_items: [K001, CH_GRANDMOTHER, OBH_GRANDMOTHER_01]
+        director_notes:
+          - '不写他的判断，只写他的动作'
+        proposed_additions: []
+      - pov: CH_GRANDSON
+        scene_type: dialogue
+        purpose: '他意识到这句话是留给自己的'
+        target_length: 1300
+        narrative_role_ref: BP_STR_CLIMAX
+        characters: [CH_GRANDSON]
+        location: '老家的院子里'
+        start_state: '他拿着本子走到院子里'
+        conflict: '他想问人，又不想让别人替奶奶说话'
+        turn: '他对着空院子把这句话念了出来'
+        end_state: '他把本子抱在怀里'
+        referenced_blueprint_items: [BP_ARC_SHIFT, CH_GRANDSON, K001]
+        director_notes:
+          - '对白只有一句，且是对空院子说的'
+        proposed_additions: []
+      - pov: CH_GRANDSON
+        scene_type: transition
+        purpose: '把本子带回城里'
+        target_length: 1100
+        narrative_role_ref: BP_STR_END
+        characters: [CH_GRANDSON]
+        location: '车站与城里的书桌'
+        start_state: '他把本子放进背包最里层'
+        conflict: '带走它等于承认奶奶不在了'
+        turn: '他把背包拉上'
+        end_state: '本子放在书桌右上角'
+        referenced_blueprint_items: [BP_STR_END, BP_ARC_END, CH_GRANDSON]
+        director_notes:
+          - '最后一段只写位置'
+        proposed_additions:
+          - '书桌上原本放着一盆绿萝'

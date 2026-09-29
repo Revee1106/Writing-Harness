@@ -52,6 +52,12 @@ export const ID_PATTERNS = {
   scene: /^scene-\d{3}$/,
   /** 需求规格 §7 通用状态项示例 id */
   genericItem: /^ITEM_\d{3}$/,
+  /**
+   * Scene 引用 Blueprint 项时使用的统一形态（§14 referenced_blueprint_items / §16 完整性检查）：
+   * Blueprint 项包含 BP_*（premise/theme/structure/arc/foreshadowing/style）、K###（key knowledge）、
+   * CH_*（角色）、OBH_*（可观察行为提示）、REL_*（关系）。
+   */
+  blueprintItemRef: /^(?:BP_[A-Z0-9_]+|K\d{3}|CH_[A-Z0-9_]+|OBH_[A-Z0-9_]+|REL_[A-Z0-9_]+)$/,
   /** Story 1 项目 id（OQ-20 / D7 裁决；形态为解读 I-5） */
   projectId: /^[a-z0-9][a-z0-9_-]{0,63}$/,
 } as const

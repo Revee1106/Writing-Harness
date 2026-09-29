@@ -1,0 +1,27 @@
+schema_version: "0.1"
+scene_id: scene-004
+order: 4
+pov: CH_WOMAN
+scene_type: interior
+purpose: 把沉默推到顶点
+target_length: 1600
+narrative_role_ref: BP_STR_CLIMAX
+characters:
+  - CH_WOMAN
+  - CH_MAN
+location: 他的公寓门口
+start_state: 两人都站着，谁都不先开口
+conflict: 她希望他先说话，他希望她先留下
+turn: 两人同时拿起手机，又同时放下
+end_state: 她转身下楼，他没有追出来
+allowed_reveals: []
+director_notes:
+  - id: DIR_SCENE_004
+    instruction: 全场景不超过十句对白
+    source: scene
+referenced_blueprint_items:
+  - BP_CONFLICT_01
+  - K001
+  - CH_WOMAN
+  - CH_MAN
+proposed_additions: []

@@ -1,0 +1,88 @@
+contract: scene_breakdown
+contract_version: "0.1"
+seed: multi-sentence.txt
+gate1_ops: [{"kind":"skip"}]
+gate2_plan: {"from":"PROP_A"}
+input_sha256: "383f6b98579258d7ffbe7c98f3c631c8b406da75b0a3a0a663d0b46b17bbc180"
+response:
+  model: recorded-scene-breakdown-v0.1
+  text: |
+    scenes:
+      - pov: CH_WOMAN
+        scene_type: dialogue
+        purpose: '建立两人的日常与那件小事的引爆点'
+        target_length: 1500
+        narrative_role_ref: BP_STR_BEG
+        characters: [CH_WOMAN, CH_MAN]
+        location: '餐厅'
+        start_state: '两人还在为晚饭吃什么拌嘴'
+        conflict: '一件小事被反复提起，语气越来越短'
+        turn: '她放下筷子说出"那就分吧"'
+        end_state: '两人各自沉默，饭没吃完'
+        referenced_blueprint_items: [BP_PREMISE_01, BP_THEME_01, CH_WOMAN, CH_MAN, REL_WOMAN_MAN]
+        director_notes:
+          - '对白为主，叙述只保留动作与停顿'
+        proposed_additions:
+          - '那天晚饭吃的是她做的汤'
+      - pov: CH_WOMAN
+        scene_type: interior
+        purpose: '呈现女方独自等待的心理过程'
+        target_length: 1600
+        narrative_role_ref: BP_STR_DEV
+        characters: [CH_WOMAN]
+        location: '她的出租屋'
+        start_state: '她把手机放在桌上，没有锁屏'
+        conflict: '她想先等到对方的消息，又不想承认自己在等'
+        turn: '她把分手的话重新写成一条又删掉的消息'
+        end_state: '她把手机翻面，决定不再看'
+        referenced_blueprint_items: [BP_CONFLICT_01, CH_WOMAN, OBH_WOMAN_01]
+        director_notes:
+          - '贴身第三人称，句子越到后面越短'
+        proposed_additions: []
+      - pov: CH_WOMAN
+        scene_type: dialogue
+        purpose: '让女方发现男方也写过消息'
+        target_length: 1800
+        narrative_role_ref: BP_STR_TURN
+        characters: [CH_WOMAN, CH_MAN]
+        location: '他的公寓门口'
+        start_state: '她来取落下的充电器'
+        conflict: '两人都在装作只是来拿东西'
+        turn: '她看到他手机屏幕上那条删掉的草稿'
+        end_state: '她确认了他在等，但两人都没提这件事'
+        referenced_blueprint_items: [K001, BP_STR_TURN, CH_MAN, OBH_MAN_01]
+        director_notes:
+          - '不写他的内心，只写她的观察'
+        proposed_additions:
+          - '他去开门时手机留在桌上没有锁屏'
+      - pov: CH_WOMAN
+        scene_type: interior
+        purpose: '把沉默推到顶点'
+        target_length: 1600
+        narrative_role_ref: BP_STR_CLIMAX
+        characters: [CH_WOMAN, CH_MAN]
+        location: '他的公寓门口'
+        start_state: '两人都站着，谁都不先开口'
+        conflict: '她希望他先说话，他希望她先留下'
+        turn: '两人同时拿起手机，又同时放下'
+        end_state: '她转身下楼，他没有追出来'
+        referenced_blueprint_items: [BP_CONFLICT_01, K001, CH_WOMAN, CH_MAN]
+        director_notes:
+          - '全场景不超过十句对白'
+        proposed_additions: []
+      - pov: CH_WOMAN
+        scene_type: transition
+        purpose: '收尾：分手成为事实，草稿留在他的手机里'
+        target_length: 1200
+        narrative_role_ref: BP_STR_END
+        characters: [CH_WOMAN, CH_MAN]
+        location: '楼下与他的手机屏幕（并置）'
+        start_state: '她拖着行李箱走出小区'
+        conflict: '她想回头，又不想让自己看起来在等'
+        turn: '她没有回头'
+        end_state: '他删掉了那条草稿，也没有再写'
+        referenced_blueprint_items: [BP_STR_END, BP_ARC_END, CH_WOMAN, CH_MAN]
+        director_notes:
+          - '最后一段只写手机屏幕的亮灭'
+        proposed_additions:
+          - '她搬走时带走的是那只旧汤锅'

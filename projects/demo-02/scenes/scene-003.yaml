@@ -1,0 +1,28 @@
+schema_version: "0.1"
+scene_id: scene-003
+order: 3
+pov: CH_HUSBAND
+scene_type: dialogue
+purpose: 老人讲出自己也在这栋楼里离过婚
+target_length: 1300
+narrative_role_ref: BP_STR_TURN
+characters:
+  - CH_HUSBAND
+  - CH_WIFE
+  - CH_OLD_MAN
+location: 电梯内
+start_state: 老人用手杖敲地面打节拍
+conflict: 夫妻听出了故事与自己的关系
+turn: 老人说他当年等了很久，没人先按
+end_state: 她第一次看向他
+allowed_reveals:
+  - K001
+director_notes:
+  - id: DIR_SCENE_003
+    instruction: 老人的话保持口语，不用总结句
+    source: scene
+referenced_blueprint_items:
+  - K001
+  - CH_OLD_MAN
+  - OBH_OLD_MAN_01
+proposed_additions: []

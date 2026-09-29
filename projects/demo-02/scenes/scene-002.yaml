@@ -1,0 +1,32 @@
+schema_version: "0.1"
+scene_id: scene-002
+order: 2
+pov: CH_HUSBAND
+scene_type: dialogue
+purpose: 老人提出条件，夫妻互相推让
+target_length: 1200
+narrative_role_ref: BP_STR_DEV
+characters:
+  - CH_HUSBAND
+  - CH_WIFE
+  - CH_OLD_MAN
+location: 电梯内（停住的两层楼之间）
+start_state: 电梯停住，报警灯亮起
+conflict: 按铃等于承认自己还想被听见
+turn: 老人提出"谁先按铃就把今天的事讲给谁听"
+end_state: 两人都把目光移开
+allowed_reveals: []
+director_notes:
+  - id: DIR_SCENE_002
+    instruction: 三人对白交替，避免内心描写堆叠
+    source: scene
+referenced_blueprint_items:
+  - BP_CONFLICT_01
+  - CH_HUSBAND
+  - CH_WIFE
+  - CH_OLD_MAN
+proposed_additions:
+  - id: ADD_001
+    value: 电梯报警灯是缓闪的橙色
+    status: PROPOSED
+    source: scene_breakdown

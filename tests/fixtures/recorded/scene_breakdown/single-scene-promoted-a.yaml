@@ -1,0 +1,87 @@
+contract: scene_breakdown
+contract_version: "0.1"
+seed: story2/07-single-scene.txt
+gate1_ops: [{"kind":"promote","id":"SEED_A001"}]
+gate2_plan: {"from":"PROP_A"}
+input_sha256: "5eac2d34f38314a55be3fbcdd02cd0ff2799abde1929a67c50b9117f8ddf4299"
+response:
+  model: recorded-scene-breakdown-v0.1
+  text: |
+    scenes:
+      - pov: CH_HUSBAND
+        scene_type: interior
+        purpose: '交代两人刚办完手续、进入电梯'
+        target_length: 800
+        narrative_role_ref: BP_STR_BEG
+        characters: [CH_HUSBAND, CH_WIFE]
+        location: '写字楼电梯内（刚进电梯）'
+        start_state: '两人各拿一份文件，站在电梯两侧'
+        conflict: '谁都不愿先开口，只能听见电梯运行的噪音'
+        turn: '老人走进电梯，站在按钮前'
+        end_state: '三人在电梯里沉默'
+        referenced_blueprint_items: [BP_PREMISE_01, CH_HUSBAND, CH_WIFE, CH_OLD_MAN, REL_HUSBAND_WIFE]
+        director_notes:
+          - '电梯是唯一空间，不切换地点'
+        proposed_additions: []
+      - pov: CH_HUSBAND
+        scene_type: dialogue
+        purpose: '老人提出条件，夫妻互相推让'
+        target_length: 1200
+        narrative_role_ref: BP_STR_DEV
+        characters: [CH_HUSBAND, CH_WIFE, CH_OLD_MAN]
+        location: '电梯内（停住的两层楼之间）'
+        start_state: '电梯停住，报警灯亮起'
+        conflict: '按铃等于承认自己还想被听见'
+        turn: '老人提出"谁先按铃就把今天的事讲给谁听"'
+        end_state: '两人都把目光移开'
+        referenced_blueprint_items: [BP_CONFLICT_01, CH_HUSBAND, CH_WIFE, CH_OLD_MAN]
+        director_notes:
+          - '三人对白交替，避免内心描写堆叠'
+        proposed_additions:
+          - '电梯报警灯是缓闪的橙色'
+      - pov: CH_HUSBAND
+        scene_type: dialogue
+        purpose: '老人讲出自己也在这栋楼里离过婚'
+        target_length: 1300
+        narrative_role_ref: BP_STR_TURN
+        characters: [CH_HUSBAND, CH_WIFE, CH_OLD_MAN]
+        location: '电梯内'
+        start_state: '老人用手杖敲地面打节拍'
+        conflict: '夫妻听出了故事与自己的关系'
+        turn: '老人说他当年等了很久，没人先按'
+        end_state: '她第一次看向他'
+        referenced_blueprint_items: [K001, CH_OLD_MAN, OBH_OLD_MAN_01]
+        director_notes:
+          - '老人的话保持口语，不用总结句'
+        proposed_additions: []
+      - pov: CH_HUSBAND
+        scene_type: action
+        purpose: '男方按下呼叫铃'
+        target_length: 900
+        narrative_role_ref: BP_STR_CLIMAX
+        characters: [CH_HUSBAND, CH_WIFE, CH_OLD_MAN]
+        location: '电梯内（按铃瞬间）'
+        start_state: '他的手一直插在口袋里'
+        conflict: '按下去就意味着他先承认'
+        turn: '他伸手按下呼叫铃'
+        end_state: '铃声响起，三人都不说话'
+        referenced_blueprint_items: [BP_ARC_SHIFT, CH_HUSBAND]
+        director_notes:
+          - '动作写成一句，不加解释'
+        proposed_additions: []
+      - pov: CH_HUSBAND
+        scene_type: transition
+        purpose: '门开，两人第一次并肩走出'
+        target_length: 800
+        narrative_role_ref: BP_STR_END
+        characters: [CH_HUSBAND, CH_WIFE, CH_OLD_MAN]
+        location: '电梯门外'
+        start_state: '维修人员从外面拉开门'
+        conflict: '走出去意味着今天真的结束了'
+        turn: '两人几乎同时迈步'
+        end_state: '三人各自离开，没有人讲故事'
+        referenced_blueprint_items: [BP_STR_END, BP_ARC_END, CH_HUSBAND, CH_WIFE]
+        director_notes:
+          - '结尾不写内心，只写脚步'
+        proposed_additions:
+          - '维修人员只出现一句台词'
