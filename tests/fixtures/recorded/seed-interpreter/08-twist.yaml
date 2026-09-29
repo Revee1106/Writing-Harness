@@ -1,0 +1,22 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/08-twist.txt
+input_sha256: "b1f8b2fad78b32b058bed77655c3cc7fef274b87f4fb89762440e10808ed8b0d"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '妻子去世一年'
+        evidence: '妻子去世一年'
+      - value: '他每天写日记记录思念'
+        evidence: '他每天写日记记录思念'
+      - value: '邻居都说他深情'
+        evidence: '邻居都说他深情'
+      - value: '日记最后一页写着他把妻子的药换了'
+        evidence: '日记最后一页写着："她走的那天，是我把她的药换了。"'
+    ambiguous:
+      - value: '他换药的动机是什么'
+        evidence: '是我把她的药换了'
+    open_questions:
+      - value: '这件事会不会被发现'
+      - value: '邻居眼中的深情形象如何收场'

@@ -1,0 +1,24 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/07-single-scene.txt
+input_sha256: "21b6fd95c2f6105f1ed52496fbfafc601dedc0aafac78e4eb61a232bf0224c16"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '电梯停在两层楼之间'
+        evidence: '电梯在两层楼之间停住'
+      - value: '电梯里有一对刚办完离婚手续的夫妻'
+        evidence: '一对刚办完离婚手续的夫妻'
+      - value: '电梯里还有一位陌生老人'
+        evidence: '一位陌生老人'
+      - value: '老人提出谁先按铃就把今天的事讲给谁听'
+        evidence: '你们谁先按铃，我就把今天的事讲给谁听。'
+    ambiguous:
+      - value: '老人是谁'
+        evidence: ''
+      - value: '老人所说的今天的事是什么'
+        evidence: '把今天的事讲给谁听'
+    open_questions:
+      - value: '谁会先按铃'
+      - value: '老人要讲的事是什么'

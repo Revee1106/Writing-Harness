@@ -1,0 +1,20 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/11-evidence-probe.txt
+input_sha256: "b74f152d255835b620b348c2663d5e25c3be16ac347d17c13cd03bc95dc94583"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '她把旧相机留给了我'
+        evidence: '她把旧相机留给了我'
+      - value: '她不再拍照了'
+        evidence: '说她不再拍照了'
+      - value: '这台相机是她父亲留下的'
+        evidence: '她父亲留下的相机'
+      - value: '相机里还有半卷没拍完的胶卷'
+    ambiguous:
+      - value: '她为什么不再拍照'
+        evidence: ''
+    open_questions:
+      - value: '那半卷胶卷会不会被冲洗'

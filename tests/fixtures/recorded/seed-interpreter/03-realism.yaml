@@ -1,0 +1,28 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/03-realism.txt
+input_sha256: "f03ebcc0bd419843483cbde2841f0211fddfcde18d1e2d269339bf683a198a2e"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '他被裁员了'
+        evidence: '他被裁员那天'
+      - value: '他去超市买了打折的排骨'
+        evidence: '先去了超市买打折的排骨'
+      - value: '他回家做饭'
+        evidence: '再回家做饭'
+      - value: '妻子问他今天怎么这么早'
+        evidence: '妻子问今天怎么这么早'
+      - value: '他对妻子说公司放了半天假'
+        evidence: '他说公司放了半天假'
+      - value: '房贷还有十九年'
+        evidence: '房贷还有十九年'
+    ambiguous:
+      - value: '他是否打算告诉妻子真相'
+        evidence: ''
+      - value: '他有没有找新工作'
+        evidence: ''
+    open_questions:
+      - value: '他什么时候会说真话'
+      - value: '这个家能不能撑过这段时间'

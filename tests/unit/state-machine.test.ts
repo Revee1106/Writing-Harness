@@ -274,3 +274,117 @@ describe('原则 1 / 原则 4 的 Story 1 子集：使用不会升级（需求�
     expect(Object.isFrozen(confirmed)).toBe(true)
   })
 })
+
+describe('裁决优先级显式断言（Story 2 加固）', () => {
+  /**
+   * 实现顺序（src/core/state-machine.ts evaluateTransition）：
+   * ① 使用类触发器 → F3/F4/F5
+   * ② from=USER_GIVEN：to=USER_GIVEN → A1，否则 U1
+   * ③ from===to → NOOP
+   * ④ to=USER_GIVEN：from=PROPOSED → G1，否则 U1
+   * ⑤ PROPOSED→OCCURRED → F2
+   * ⑥ OCCURRED→CONFIRMED → F6
+   * ⑦ PROPOSED→CONFIRMED：GATE2 → A2，否则 F1
+   * ⑧ CONFIRMED→OCCURRED：GATE3 → A3，否则 U1
+   * ⑨ 其余 → U1
+   * 本组用例把上述优先级钉死，避免以后调整分支顺序时静默改变裁决结果。
+   */
+  it('① 使用类触发器优先于 F1：PROPOSED→CONFIRMED 带使用触发器返回 F3/F4/F5', () => {
+    const expected = {
+      SCENE_BREAKDOWN_REFERENCE: 'F3',
+      WRITER_REFERENCE: 'F4',
+      DRAFT_CONTAINS: 'F5',
+    } as const
+    for (const [trigger, ruleId] of Object.entries(expected)) {
+      const decision = evaluateTransition({
+        from: 'PROPOSED',
+        to: 'CONFIRMED',
+        trigger: trigger as TransitionTrigger,
+      })
+      expect(decision.ok).toBe(false)
+      if (!decision.ok) expect(decision.ruleId).toBe(ruleId)
+    }
+  })
+
+  it('② 先于 ③：USER_GIVEN→USER_GIVEN 返回 A1（合法规则）而不是 NOOP', () => {
+    const decision = evaluateTransition({ from: 'USER_GIVEN', to: 'USER_GIVEN', trigger: 'GATE2_CONFIRM' })
+    expect(decision).toMatchObject({ ok: true, ruleId: 'A1' })
+  })
+
+  it('② 先于 ④/⑤/⑥：USER_GIVEN 指向前三种状态一律 U1', () => {
+    for (const to of ['PROPOSED', 'CONFIRMED', 'OCCURRED'] as const) {
+      const decision = evaluateTransition({ from: 'USER_GIVEN', to, trigger: 'GATE2_CONFIRM' })
+      expect(decision.ok).toBe(false)
+      if (!decision.ok) expect(decision.ruleId).toBe('U1')
+    }
+  })
+
+  it('③ 先于 ⑦：PROPOSED→PROPOSED 带 GATE2_CONFIRM 返回 NOOP 而不是 A2/F1', () => {
+    expect(evaluateTransition({ from: 'PROPOSED', to: 'PROPOSED', trigger: 'GATE2_CONFIRM' })).toMatchObject({
+      ok: true,
+      ruleId: 'NOOP',
+    })
+  })
+
+  it('④ 先于 ⑨：PROPOSED→USER_GIVEN 返回 G1 而不是泛化的 U1', () => {
+    const decision = evaluateTransition({ from: 'PROPOSED', to: 'USER_GIVEN', trigger: 'GATE2_CONFIRM' })
+    expect(decision.ok).toBe(false)
+    if (!decision.ok) expect(decision.ruleId).toBe('G1')
+  })
+
+  it('⑤ 先于 ⑦：PROPOSED→OCCURRED 带 GATE3_CONFIRM 仍返回 F2（有 Gate 3 也不能从 PROPOSED 直达事实）', () => {
+    const decision = evaluateTransition({ from: 'PROPOSED', to: 'OCCURRED', trigger: 'GATE3_CONFIRM' })
+    expect(decision.ok).toBe(false)
+    if (!decision.ok) expect(decision.ruleId).toBe('F2')
+  })
+
+  it('⑦ 内部：PROPOSED→CONFIRMED 只有 GATE2_CONFIRM 放行，其余触发器一律 F1', () => {
+    expect(evaluateTransition({ from: 'PROPOSED', to: 'CONFIRMED', trigger: 'GATE2_CONFIRM' })).toMatchObject({
+      ok: true,
+      ruleId: 'A2',
+    })
+    for (const trigger of ['GATE3_CONFIRM', 'STATE_EXTRACTOR'] as const) {
+      const decision = evaluateTransition({ from: 'PROPOSED', to: 'CONFIRMED', trigger })
+      expect(decision.ok).toBe(false)
+      if (!decision.ok) expect(decision.ruleId).toBe('F1')
+    }
+  })
+
+  it('⑧ 内部：CONFIRMED→OCCURRED 只有 GATE3_CONFIRM 放行，否则 U1 且原因点名 Gate 3', () => {
+    expect(evaluateTransition({ from: 'CONFIRMED', to: 'OCCURRED', trigger: 'GATE3_CONFIRM' })).toMatchObject({
+      ok: true,
+      ruleId: 'A3',
+    })
+    const decision = evaluateTransition({ from: 'CONFIRMED', to: 'OCCURRED', trigger: 'GATE2_CONFIRM' })
+    expect(decision.ok).toBe(false)
+    if (!decision.ok) {
+      expect(decision.ruleId).toBe('U1')
+      expect(decision.reason).toContain('GATE3_CONFIRM')
+    }
+  })
+})
+
+describe('recordUsage 的冻结边界（Story 2 加固）', () => {
+  it('使用后返回的对象一定是冻结的（即使传入的是手工构造、未冻结的项）', () => {
+    const handBuilt = {
+      id: 'ITEM_009',
+      value: '手工构造的 PROPOSED 项',
+      status: 'PROPOSED',
+      source: 'harness',
+    } as StatusItem
+    expect(Object.isFrozen(handBuilt)).toBe(false)
+    const after = recordUsage(handBuilt, 'WRITER_REFERENCE')
+    expect(after).toBe(handBuilt)
+    expect(Object.isFrozen(after)).toBe(true)
+    expect(() => {
+      ;(after as { status: string }).status = 'CONFIRMED'
+    }).toThrow(TypeError)
+    expect(after.status).toBe('PROPOSED')
+  })
+
+  it('已冻结的项保持同一引用（零成本无操作）', () => {
+    const item = makeItem('PROPOSED')
+    expect(Object.isFrozen(item)).toBe(true)
+    expect(recordUsage(item, 'DRAFT_CONTAINS')).toBe(item)
+  })
+})

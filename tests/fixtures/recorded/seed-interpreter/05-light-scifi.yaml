@@ -1,0 +1,26 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/05-light-scifi.txt
+input_sha256: "c0d9f20aeb324fbcef756da9c1146950a81dcbabdbbf312aa0402be35f028e51"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '母亲临终前把记忆备份交给了女儿'
+        evidence: '母亲临终前把记忆备份交给女儿'
+      - value: '母亲说想她的时候就打开'
+        evidence: '想她的时候就打开'
+      - value: '女儿三年没敢打开'
+        evidence: '女儿三年没敢打开'
+      - value: '备份有到期时间'
+        evidence: '备份到期前一天'
+      - value: '女儿收到了母亲本人发来的提醒'
+        evidence: '收到了母亲本人发来的提醒'
+    ambiguous:
+      - value: '记忆备份是什么技术'
+        evidence: ''
+      - value: '母亲本人是否还活着'
+        evidence: '母亲本人发来的提醒'
+    open_questions:
+      - value: '女儿最终会不会打开备份'
+      - value: '母亲本人发来的提醒意味着什么'

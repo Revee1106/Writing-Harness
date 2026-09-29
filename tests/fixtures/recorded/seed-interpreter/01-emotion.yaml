@@ -1,0 +1,26 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/01-emotion.txt
+input_sha256: "5041b4f1263165a0464cc123a96c4ddf7a64486e87bcb035d7c83126a3b0fd9b"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '两人是情侣且都深爱对方'
+        evidence: '一对情侣其实都深爱对方'
+      - value: '两人因为一件小事争吵'
+        evidence: '因为一件小事争吵'
+      - value: '女方提出了分手'
+        evidence: '女方提出分手'
+      - value: '女方只要男方认错就愿意留下'
+        evidence: '只要男方认错她就愿意留下'
+      - value: '男方认为每次都是小题大做'
+        evidence: '为什么每次都要小题大做'
+    ambiguous:
+      - value: '那件引发争吵的小事具体是什么'
+        evidence: '一件小事'
+      - value: '男方最终会不会认错'
+        evidence: ''
+    open_questions:
+      - value: '两人最终会不会和好'
+      - value: '谁先开口打破僵局'

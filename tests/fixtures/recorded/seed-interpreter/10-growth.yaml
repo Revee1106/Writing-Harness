@@ -1,0 +1,26 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/10-growth.txt
+input_sha256: "dd6e275ad6e484f340edc7af9e3481ce8d9ca95ba567033d50fd5c85f7c7ed18"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '她三十岁辞掉稳定工作去学画画'
+        evidence: '她三十岁那年辞掉稳定工作去学画画'
+      - value: '所有人都说她疯了'
+        evidence: '所有人都说她疯了'
+      - value: '第一年她靠给人画头像付房租'
+        evidence: '第一年她靠给人画头像付房租'
+      - value: '第三年她办了自己的展'
+        evidence: '第三年她终于办了自己的展'
+      - value: '母亲站在角落里哭'
+        evidence: '母亲站在角落里哭'
+    ambiguous:
+      - value: '她原来的工作是什么'
+        evidence: '稳定工作'
+      - value: '母亲为什么哭'
+        evidence: '母亲站在角落里哭'
+    open_questions:
+      - value: '她之后还会不会继续画画'
+      - value: '母亲是否一直反对她学画画'

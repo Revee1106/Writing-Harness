@@ -1,0 +1,47 @@
+schema_version: "0.1"
+story_seed:
+  raw_input: |
+    电梯在两层楼之间停住，里面只有一对刚办完离婚手续的夫妻和一位陌生老人。老人说：你们谁先按铃，我就把今天的事讲给谁听。
+  raw_seed_anchor_ids:
+    - SEED_F001
+    - SEED_F002
+    - SEED_F003
+    - SEED_F004
+  gate1_status: partial
+  fixed_by_user:
+    - id: SEED_F001
+      value: 电梯停在两层楼之间
+      status: USER_GIVEN
+      source: user
+      origin: raw_seed
+    - id: SEED_F002
+      value: 电梯里有一对刚办完离婚手续的夫妻
+      status: USER_GIVEN
+      source: user
+      origin: raw_seed
+    - id: SEED_F003
+      value: 电梯里还有一位陌生老人
+      status: USER_GIVEN
+      source: user
+      origin: raw_seed
+    - id: SEED_F004
+      value: 老人提出谁先按铃就把今天的事讲给谁听
+      status: USER_GIVEN
+      source: user
+      origin: raw_seed
+    - id: SEED_A001
+      value: 老人是谁
+      status: USER_GIVEN
+      source: user_gate1
+      origin: gate1_confirmation
+  ambiguous:
+    - id: SEED_A002
+      value: 老人所说的今天的事是什么
+      source: interpreter
+  open_questions:
+    - id: SEED_Q001
+      value: 谁会先按铃
+      source: interpreter
+    - id: SEED_Q002
+      value: 老人要讲的事是什么
+      source: interpreter

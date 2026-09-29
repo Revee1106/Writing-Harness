@@ -1,0 +1,28 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/02-mystery.txt
+input_sha256: "08016d87d708e569e5c2f7a1dd5e1c04359066ff1349a56caba5d793117e8748"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '男人的妻子已经去世'
+        evidence: '去世的妻子'
+      - value: '男人每天给妻子发微信'
+        evidence: '每天给去世的妻子发微信'
+      - value: '某天他收到了回复'
+        evidence: '某天突然收到回复'
+      - value: '回复只有三个字'
+        evidence: '回复只有三个字："我知道。"'
+      - value: '他不敢再发第二条'
+        evidence: '他不敢再发第二条'
+      - value: '他开始每天检查手机'
+        evidence: '开始每天检查手机'
+    ambiguous:
+      - value: '回复究竟是谁发的'
+        evidence: ''
+      - value: '妻子是否真的已经死亡'
+        evidence: '去世的妻子'
+    open_questions:
+      - value: '回复的来源真相何时揭晓'
+      - value: '男人会不会继续发消息'

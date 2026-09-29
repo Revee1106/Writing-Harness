@@ -1,0 +1,26 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: multi-sentence.txt
+input_sha256: "80e03aa1337ea72185f9e7c7158e88c9ffd612ffffc3b7cc82fbae638fe36650"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '两人是情侣且都深爱对方'
+        evidence: '一对情侣其实都深爱对方'
+      - value: '两人因为一件小事争吵'
+        evidence: '因为一件小事争吵'
+      - value: '女方提出了分手'
+        evidence: '女方提出分手'
+      - value: '女方只要男方认错就愿意留下'
+        evidence: '只要男方认错她就愿意留下'
+      - value: '男方认为每次都是小题大做'
+        evidence: '为什么每次都要小题大做'
+      - value: '两个人都在等对方先开口'
+        evidence: '两个人都在等对方先开口'
+    ambiguous:
+      - value: '那件引发争吵的小事具体是什么'
+        evidence: '一件小事'
+    open_questions:
+      - value: '两人最终会不会和好'
+      - value: '谁先开口'

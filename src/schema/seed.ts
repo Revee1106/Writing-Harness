@@ -23,11 +23,19 @@ export const SEED_SCHEMA_VERSION = '0.1'
 export const GATE1_STATUSES = ['pending', 'confirmed', 'skipped', 'partial'] as const
 export const gate1StatusSchema = z.enum(GATE1_STATUSES)
 
-/** 需求规格 §8.1：原始 Seed 中直接抽取、`status=USER_GIVEN` / `source=user` / `origin=raw_seed` 的锚点。 */
+/**
+ * 需求规格 §8.1：原始 Seed 中直接抽取、`status=USER_GIVEN` / `source=user` / `origin=raw_seed` 的锚点；
+ * 也承载 Gate 1 用户提升的条目（§5.1，`source=user_gate1`）。
+ *
+ * Story 2 调整（解读 I-16）：本集合的 id 放宽为 Seed item ID（`SEED_[FAQ]###`）。
+ * 原因：§5.1 要求 Gate 1 支持 `ambiguous → fixed_by_user` 的提升，而 Story 1 只允许 `SEED_F###`，
+ * 二者不能同时成立；实现选择"条目在集合之间移动时保留原 ID"（与 §8.2 把升降级描述为同一项的移动一致），
+ * 因此 `SEED_A###` 经用户提升后会出现在本集合中。
+ */
 export const fixedByUserItemSchema = z
   .strictObject({
     ...statusItemShape,
-    id: z.string().regex(ID_PATTERNS.seedAnchorFixed, 'Seed 锚点 ID 必须形如 SEED_F001（需求规格 §8.1）'),
+    id: z.string().regex(ID_PATTERNS.seedItem, 'Seed item ID 必须是 SEED_F/SEED_A/SEED_Q + 3 位数字（解读 I-16）'),
     status: z.literal('USER_GIVEN'),
     origin: originSchema,
   })
@@ -43,7 +51,8 @@ export type FixedByUserItem = z.infer<typeof fixedByUserItemSchema>
  * OQ-04 裁决：这是 Interpreter 的中间态，不属于四状态模型 —— 用 `source: interpreter` 标注，**不设 status**。
  */
 export const ambiguousItemSchema = z.strictObject({
-  id: z.string().regex(ID_PATTERNS.seedAmbiguous, '模糊项 ID 必须形如 SEED_A001（OQ-04 裁决）'),
+  // 解读 I-16：也允许被用户降级的原始锚点（保留 `SEED_F###` 原 ID）
+  id: z.string().regex(ID_PATTERNS.seedItem, 'Seed item ID 必须是 SEED_F/SEED_A/SEED_Q + 3 位数字（解读 I-16）'),
   value: z.string().min(1),
   source: z.literal('interpreter'),
   source_ref: resolvableRefSchema.nullish(),
@@ -103,12 +112,12 @@ export function checkSeedInvariants(seed: StorySeed): SeedInvariantIssue[] {
         message: `fixed_by_user ${item.id} 的 origin=raw_seed，但不在 raw_seed_anchor_ids 中；首次 Interpreter 后必须立即冻结（需求规格 §8.2）`,
       })
     }
-    if (item.origin === 'gate1_confirmation' && anchors.has(item.id)) {
-      issues.push({
-        code: 'GATE1_ITEM_IN_ANCHOR_SET',
-        message: `${item.id} 是 Gate 1 提升项（origin=gate1_confirmation），不得加入 raw_seed_anchor_ids；Gate 1 升降级不改变评估分母（需求规格 §8.2 / §10.1）`,
-      })
-    }
+    // 说明（解读 I-17）：这里**不再**断言"origin=gate1_confirmation 的项不得在 anchors 中"。
+    // 该断言无法静态判定，且会误伤合法流程：用户把原始锚点降级为 ambiguous、之后又提升回来时，
+    // 该项的 id 本来就在 §8.2 首次冻结的 anchor 集合里（§8.2 禁止的是"新增"，不是"原本就在"）。
+    // §8.2 的真正保证改由两处承担：
+    //   ① `applyGate1Operations()` 没有任何写入 raw_seed_anchor_ids 的代码路径（结构保证）；
+    //   ② Gate 1 服务在写盘前断言 anchorsBefore === anchorsAfter（运行时断言）。
   }
 
   if (seed.gate1_status === 'pending' && seed.fixed_by_user.some((item) => item.source === 'user_gate1')) {

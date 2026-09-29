@@ -324,6 +324,9 @@ export function transitionStatus(item: StatusItem, to: Status, ctx: TransitionCo
  *
  * 需求规格 §6.3：被使用、被引用、出现在 Draft 中、"被多次使用也不会自动升级"。
  * 因此本函数**返回同一引用**，调用方不可能通过它拿到任何升级路径（架构设计 §7 F3/F4/F5）。
+ *
+ * 冻结边界（Story 2 加固）：返回值一律经过 `deepFreeze` —— 对已经冻结的项是零成本无操作，
+ * 对手工构造、尚未经过 parse/validate 边界的项则补上冻结，避免"使用过后仍可被改写"。
  */
 export function recordUsage(item: StatusItem, trigger: TransitionTrigger): StatusItem {
   if (!isUsageTrigger(trigger)) {
@@ -331,5 +334,5 @@ export function recordUsage(item: StatusItem, trigger: TransitionTrigger): Statu
       `recordUsage() 只接受"使用"类触发器（${USAGE_TRIGGERS.join(' / ')}），收到 "${trigger}"；状态迁移请使用 transitionStatus()`,
     )
   }
-  return item
+  return deepFreeze(item) as StatusItem
 }

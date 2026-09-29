@@ -1,0 +1,28 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/06-open-ending.txt
+input_sha256: "b3a130e07d88f49cf1c7466f86518be37523f899e2395675195b1d518bf6eb05"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '父亲已经去世'
+        evidence: '父亲去世后'
+      - value: '父亲留下一封没有署名的信'
+        evidence: '留下一封没有署名的信'
+      - value: '父亲嘱咐儿子在母亲走后再拆信'
+        evidence: '嘱咐儿子在他母亲走后再拆'
+      - value: '母亲身体很好'
+        evidence: '母亲身体很好'
+      - value: '儿子把信锁进抽屉'
+        evidence: '儿子把信锁进抽屉'
+      - value: '二十年后儿子得了重病'
+        evidence: '二十年后他得了重病'
+    ambiguous:
+      - value: '信里写了什么'
+        evidence: ''
+      - value: '二十年后得重病的这个人是谁'
+        evidence: '二十年后他得了重病'
+    open_questions:
+      - value: '儿子会不会拆开这封信'
+      - value: '母亲最终会知道什么'

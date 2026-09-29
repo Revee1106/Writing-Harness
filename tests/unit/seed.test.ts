@@ -162,26 +162,38 @@ describe('seed.yaml 不变量（需求规格 §8.2 / §5.1；解读 I-8）', () 
     expect(() => validateSeedFile(broken)).toThrow(/ANCHOR_NOT_FROZEN/)
   })
 
-  it('Gate 1 提升项不得加入 raw_seed_anchor_ids（分母不漂移）', () => {
+  it('anchors 只接受 SEED_F### 形态（评估分母不会被 SEED_A/SEED_Q 污染）', () => {
     const seed = documentedSeedExample()
     const broken = {
       ...seed,
+      story_seed: { ...seed.story_seed, raw_seed_anchor_ids: ['SEED_F001', 'SEED_A001'] },
+    }
+    expect(() => validateSeedFile(broken)).toThrow(SeedValidationError)
+  })
+
+  it('Gate 1 提升项不会自动进入 anchors（结构保证在 Gate 1 服务与 state-machine 层）', () => {
+    const seed = documentedSeedExample()
+    const promoted = {
+      ...seed,
       story_seed: {
         ...seed.story_seed,
-        raw_seed_anchor_ids: ['SEED_F001', 'SEED_F002'],
+        gate1_status: 'partial' as const,
+        ambiguous: [],
         fixed_by_user: [
           ...seed.story_seed.fixed_by_user,
           {
-            id: 'SEED_F002',
+            id: 'SEED_A001',
             value: '两人仍然相爱',
-            status: 'USER_GIVEN',
-            source: 'user_gate1',
-            origin: 'gate1_confirmation',
+            status: 'USER_GIVEN' as const,
+            source: 'user_gate1' as const,
+            origin: 'gate1_confirmation' as const,
           },
         ],
       },
     }
-    expect(() => validateSeedFile(broken)).toThrow(/GATE1_ITEM_IN_ANCHOR_SET/)
+    const validated = validateSeedFile(promoted)
+    expect(validated.story_seed.raw_seed_anchor_ids).toEqual(['SEED_F001'])
+    expect(checkSeedInvariants(validated.story_seed)).toEqual([])
   })
 
   it('gate1_status=pending 时不得存在 Gate 1 提升项', () => {

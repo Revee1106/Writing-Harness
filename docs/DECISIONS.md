@@ -44,3 +44,21 @@
 | I-10 | `harness init` 会在项目目录下创建 §29/§32 记录的空骨架目录（`history/ scenes/ drafts/ style/samples/ reports/ config/`），但不预建任何未定义的文件。 | 需求规格 §29；架构 §32；OQ-07。 | 只建目录，不发明文件。 |
 | I-11 | ID 前缀集中登记在 `src/core/ids.ts`，登记项全部来自文档已出现的示例；Story 1 只用其中的 seed 类前缀。 | 需求规格 §7/§8.1/§9.3/§11.1/§18.1/§29。 | 防止后续 Story 各自发明前缀。 |
 | I-12 | `source_refs` 的 `ref_id` 按 type 做形式校验：`seed` → `SEED_F/SEED_A/SEED_Q` 形态；`proposal` → `<proposal_id>.<field_path>`（§9.3）；`user_edit`/`blueprint_gate2` → 非空（深层可解析性受 OQ-10 阻塞）。 | 需求规格 §7.2、§9.3。 | 落实"不允许使用无法解析的自由字符串作为 source ref"。 |
+
+---
+
+## 四、Story 2 实现解读（I-13 … I-17）
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-13 | **ID 由 Harness 分配，不由模型输出**：Prompt Contract 只要求模型给出 `value` + `evidence`，Harness 按出现顺序分配 `SEED_F###` / `SEED_A###` / `SEED_Q###`。 | 需求规格 §8.1/§8.3 只规定 ID 形态与稳定性，未规定由谁产生；Harness 分配才能保证确定性与可复现验收。 | 使"10 个 Seed 离线可复现"成立的关键。 |
+| I-14 | **原文证据（`evidence`）定位失败的条目不进入 `fixed_by_user`**，而是降级为 `ambiguous` 并产生 notice（`EVIDENCE_NOT_FOUND` / `EVIDENCE_MISSING`）。 | 需求规格 §4「fixed_by_user 必须来自用户原始输入；推断不能混入 fixed_by_user」＋ §3 原则 2。 | 不阻塞用户（不报错中断），但也不伪装成 USER_GIVEN。 |
+| I-15 | **`gate1_status` 判定**：`accept_all` → `confirmed`；`skip` → `skipped`；存在删除/提升/降级/编辑 → `partial`。`skip` 与 `accept_all` 都必须单独使用。 | 需求规格 §8.1 的三值 + §5.1 的操作集合（判定条件文档未定义，见 OQ-28）。 | 见 `src/gate1/status.ts`。 |
+| I-16 | **Gate 1 升降级时条目保留原 ID**：`ambiguous → fixed_by_user` 的条目仍是 `SEED_A###`，`fixed → ambiguous` 的条目仍是 `SEED_F###`。相应地把两个集合的 ID 约束放宽为"Seed item ID"（`SEED_[FAQ]###`）。 | 需求规格 §8.2 把升降级描述为同一项的移动；§5.1 要求支持提升，而 Story 1 的"fixed 只接受 `SEED_F###`"与之不可兼得。 | **这是 Story 2 对 Story 1 schema 的唯一一处放宽**，已在 OPEN-QUESTIONS OQ-29 记录，供复核。 |
+| I-17 | **删除 Story 1 的 `GATE1_ITEM_IN_ANCHOR_SET` 不变量**，改成"Gate 1 从不写 anchor"的结构保证 + 运行时断言（`anchorsBefore === anchorsAfter`）。 | 原不变量无法静态判定，且会误伤合法流程（原始锚点被降级后再提升）。
+
+**Story 2 加固项（承接 Story 1 追问）**
+| # | 加固 | 说明 |
+|---|---|---|
+| H-1 | `recordUsage()` 现在返回前调用 `deepFreeze()` | 对已冻结项是零成本无操作；对手工构造项补上冻结，保证"使用过的项不可被改写"。已加测试。 |
+| H-2 | 状态机新增显式优先级断言块（7 条） | 把 ①使用→F3/F4/F5 先于 ⑦F1、②A1 先于 ③NOOP 等优先级钉死。已加测试。 |

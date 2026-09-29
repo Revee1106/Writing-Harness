@@ -1,0 +1,24 @@
+contract: seed_interpreter
+contract_version: "0.1"
+seed: story2/09-dark-humor.txt
+input_sha256: "a6f06076599fc9f6df4552cac64447455105352f1cc5b88b94858463cdb78e61"
+response:
+  model: recorded-seed-interpreter-v0.1
+  text: |
+    fixed_by_user:
+      - value: '父亲葬礼上亲戚们为遗产争吵'
+        evidence: '亲戚们为遗产吵得不可开交'
+      - value: '小儿子一直低头看手机'
+        evidence: '只有小儿子一直低头看手机'
+      - value: '姑姑抢过了手机'
+        evidence: '姑姑抢过手机'
+      - value: '小儿子在直播葬礼'
+        evidence: '他在直播葬礼'
+      - value: '小儿子已经收到三万块打赏'
+        evidence: '已经收到三万块打赏'
+    ambiguous:
+      - value: '小儿子为什么要直播葬礼'
+        evidence: ''
+    open_questions:
+      - value: '亲戚们会如何反应'
+      - value: '打赏的人是否知道这是什么场合'
