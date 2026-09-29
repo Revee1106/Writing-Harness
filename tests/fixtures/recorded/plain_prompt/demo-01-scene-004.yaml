@@ -1,0 +1,15 @@
+contract: plain_prompt
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-004
+input_sha256: "2747d0d2b84ca43dbaa54b97c139a62f698470d169a8135bce7ed1348ddb14a9"
+response:
+  model: recorded-plain-prompt-v0.1
+  text: |
+    两个人站在门口，气氛凝固。
+    
+    他看着她，她也看着他，空气中弥漫着难以言说的情绪。
+    
+    他们几乎同时拿起手机，又几乎同时放下，仿佛整个世界都安静了下来。
+    
+    他终于明白，有些告别是没有声音的。

@@ -1,0 +1,3 @@
+project_id,explicit_gates,gate1_status,gate1_fixed_items,gate1_gate1_confirmed_items,blueprint_versions,blueprint_conflicts_resolved,linter_warnings,rewrites_applied,scenes,confirmed_scenes,occurred,unresolved_state_conflicts
+demo-01,3,skipped,6,0,1,0,2,1,5,5,1,0
+demo-02,3,partial,5,1,1,0,2,1,5,5,1,0

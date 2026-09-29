@@ -132,12 +132,15 @@ describe('验收 D：无 state mutation（硬）', () => {
     expect(readFileSync(join(paths.scenesDir, 'scene-003.yaml'), 'utf8')).toBe(sceneBefore)
   })
 
-  it('Story State 保持 occurred 为空、confirmed_scenes 为空（Writer 不产生事实）', async () => {
+  it('Story State 逐字节不变（Writer 不产生事实；occurred / confirmed_scenes 只能由 Gate 3 写入）', async () => {
     const paths = cloneProject('demo-01')
+    const { loadStoryState } = await import('../../src/scenes/service.ts')
+    const stateFileBefore = readFileSync(paths.storyState, 'utf8')
+    const before = JSON.parse(JSON.stringify(loadStoryState(paths)))
     await runProseWriterAll({ paths, provider: proseProvider() })
-    const state = JSON.parse(JSON.stringify(await import('../../src/scenes/service.ts').then((module) => module.loadStoryState(paths))))
-    expect(state.occurred).toEqual([])
-    expect(state.confirmed_scenes).toEqual([])
+    // Writer 只写 drafts：story_state.yaml 必须逐字节不变
+    expect(readFileSync(paths.storyState, 'utf8')).toBe(stateFileBefore)
+    expect(JSON.parse(JSON.stringify(loadStoryState(paths)))).toEqual(before)
   })
 })
 

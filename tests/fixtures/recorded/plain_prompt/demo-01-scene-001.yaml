@@ -1,0 +1,15 @@
+contract: plain_prompt
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-001
+input_sha256: "079186dfe26cc1334c35a00965166744afb7fa9e35dc5f4f456d1faa20c115f6"
+response:
+  model: recorded-plain-prompt-v0.1
+  text: |
+    餐厅里的灯光很柔和，空气中弥漫着一种说不清的情绪。
+    
+    他把碗推到她面前，沉默了片刻，然后深吸一口气，苦笑了一下。
+    
+    "就这一次。"他说。她看着他，眼底闪过一丝复杂的情绪。
+    
+    她知道，也许，这就是两个人之间最难说出口的距离。

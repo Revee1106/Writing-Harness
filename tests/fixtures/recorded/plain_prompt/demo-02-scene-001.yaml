@@ -1,0 +1,15 @@
+contract: plain_prompt
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-001
+input_sha256: "1513281349e30b9da1cd94bf743a1157cdb217c079e9f4cc00f1d3970ee30179"
+response:
+  model: recorded-plain-prompt-v0.1
+  text: |
+    电梯门缓缓合上，空气中弥漫着一种微妙的气氛。
+    
+    他手里捏着那份文件，微微一怔，深吸一口气。
+    
+    她也靠在墙边，眼底闪过一丝疲惫。
+    
+    仿佛整个世界都跟着这部电梯一起停了下来。

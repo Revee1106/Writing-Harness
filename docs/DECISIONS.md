@@ -282,3 +282,45 @@
 | I-69 | **被改写的目标 warning 在局部重跑中保留**（携带 `rewrite` 审计记录），其余范围内旧 warning 被替换；若重跑结果与目标 span 完全一致则不重复记录。 | 裁决 4（rewrite 记录留在 warning 上）与裁决 5（局部替换）的组合语义。 | 否则 `rewrite` 记录会被局部重跑清掉。 |
 | I-71 | **替换文本不得与紧邻上下文形成"重叠重复"**：替换文本与紧邻前文的最长重叠片段、或与紧邻后文的最长重叠片段，达到 **4 码点**即拒绝（上限检查 12 码点）。 | Story 9 裁决 3 的"不得引入新事实"与"拼接自然"需要一道防线；实际演示中曾出现"手机亮了一次，手机亮了一次，又暗下去。"这类重复粘贴。 | 阈值常量在 `validateRewrite()` 内；4 码点以下不判，避免误伤正常衔接。 |
 | I-70 | LLM Linter 与 Local Rewrite 的 fixture 都不使用 `seed:` 元数据，改为 `source_project` + `scene`（`local_rewrite` 另有 `rewrite_target` 元数据），工具链通过 `prepareRewrite()` / `buildLlmLinterInput()` 重建与运行时逐字段一致的输入。 | 输入依赖项目状态（正文 + Scene + Style Samples）。 | 与 I-55 同一思路。 |
+
+---
+
+## Story 10 起始会裁决（Gate 3 + State Extractor + 评估）
+
+| 事项 | 裁决 | 落地 |
+|---|---|---|
+| `final.md` 的形态 | 由 `drafts/scene-NNN.md` **按 Scene `order` 拼接**，场景之间空行分隔；**不含标题、不含任何元数据、不含分隔符**；写入时末尾补一个换行 | `src/state/gate3.ts` 的 `assembleFinalDraft()` / `assembleFinalFromProject()` |
+| 缺稿处理 | 任一 Scene 缺 Draft（或 Draft 为空白）时**抛错**，不静默跳过、不生成"少一场"的 final.md | `assembleFinalDraft()` 抛 `Gate3Error`；`runGate3()` 前置检查 `missingSceneIds` |
+| Gate 3 的粒度 | **整篇一次性确认**（`--confirm`）；逐场确认属于 Story 9 的 Rewrite 范畴，不在这里做 | `runGate3()`：`confirm!==true` 直接报错；无 `--confirm` 时只做 dry-run |
+| `confirmed_scenes` 的写入 | Gate 3 一次性写入**全部** Scene（按 order），不做增量 | `runGate3()` 组装 `confirmedScenes` 后一次校验写入 |
+| Scene Draft 的保留 | Gate 3 **不删稿、不合并文件**，`drafts/scene-NNN.md` 全部保留，另生成 `drafts/final.md` | 断言见 Story 10 验收 A |
+| `payload.revealed_to` 的比对 | 由 **Harness** 比对（不是让 LLM 自证）：`==` 计划 → 正常；**真子集** → 正常 + `low_severity_log: [{code: "revealed_to_narrower_than_plan"}]`；**真超集** → `OCCURRED_CONFLICT`；**无交集** → `OCCURRED_CONFLICT` | `compareExtraction()`，集合语义、与元素顺序无关 |
+| `relationship_change.from_state` | 从 `story_state.relationship_state` 读取当前值；候选给出的 `from_state` 不一致 → `OCCURRED_CONFLICT`（不写状态） | `compareExtraction()`；断言见 Story 10 验收 B |
+| 冲突的落点 | 冲突写入 `story_state.state_rebuild_conflicts`（`type: OCCURRED_CONFLICT`）；**冲突不产生事实**（不写 occurred、不动投影、不回写 Blueprint） | `applyOccurredToState()` |
+| 测试集位置 | Story Development Test Set 与 Anti-AI A/B Test Set 都放在 `tests/fixtures/evaluation/`，**不进 `projects/`**，不修改 §29/§32 的文件树 | `src/eval/evaluation.ts` 的 `EVALUATION_ROOT` |
+| Anti-AI A/B 的范围 | v0.1 只准备**可运行的 A/B 对照 + 人工填写模板**：**不做盲测、不自动评分** | `eval ab-generate` → `session-00N/{group-GNN.a.txt, group-GNN.b.txt, ratings.csv, session.yaml}` |
+| A/B 评分列 | `group_id, text_a_file, text_b_file, rater_id, more_humanlike, more_natural, dialogue_more_natural, characters_more_alive, lower_ai_feel, want_to_continue, notes` | `ANTI_AI_CSV_COLUMNS`（只冻结列，不冻结取值） |
+| Story 10 不新增 Schema | Gate 3 / State Extractor / 评估资产一律复用既有 8 份 Schema；**不新增** `story_state.final_ref` 之类字段 | Story 10 验收 G 断言 `src/schema/` 文件清单不变 |
+
+### 实现解读
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-72 | `assembleFinalDraft()` 在"Scene 缺少 Draft / Draft 为空白"时**抛错**；纯函数与项目级组装（`assembleFinalFromProject()`）行为一致。 | P1/P4 的可执行要求：静默跳过会让 `final.md` 少一场而 Gate 3 仍认为"整篇已确认"。 | 原先纯函数只过滤空白文本，Story 10 起始收紧。 |
+| I-73 | `state_extractor@0.1` 的 fixture **不使用 `seed:` 元数据**，改用 `source_project`（+ `scene`），工具链通过 `buildStateExtractorInput()` 重建与运行时逐字段一致的输入。 | 与 I-55 / I-70 同一思路：输入依赖项目状态（Scene 正文 + 投影）。 | `pnpm fixtures:check` 可复核。 |
+| I-74 | `plain_prompt@0.1` 是**评估专用契约**：输入只有 Scene Intent（无 POV 过滤、无 Style Samples），A 侧 fixture 不带 `seed:` 元数据，由 `buildPlainPromptInput()` 重建输入。 | Story 10 D 节要"可运行的 A/B 对照"；A 侧必须能离线复现，否则对照不可重复。 | 该契约不参与创作流程；`eval ab-generate` 与 fixture 复核共用同一个构造函数。 |
+| I-75 | 低危日志（如 `revealed_to_narrower_than_plan`）v0.1 **只在 Gate 3 结果对象 / CLI 输出中可见，不落盘**。 | `story_state` 没有承载它的字段，而 Story 10 的硬边界是"不新增 Schema"。 | 见 OQ-59（待裁决是否需要单独的报告文件）。 |
+| I-76 | `low_severity_log[].code` 的取值随 Story 10 扩展出 `revealed_to_narrower_than_plan`（沿用 I-65 的 `code` 字段，不新增字段）。 | 裁决 2 的"低危日志"需要可机读的代码。 | 与 `llm_span_invalid` 同一字段。 |
+| I-77 | `story_state.state_rebuild_conflicts[].type` 扩为 `['ORPHANED', 'OCCURRED_CONFLICT']`（枚举扩展，**不新增 Schema**）。 | Gate 3 后的冲突（§8"不覆盖、不自动合并，由用户裁决"）需要与重建期 `ORPHANED` 区分。 | 沿用 OQ-50 的"扩枚举"先例；`SRC_NNN` 编号复用（Story 10 用 `conflictOffset` 避免与既有冲突撞号）。 |
+
+### 回写清单（累计，新增）
+
+| 目标文档 | 需要回写的内容 |
+|---|---|
+| 《需求规格》§17 / 《架构设计》§17 | `low_severity_log[].code` 字段与 `revealed_to_narrower_than_plan` 取值；低危日志在 v0.1 不落盘（OQ-59 / I-75 / I-76） |
+| 《需求规格》§31.1 | Story Development Test Set 的存放位置（`tests/fixtures/evaluation/story-development/`）与"哪些 Seed 有 fixture 覆盖"的口径（OQ-60） |
+| 《需求规格》§31.2 | Anti-AI A/B Test Set 的 11 个人工评分列；明确 "v0.1 不执行盲测、不自动评分" |
+| 《需求规格》§31.3 | Author Cost 的列定义（`AUTHOR_COST_CSV_COLUMNS`），由项目状态可复算 |
+| 《开发 Story 拆分》Story 10 | **v0.1 的 8 点自检条款原文**（仓库中缺失，见 OQ-61，需要原文回填） |
+| 《架构设计》§29 / §32 | **无改动**：Story 10 的产物（`drafts/final.md`）落在既有 `drafts/` 下，评估资产在 `tests/`，文件树未新增条目 |
+

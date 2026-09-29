@@ -1,15 +1,32 @@
+# Gate 3 已确认：confirmed_scenes 一次性写入；occurred 由 State Extractor 提取（确定性 ID，可重跑）
+# State Extractor：state_extractor@0.1
 schema_version: "0.1"
 blueprint_version: 1
-confirmed_scenes: []
-occurred: []
+confirmed_scenes:
+  - scene-001
+  - scene-002
+  - scene-003
+  - scene-004
+  - scene-005
+occurred:
+  - scene_id: scene-003
+    status: OCCURRED
+    source: final_text
+    source_ref: drafts/final.md
+    id: OCC_K_K001_scene-003
+    type: knowledge_reveal
+    payload:
+      knowledge_ref: K001
+      revealed_to:
+        - CH_WOMAN
 knowledge_state:
   - blueprint_ref: K001
     known_by:
-      CH_WOMAN: false
+      CH_WOMAN: true
       CH_MAN: true
     reader_knows: false
-    occurred_reveal: false
-    last_updated_scene: null
+    occurred_reveal: true
+    last_updated_scene: scene-003
 relationship_state:
   - blueprint_ref: REL_WOMAN_MAN
     state: together
@@ -30,5 +47,5 @@ foreshadowing_state:
   - blueprint_ref: BP_FS_001
     resolved_setup_scene: scene-001
     resolved_payoff_scene: scene-005
-    state: planned
+    state: paid_off
 state_rebuild_conflicts: []

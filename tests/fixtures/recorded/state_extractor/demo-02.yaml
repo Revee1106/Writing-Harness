@@ -1,0 +1,13 @@
+contract: state_extractor
+contract_version: "0.1"
+source_project: projects/demo-02
+input_sha256: "1853d3d5206abba070b9926b3dd464faac36559b990347dd8caecac6792b7a6d"
+response:
+  model: recorded-state-extractor-v0.1
+  text: |
+    knowledge_reveals:
+      - knowledge_ref: K001
+        scene_id: scene-003
+        revealed_to: [CH_HUSBAND]
+        evidence: "他说他年轻的时候也在这栋楼里办过离婚"
+    relationship_changes: []

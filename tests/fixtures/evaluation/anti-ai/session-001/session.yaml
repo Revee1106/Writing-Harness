@@ -1,0 +1,136 @@
+# Anti-AI A/B 对照（Story 10 D）：A = 普通 Prompt，B = Writing Harness
+session_id: session-001
+schema_version: "0.1"
+generated_at: 2026-09-29T16:05:24.430Z
+note: v0.1 不执行盲测、不自动评分；ratings.csv 由人工填写（Story 10 起始会裁决 4）
+groups:
+  - group_id: G01
+    project_id: demo-01
+    scene_id: scene-001
+    pov: CH_WOMAN
+    scene_type: dialogue
+    intent_ref: projects/demo-01/scenes/scene-001.yaml
+    text_a_file: group-G01.a.txt
+    text_b_file: group-G01.b.txt
+    harness_target_length: 1500
+    a_code_points: 105
+    b_code_points: 160
+    a_rule_warnings: 6
+    b_rule_warnings: 0
+  - group_id: G02
+    project_id: demo-01
+    scene_id: scene-002
+    pov: CH_WOMAN
+    scene_type: interior
+    intent_ref: projects/demo-01/scenes/scene-002.yaml
+    text_a_file: group-G02.a.txt
+    text_b_file: group-G02.b.txt
+    harness_target_length: 1600
+    a_code_points: 83
+    b_code_points: 168
+    a_rule_warnings: 4
+    b_rule_warnings: 0
+  - group_id: G03
+    project_id: demo-01
+    scene_id: scene-003
+    pov: CH_WOMAN
+    scene_type: dialogue
+    intent_ref: projects/demo-01/scenes/scene-003.yaml
+    text_a_file: group-G03.a.txt
+    text_b_file: group-G03.b.txt
+    harness_target_length: 1800
+    a_code_points: 75
+    b_code_points: 157
+    a_rule_warnings: 3
+    b_rule_warnings: 0
+  - group_id: G04
+    project_id: demo-01
+    scene_id: scene-004
+    pov: CH_WOMAN
+    scene_type: interior
+    intent_ref: projects/demo-01/scenes/scene-004.yaml
+    text_a_file: group-G04.a.txt
+    text_b_file: group-G04.b.txt
+    harness_target_length: 1600
+    a_code_points: 87
+    b_code_points: 140
+    a_rule_warnings: 4
+    b_rule_warnings: 1
+  - group_id: G05
+    project_id: demo-01
+    scene_id: scene-005
+    pov: CH_WOMAN
+    scene_type: transition
+    intent_ref: projects/demo-01/scenes/scene-005.yaml
+    text_a_file: group-G05.a.txt
+    text_b_file: group-G05.b.txt
+    harness_target_length: 1200
+    a_code_points: 90
+    b_code_points: 153
+    a_rule_warnings: 3
+    b_rule_warnings: 1
+  - group_id: G06
+    project_id: demo-02
+    scene_id: scene-001
+    pov: CH_HUSBAND
+    scene_type: interior
+    intent_ref: projects/demo-02/scenes/scene-001.yaml
+    text_a_file: group-G06.a.txt
+    text_b_file: group-G06.b.txt
+    harness_target_length: 800
+    a_code_points: 79
+    b_code_points: 194
+    a_rule_warnings: 6
+    b_rule_warnings: 1
+  - group_id: G07
+    project_id: demo-02
+    scene_id: scene-002
+    pov: CH_HUSBAND
+    scene_type: dialogue
+    intent_ref: projects/demo-02/scenes/scene-002.yaml
+    text_a_file: group-G07.a.txt
+    text_b_file: group-G07.b.txt
+    harness_target_length: 1200
+    a_code_points: 82
+    b_code_points: 189
+    a_rule_warnings: 4
+    b_rule_warnings: 0
+  - group_id: G08
+    project_id: demo-02
+    scene_id: scene-003
+    pov: CH_HUSBAND
+    scene_type: dialogue
+    intent_ref: projects/demo-02/scenes/scene-003.yaml
+    text_a_file: group-G08.a.txt
+    text_b_file: group-G08.b.txt
+    harness_target_length: 1300
+    a_code_points: 91
+    b_code_points: 161
+    a_rule_warnings: 3
+    b_rule_warnings: 0
+  - group_id: G09
+    project_id: demo-02
+    scene_id: scene-004
+    pov: CH_HUSBAND
+    scene_type: action
+    intent_ref: projects/demo-02/scenes/scene-004.yaml
+    text_a_file: group-G09.a.txt
+    text_b_file: group-G09.b.txt
+    harness_target_length: 900
+    a_code_points: 83
+    b_code_points: 114
+    a_rule_warnings: 6
+    b_rule_warnings: 0
+  - group_id: G10
+    project_id: demo-02
+    scene_id: scene-005
+    pov: CH_HUSBAND
+    scene_type: transition
+    intent_ref: projects/demo-02/scenes/scene-005.yaml
+    text_a_file: group-G10.a.txt
+    text_b_file: group-G10.b.txt
+    harness_target_length: 800
+    a_code_points: 87
+    b_code_points: 130
+    a_rule_warnings: 2
+    b_rule_warnings: 1

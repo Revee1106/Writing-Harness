@@ -1,0 +1,15 @@
+contract: plain_prompt
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-002
+input_sha256: "6b95191abc834e2716c3eb4d66f0f9e9bfcbd81bfe5c6c7cff745e407174bf7a"
+response:
+  model: recorded-plain-prompt-v0.1
+  text: |
+    回到房间，她坐在桌前，心里五味杂陈。
+    
+    她拿起手机，打了一行字，删掉；又打了一行字，删掉。
+    
+    时间仿佛静止，她微微一怔，意识到自己其实一直在等一个回答。
+    
+    而这一切，才刚刚开始。

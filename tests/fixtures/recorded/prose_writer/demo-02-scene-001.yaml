@@ -2,7 +2,7 @@ contract: prose_writer
 contract_version: "0.1"
 source_project: projects/demo-02
 scene: scene-001
-input_sha256: "9f3a772440ac38e4ede076333ec9507ea6469df196186f39877f2bc75dec340b"
+input_sha256: "c83deae5dd68586809a7c8a62bb97261c755a7877794c04c4504d78951d81234"
 response:
   model: recorded-prose-writer-v0.1
   text: |

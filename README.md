@@ -46,13 +46,17 @@ src/
   context/    Context Compiler（数据源白名单 / POV Filter / Manifest / Draft Context）
   writer/     Prose Writer（纯正文生成 / 硬软约束检查 / Draft 落盘）
   linter/     Rule Linter（五条规则）+ LLM Linter（五类语义）+ Local Rewrite 与局部二次检查
-  prompts/    版本化 Prompt Contract（seed_interpreter / story_developer / blueprint_builder / scene_breakdown / prose_writer，均 @0.1）
+  eval/        评估资产（Story Development Test Set / Author Cost / Anti-AI A/B 对照）
+  state/       Gate 3（final.md 组装 + State Extractor 校验与 OCCURRED 落库）
+  prompts/    版本化 Prompt Contract（seed_interpreter / story_developer / blueprint_builder /
+              scene_breakdown / prose_writer / llm_linter / local_rewrite / state_extractor，均 @0.1；
+              plain_prompt@0.1 只用于 Anti-AI A/B 的 A 侧对照，不参与创作流程）
   cli/        CLI 入口
 scripts/      fixture 哈希刷新工具
 tests/
   unit/       单元测试（状态机表驱动、schema、raw input 保真）
   acceptance/ Story 级验收测试（含 golden 快照）
-  fixtures/   seeds / golden
+  fixtures/   seeds / golden / recorded（离线回放）/ evaluation（Story 10 评估资产）
 projects/     项目数据（每个项目一个目录）
 config/       仓库级默认配置（反 AI 词表，Story 8 填充）
 docs/         未决问题清单、已裁决事项、技术选型
@@ -123,6 +127,16 @@ pnpm harness lint demo-02 --scene scene-003 --llm     # 语义型五类检查（
 pnpm harness rewrite demo-02 --scene scene-003 --warning LINT_001   # 局部改写 + 局部二次 Linter
 pnpm harness rewrite demo-02 --scene scene-003 --warning LINT_001 --full  # 改写后跑完整 Linter
 
+# Gate 3 + State Extractor（Story 10）
+pnpm harness gate3 demo-02 --confirm        # 整篇一次性确认：写 drafts/final.md + confirmed_scenes
+pnpm harness gate3 demo-02                  # 只预演（dry-run），不落盘
+pnpm harness final show demo-02             # 显示 final.md 状态（长度 / 场景数 / occurred / 冲突）
+
+# 评估资产（Story 10：测试集 + 作者成本 + A/B 对照，不自动评分）
+pnpm harness eval story-development         # Story Development Test Set（≥10 Seed）→ results.csv
+pnpm harness eval author-cost               # Author Cost（§31.3）→ author-cost.csv
+pnpm harness eval ab-generate               # Anti-AI A/B 对照（10 Scene Intent）→ session-00N/ + ratings.csv
+
 # fixture 与 Seed 文本 / Gate 1 状态一致性（离线回放依赖）
 pnpm fixtures:check
 pnpm fixtures:refresh
@@ -145,9 +159,12 @@ Node 24 可直接执行 TypeScript，CLI 无需构建步骤。
 | Story 6 | Context Compiler + POV Filter + Manifest | ✅ 完成 |
 | Story 7 | Prose Writer + Style Samples | ✅ 完成 |
 | Story 8 | Rule Anti-AI Linter | ✅ 完成 |
-| Story 9 | LLM Linter + Local Rewrite | ✅ 完成（577 项测试全绿） |
-| Story 3 | Story Developer + Proposal | 未开始 |
-| Story 4 | Blueprint Confirm / Merge / Edit（Gate 2） | 未开始 |
-| Story 5 | Scene Breakdown + Story State + Coverage Check | 未开始 |
+| Story 9 | LLM Linter + Local Rewrite | ✅ 完成 |
+| Story 10 | Gate 3 + State Extractor + 评估 | ✅ 完成（654 项测试全绿） |
 | M1 | 最小端到端验证（Story 5 后强制） | ✅ **通过** |
-| Story 10 | Gate 3 + State Extractor + 评估 | 未开始 |
+
+交付物：
+- 命令面：`init / seed / gate1 / develop / gate2 / breakdown / context / style / write / lint / rewrite / gate3 / final / state / coverage / eval`
+- 评估资产：`tests/fixtures/evaluation/story-development/`（≥10 Seed 测试集 + 两类 CSV）与
+  `tests/fixtures/evaluation/anti-ai/session-001/`（10 组 A/B 对照 + 人工评分模板）
+- 已知缺口：见 `docs/OPEN-QUESTIONS.md` 的 OQ-59 / OQ-60 / OQ-61

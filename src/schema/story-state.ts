@@ -80,10 +80,17 @@ export const foreshadowingStateSchema = z.strictObject({
   state: z.enum(FORESHADOWING_STATES),
 })
 
-/** OQ-13 裁决：重建冲突（ORPHANED 不删除，重建继续）。 */
+/**
+ * OQ-13 裁决：重建冲突（ORPHANED 不删除，重建继续）。
+ *
+ * Story 10 扩展（解读 I-77，沿用 OQ-50"扩枚举"的先例、不新增第 9 个 Schema）：
+ * `type` 增加 `OCCURRED_CONFLICT`，用于 Gate 3 后 State Extractor 与计划/投影的冲突
+ * （§8：不覆盖、不自动合并，由用户裁决）。
+ */
+export const STATE_REBUILD_CONFLICT_TYPES = ['ORPHANED', 'OCCURRED_CONFLICT'] as const
 export const stateRebuildConflictSchema = z.strictObject({
   id: z.string().regex(/^SRC_\d{3}$/, 'state rebuild conflict ID 必须形如 SRC_001'),
-  type: z.literal('ORPHANED'),
+  type: z.enum(STATE_REBUILD_CONFLICT_TYPES),
   ref_type: z.enum(['knowledge', 'relationship', 'foreshadowing', 'scene', 'seed_question']),
   ref_id: z.string().min(1),
   blueprint_version: z.number().int().min(1),

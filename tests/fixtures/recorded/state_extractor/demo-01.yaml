@@ -1,0 +1,13 @@
+contract: state_extractor
+contract_version: "0.1"
+source_project: projects/demo-01
+input_sha256: "05c9443368fdf8850665fa6dc2bd8fee94971c4362618980464c5d3f424ec139"
+response:
+  model: recorded-state-extractor-v0.1
+  text: |
+    knowledge_reveals:
+      - knowledge_ref: K001
+        scene_id: scene-003
+        revealed_to: [CH_WOMAN]
+        evidence: "输入框里停着一行没发出去的字"
+    relationship_changes: []

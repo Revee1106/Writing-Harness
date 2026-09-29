@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { PROJECT_FILE_NAMES, projectPaths } from '../io/paths.ts'
@@ -58,6 +59,27 @@ import { LinterReportValidationError, SEVERITY_DISPLAY } from '../schema/linter-
 import { LlmLinterError, LLM_LINTER_CONTRACT_ID, runLlmLinter } from '../linter/llm-linter.ts'
 import { LocalRewriteError, runLocalRewrite } from '../linter/rewrite.ts'
 import { LLM_LINTER_RULES } from '../linter/llm-rules.ts'
+import {
+  Gate3Error,
+  assembleFinalFromProject,
+  loadFinalDraft,
+  runGate3,
+} from '../state/gate3.ts'
+import {
+  ANTI_AI_CSV_COLUMNS,
+  ANTI_AI_DIR,
+  AUTHOR_COST_CSV_COLUMNS,
+  STORY_DEVELOPMENT_CSV_COLUMNS,
+  loadStoryDevelopmentSeedSet,
+  STORY_DEVELOPMENT_DIR,
+  buildStoryDevelopmentEvaluation,
+  collectAuthorCost,
+  draftTextsOf,
+  generateAbSession,
+  nextSessionId,
+  toCsv,
+} from '../eval/evaluation.ts'
+import { RuleLinterPreconditionError as _RuleLinterPreconditionError } from '../linter/rule-linter.ts'
 import { AntiAiVocabError } from '../schema/anti-ai-vocab.ts'
 import { REPO_DEFAULT_ANTI_AI_ELEVATION_REL_PATH, REPO_DEFAULT_ANTI_AI_TEMPLATE_ACTIONS_REL_PATH } from '../io/paths.ts'
 import { ContextManifestValidationError } from '../schema/context-manifest.ts'
@@ -70,7 +92,8 @@ import {
 } from '../schema/style-profile.ts'
 import { UnresolvedOrphanError } from '../scenes/state.ts'
 import { SCENE_TYPES, TONE_TAGS } from '../core/scene-types.ts'
-import { writeYamlFile } from '../io/yaml.ts'
+import { writeTextFile, writeYamlFile } from '../io/yaml.ts'
+import { countRuleWarnings } from '../eval/evaluation.ts'
 import { readTextFile as readTextFileFromDisk, readYamlFile } from '../io/yaml.ts'
 import { countNonWhitespaceCodePoints } from '../core/text.ts'
 import { readdirSync } from 'node:fs'
@@ -99,7 +122,8 @@ import { normalizeForEvidence } from '../interpreter/interpreter.ts'
  *         write / drafts show（Story 7，Prose Writer）
  *         lint / lint show（Story 8 Rule Linter；Story 9 LLM Linter）
  *         rewrite（Story 9，Local Rewrite + 局部二次 Linter）
- * Gate 3 的交互命令属于 Story 10。
+ *         gate3 / final show（Story 10，Gate 3 + State Extractor）
+ *         eval story-development / eval author-cost / eval ab-generate（Story 10，评估资产）
  */
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..')
@@ -129,6 +153,11 @@ const USAGE = `Short-story-first Writing Harness v0.1 — 项目 / Seed / Gate 1
   harness lint <projectId> [选项]       Rule Anti-AI Linter：确定性 / 统计型检查（不自动 Rewrite）
   harness lint show <projectId>         显示 reports/linter.yaml
   harness rewrite <projectId> [选项]    对某条 warning 的 span 做局部 Rewrite（不整篇重写）
+  harness gate3 <projectId> [选项]      Gate 3：拼接 final.md + 整篇确认 + State Extractor
+  harness final show <projectId>        显示 drafts/final.md 摘要
+  harness eval story-development        生成 Story Development 评估表（≥10 Seed，CSV）
+  harness eval author-cost              生成作者成本表（CSV）
+  harness eval ab-generate             生成 Anti-AI A/B 对照 session + 人工填写模板
   harness help                          显示本帮助
 
 通用选项：
@@ -164,6 +193,17 @@ lint 选项：
   --plan                  只读预览：完整检查但不写 reports/linter.yaml
   --json                  以 JSON 输出报告
   --provider / --fixtures LLM Linter 使用的 provider（默认 recorded）
+
+gate3 选项：
+  --confirm               整篇一次性确认（必须显式给出；逐场确认属于 Story 9 的 Rewrite 范畴）
+  --plan                  只读预览：完整提取但不写 final.md / story_state.yaml
+  --provider <name>       State Extractor 使用的 provider（默认 recorded）
+  --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/state_extractor）
+
+eval 选项：
+  eval story-development [--projects demo-01,demo-02] [--out <path>]
+  eval author-cost [--projects demo-01,demo-02] [--out <path>]
+  eval ab-generate [--session <session-NNN>] [--projects demo-01,demo-02]
 
 rewrite 选项：
   --scene <scene-###>     目标 Scene（必填）
@@ -278,6 +318,11 @@ function parseCli(argv: string[]): ParsedCli {
       llm: { type: 'boolean' },
       full: { type: 'boolean' },
       warning: { type: 'string' },
+      confirm: { type: 'boolean' },
+      projects: { type: 'string' },
+      out: { type: 'string' },
+      project: { type: 'string' },
+      session: { type: 'string' },
     },
   })
   const [command, second, third] = positionals
@@ -293,7 +338,9 @@ function parseCli(argv: string[]): ParsedCli {
     command === 'state' ||
     command === 'coverage' ||
     command === 'style' ||
-    command === 'drafts'
+    command === 'drafts' ||
+    command === 'final' ||
+    command === 'eval'
   return {
     command,
     subcommand: isSubcommandForm ? second : undefined,
@@ -1209,6 +1256,195 @@ async function runRewriteCommand(parsed: ParsedCli): Promise<number> {
   return 0
 }
 
+
+async function runGate3Command(parsed: ParsedCli): Promise<number> {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const resolved = providerFor(parsed, 'state_extractor')
+  const result = await runGate3({
+    paths,
+    provider: resolved.provider,
+    confirm: parsed.values.confirm === true,
+    dryRun: parsed.values.plan === true,
+  })
+
+  if (parsed.values.json === true) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    return 0
+  }
+  process.stdout.write(`Gate 3：${result.sceneCount} 场已确认（confirmed_scenes 一次性写入）\n`)
+  process.stdout.write(`final.md：${result.finalText.length} 字（${[...result.finalText].length} 码点）→ ${result.finalPath}\n`)
+  process.stdout.write(`OCCURRED：${result.occurred.length} 条\n`)
+  for (const entry of result.occurred) {
+    process.stdout.write(`  ${entry.id}  ${entry.type}  scene=${entry.scene_id}\n`)
+  }
+  if (result.lowSeverity.length > 0) {
+    process.stdout.write('low_severity_log：\n')
+    for (const entry of result.lowSeverity) process.stdout.write(`  [${entry.code}] ${entry.message}\n`)
+  }
+  for (const conflict of result.conflicts) {
+    process.stdout.write(`  [conflict] ${conflict.ref_id}: ${conflict.message}\n`)
+  }
+  for (const warning of result.foreshadowingWarnings) {
+    process.stdout.write(`  [high warning] ${warning}\n`)
+  }
+  const unresolved = result.state.state_rebuild_conflicts.filter((conflict) => conflict.resolution_note === null)
+  process.stdout.write(`未处理的状态冲突：${unresolved.length} 条（需用户裁决：改正文或改 Blueprint）\n`)
+  process.stdout.write(result.written ? `已写入：${result.finalPath} 与 ${paths.storyState}\n` : '[plan] 只读预览：未写盘\n')
+  return 0
+}
+
+function runFinalShowCommand(parsed: ParsedCli): number {
+  const projectId = requireProjectId(parsed)
+  const paths = projectPaths(projectsRootOf(parsed), projectId)
+  const final = loadFinalDraft(paths)
+  if (final === null) {
+    const assembled = assembleFinalFromProject(paths)
+    process.stdout.write(`（尚未生成 final.md；若现在拼接将是 ${assembled.sceneCount} 场、${assembled.finalText.length} 字）\n`)
+    return 0
+  }
+  process.stdout.write(`# ${join(paths.draftsDir, 'final.md')}\n`)
+  process.stdout.write(`码点：${[...final].length}  段落：${final.split(/\n\s*\n/).filter((block) => block.trim() !== '').length}\n`)
+  process.stdout.write(`格式检查：${checkProseFormat(final).length === 0 ? '通过（无标题 / 无元数据 / 无分隔符）' : '存在问题'}\n`)
+  process.stdout.write('--- 开头 ---\n')
+  process.stdout.write(final.split('\n').slice(0, 4).join('\n'))
+  process.stdout.write('\n--- 结尾 ---\n')
+  process.stdout.write(final.trimEnd().split('\n').slice(-4).join('\n'))
+  process.stdout.write('\n')
+  return 0
+}
+
+function projectIdsOf(parsed: ParsedCli): string[] {
+  const raw = parsed.values.projects
+  if (typeof raw === 'string' && raw.trim() !== '') return raw.split(',').map((value) => value.trim())
+  return ['demo-01', 'demo-02']
+}
+
+function runEvalStoryDevelopment(parsed: ParsedCli): number {
+  const seedSet = loadStoryDevelopmentSeedSet(REPO_ROOT)
+  const projects = projectIdsOf(parsed).map((projectId) => ({
+    seedId: projectId,
+    paths: projectPaths(projectsRootOf(parsed), projectId),
+  }))
+  const evaluation = buildStoryDevelopmentEvaluation(projects)
+  const rows = evaluation.rows.map((row) => STORY_DEVELOPMENT_CSV_COLUMNS.map((column) => String(row[column])))
+  const csv = toCsv(STORY_DEVELOPMENT_CSV_COLUMNS, rows)
+  const outRaw = parsed.values.out
+  const outPath = typeof outRaw === 'string' ? resolve(outRaw) : join(REPO_ROOT, STORY_DEVELOPMENT_DIR, 'results.csv')
+  writeTextFile(outPath, csv)
+  process.stdout.write(
+    `Story Development Test Set：${seedSet.seeds.length} 个 Seed（要求 ≥${seedSet.seed_count_minimum}，已跑完 Gate 2 的 ${seedSet.measuredCount} 个）\n`,
+  )
+  process.stdout.write(`  本次汇总：${evaluation.seedCount} 个项目 / ${evaluation.proposalCount} 个 Proposal\n`)
+  process.stdout.write(`  差异度全部通过：${evaluation.distinctnessAllOk ? '是' : '否'}\n`)
+  const corpusOnly = seedSet.seeds.filter((seed) => seed.status === 'corpus_only')
+  if (corpusOnly.length > 0) {
+    process.stdout.write(
+      `  仅有输入、尚无 fixture 覆盖：${corpusOnly.map((seed) => seed.seed_id).join(', ')}\n`,
+    )
+  }
+  process.stdout.write(`已写入：${outPath}\n`)
+  return 0
+}
+
+function runEvalAuthorCost(parsed: ParsedCli): number {
+  const rows = projectIdsOf(parsed).map((projectId) =>
+    collectAuthorCost(projectId, projectPaths(projectsRootOf(parsed), projectId)),
+  )
+  const csv = toCsv(
+    AUTHOR_COST_CSV_COLUMNS,
+    rows.map((row) => AUTHOR_COST_CSV_COLUMNS.map((column) => String(row[column]))),
+  )
+  const outRaw = parsed.values.out
+  const outPath = typeof outRaw === 'string' ? resolve(outRaw) : join(REPO_ROOT, STORY_DEVELOPMENT_DIR, 'author-cost.csv')
+  writeTextFile(outPath, csv)
+  process.stdout.write('作者成本（需求规格 §31.3）：\n')
+  for (const row of rows) {
+    process.stdout.write(
+      `  ${row.project_id}: 显式 Gate ${row.explicit_gates} 次（Gate1=${row.gate1_status} / Blueprint 版本 ${row.blueprint_versions} / confirmed_scenes ${row.confirmed_scenes}）  linter warning ${row.linter_warnings}  rewrite ${row.rewrites_applied}\n`,
+    )
+  }
+  process.stdout.write(`已写入：${outPath}\n`)
+  return 0
+}
+
+function runEvalAbGenerate(parsed: ParsedCli): number {
+  // Anti-AI A/B Test Set：默认覆盖两个 demo（5 + 5 = 10 个 Scene Intent，Story 10 D 节）。
+  const projectIds = Array.isArray(parsed.values.projects)
+    ? (parsed.values.projects as string[])
+    : typeof parsed.values.projects === 'string'
+      ? parsed.values.projects.split(',').map((value) => value.trim()).filter((value) => value !== '')
+      : ['demo-01', 'demo-02']
+  const projectsRoot = projectsRootOf(parsed)
+  const plainTexts: Record<string, string> = {}
+  const harnessTexts: Record<string, string> = {}
+  const aRuleWarnings: Record<string, number> = {}
+  const bRuleWarnings: Record<string, number> = {}
+  const sceneEntries: {
+    key: string
+    project_id: string
+    scene_id: string
+    pov: string
+    scene_type: string
+    intent_ref: string
+    target_length: number
+  }[] = []
+  for (const projectId of projectIds) {
+    const paths = projectPaths(projectsRoot, projectId)
+    const harnessTextsOfProject = draftTextsOf(paths)
+    for (const scene of loadScenes(paths)) {
+      const key = `${projectId}/${scene.scene_id}`
+      // A 侧（"普通 Prompt"）离线来自 recorded fixture；缺失时留空占位（不自动评分）
+      const file = join(REPO_ROOT, 'tests/fixtures/recorded/plain_prompt', `${projectId}-${scene.scene_id}.yaml`)
+      let aText = ''
+      if (existsSync(file)) {
+        const doc = readYamlFile(file) as { response?: { text?: string } }
+        aText = doc.response?.text ?? ''
+      }
+      const bText = harnessTextsOfProject[scene.scene_id] ?? ''
+      plainTexts[key] = aText
+      harnessTexts[key] = bText
+      aRuleWarnings[key] = countRuleWarnings(aText)
+      bRuleWarnings[key] = countRuleWarnings(bText)
+      sceneEntries.push({
+        key,
+        project_id: projectId,
+        scene_id: scene.scene_id,
+        pov: scene.pov,
+        scene_type: scene.scene_type,
+        intent_ref: `projects/${projectId}/scenes/${scene.scene_id}.yaml`,
+        target_length: scene.target_length,
+      })
+    }
+  }
+  const sessionId = typeof parsed.values.session === 'string' ? parsed.values.session : nextSessionId(REPO_ROOT)
+  const session = generateAbSession({
+    repoRoot: REPO_ROOT,
+    sessionId,
+    plainTexts,
+    harnessTexts,
+    scenes: sceneEntries,
+    aRuleWarnings,
+    bRuleWarnings,
+  })
+  process.stdout.write(`Anti-AI A/B 对照已生成：${session.session_dir}\n`)
+  process.stdout.write(`  Scene Intent：${session.groups.length} 个（A = 普通 Prompt，B = Writing Harness）\n`)
+  const totalA = session.groups.reduce((sum, group) => sum + group.a_rule_warnings, 0)
+  const totalB = session.groups.reduce((sum, group) => sum + group.b_rule_warnings, 0)
+  process.stdout.write(`  Rule Linter warning 合计：A=${totalA}，B=${totalB}（仅元数据，不参与评分）\n`)
+  process.stdout.write(`  人工填写模板：${session.csvPath}\n`)
+  process.stdout.write(`  说明：v0.1 不执行盲测、不自动评分（Story 10 起始会裁决 4）\n`)
+  return 0
+}
+
+async function runEvalCommand(parsed: ParsedCli): Promise<number> {
+  const sub = parsed.subcommand
+  if (sub === 'story-development') return runEvalStoryDevelopment(parsed)
+  if (sub === 'author-cost') return runEvalAuthorCost(parsed)
+  if (sub === 'ab-generate') return runEvalAbGenerate(parsed)
+  throw new UsageError(`未知子命令：eval ${sub ?? ''}（可用：story-development / author-cost / ab-generate）`)
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseCli(argv)
 
@@ -1263,6 +1499,13 @@ async function main(argv: string[]): Promise<number> {
       return runLintCommand(parsed)
     case 'rewrite':
       return runRewriteCommand(parsed)
+    case 'gate3':
+      return runGate3Command(parsed)
+    case 'final':
+      if (parsed.subcommand === 'show') return runFinalShowCommand(parsed)
+      throw new UsageError(`未知子命令：final ${parsed.subcommand ?? ''}`)
+    case 'eval':
+      return runEvalCommand(parsed)
     case 'style':
       if (parsed.subcommand === 'add') return runStyleAddCommand(parsed)
       if (parsed.subcommand === 'show') return runStyleShowCommand(parsed)
@@ -1311,7 +1554,8 @@ try {
     error instanceof LinterReportValidationError ||
     error instanceof AntiAiVocabError ||
     error instanceof LlmLinterError ||
-    error instanceof LocalRewriteError
+    error instanceof LocalRewriteError ||
+    error instanceof Gate3Error
   ) {
     process.stderr.write(`错误：${error.message}\n`)
     process.exitCode = 1

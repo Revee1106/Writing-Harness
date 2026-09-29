@@ -188,6 +188,25 @@ const INPUT_BUILDERS_EXTRA3: Record<string, InputBuilder> = {
 }
 
 const INPUT_BUILDERS_EXTRA4: Record<string, InputBuilder> = {
+  state_extractor: async ({ interaction, repoRoot }) => {
+    const { buildStateExtractorInput } = await import('../state/gate3.ts')
+    const { loadBlueprint } = await import('../project/project.ts')
+    const { loadScenes, loadStoryState } = await import('../scenes/service.ts')
+    const { projectPaths } = await import('../io/paths.ts')
+    const { readTextFile } = await import('../io/yaml.ts')
+    const { existsSync } = await import('node:fs')
+    const projectId = (interaction.source_project as string).split('/').pop() as string
+    const paths = projectPaths(join(repoRoot, 'projects'), projectId)
+    const scenes = loadScenes(paths)
+    const state = loadStoryState(paths)
+    if (state === null) throw new Error(`${projectId} 缺少 story_state.yaml`)
+    const texts: Record<string, string> = {}
+    for (const scene of scenes) {
+      const file = join(paths.draftsDir, `${scene.scene_id}.md`)
+      if (existsSync(file)) texts[scene.scene_id] = readTextFile(file)
+    }
+    return buildStateExtractorInput(loadBlueprint(paths), scenes, state, texts)
+  },
   llm_linter: async ({ interaction, repoRoot }) => {
     const { buildLlmLinterInput } = await import('../linter/llm-linter.ts')
     const { loadScenes } = await import('../scenes/service.ts')
@@ -223,6 +242,23 @@ function listFixtureFiles(fixturesDir: string): string[] {
     .sort()
 }
 
+const INPUT_BUILDERS_EXTRA5: Record<string, InputBuilder> = {
+  // Story 10 D：A/B 对照的 A 侧（普通 Prompt）。输入只含 Scene Intent。
+  plain_prompt: async ({ interaction, repoRoot }) => {
+    const { projectPaths } = await import('../io/paths.ts')
+    const { loadScenes } = await import('../scenes/service.ts')
+    const { buildPlainPromptInput } = await import('../eval/evaluation.ts')
+    const source = interaction.source_project ?? ''
+    const projectId = source.split('/').pop() ?? ''
+    const sceneId = interaction.scene ?? ''
+    if (sceneId === '') throw new Error('plain_prompt fixture 缺少 scene 字段')
+    const paths = projectPaths(join(repoRoot, 'projects'), projectId)
+    const scene = loadScenes(paths).find((entry) => entry.scene_id === sceneId)
+    if (scene === undefined) throw new Error(`${projectId} 中找不到 ${sceneId}`)
+    return buildPlainPromptInput(scene)
+  },
+}
+
 export async function checkRecordedFixtures(options: FixtureToolOptions): Promise<FixtureCheckEntry[]> {
   const entries: FixtureCheckEntry[] = []
   for (const file of listFixtureFiles(options.fixturesDir)) {
@@ -239,7 +275,8 @@ export async function checkRecordedFixtures(options: FixtureToolOptions): Promis
       INPUT_BUILDERS_EXTRA[interaction.contract] ??
       INPUT_BUILDERS_EXTRA2[interaction.contract] ??
       INPUT_BUILDERS_EXTRA3[interaction.contract] ??
-      INPUT_BUILDERS_EXTRA4[interaction.contract]
+      INPUT_BUILDERS_EXTRA4[interaction.contract] ??
+      INPUT_BUILDERS_EXTRA5[interaction.contract]
 
     // prose_writer 这类 fixture 的输入来自项目状态，不需要 seed 字段
     if (interaction.seed === undefined) {

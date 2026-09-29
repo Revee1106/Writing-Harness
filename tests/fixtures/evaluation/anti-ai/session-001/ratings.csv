@@ -1,0 +1,11 @@
+group_id,text_a_file,text_b_file,rater_id,more_humanlike,more_natural,dialogue_more_natural,characters_more_alive,lower_ai_feel,want_to_continue,notes
+G01,group-G01.a.txt,group-G01.b.txt,,,,,,,,
+G02,group-G02.a.txt,group-G02.b.txt,,,,,,,,
+G03,group-G03.a.txt,group-G03.b.txt,,,,,,,,
+G04,group-G04.a.txt,group-G04.b.txt,,,,,,,,
+G05,group-G05.a.txt,group-G05.b.txt,,,,,,,,
+G06,group-G06.a.txt,group-G06.b.txt,,,,,,,,
+G07,group-G07.a.txt,group-G07.b.txt,,,,,,,,
+G08,group-G08.a.txt,group-G08.b.txt,,,,,,,,
+G09,group-G09.a.txt,group-G09.b.txt,,,,,,,,
+G10,group-G10.a.txt,group-G10.b.txt,,,,,,,,

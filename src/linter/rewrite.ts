@@ -131,7 +131,8 @@ export function validateRewrite(params: ValidateRewriteParams): RewriteValidatio
     const precedingPoints = scenePoints.slice(0, startOffset)
     const followingPoints = scenePoints.slice(startOffset + spanLength)
     const replacementPoints = [...params.rewrittenText]
-    const MIN_OVERLAP = 4
+    // I-71 裁决：4 码点重叠属正常衔接（不拒绝），5 码点起视为重复粘贴
+    const MIN_OVERLAP = 5
     const MAX_OVERLAP = 12
     for (let length = MIN_OVERLAP; length <= MAX_OVERLAP; length += 1) {
       const prefix = replacementPoints.slice(0, length).join('')

@@ -24,6 +24,9 @@ import { locateParagraphs } from './rewrite.ts'
 /**
  * 局部二次 Linter —— 需求规格 §27；Story 9 起始会裁决 5。
  *
+ * 报告级 `linter` 的语义（OQ-57 补充裁决）：**等于"最后一次完整运行"的 Linter 类型**，
+ * 局部重跑**不改变**它（局部重跑只更新 warning 集合）。
+ *
  * - **Rule Linter**：只重跑 span 所在段落 + 相邻必要段落；
  * - **LLM Linter**：只检查 span ± 前后一段（由调用方传入局部文本，见 `relintLlmRange`）；
  * - 两个范围**独立定义**，允许不一致；
@@ -158,13 +161,21 @@ export async function relintAfterRewrite(options: RelintOptions): Promise<Relint
   // 需保留的 warning（被改写的目标，含 rewrite 审计记录）与范围外 warning 一起保留
   const merged = [...outside, ...kept].map(renumber).concat(deduped.map(renumber))
 
+  // OQ-57：报告级 linter 与两个词表版本沿用"最后一次完整运行"的报告，局部重跑不改变它们
+  const reportLevelLinter = previous?.linter ?? 'rule'
   const report = validateLinterReport({
     schema_version: LINTER_REPORT_SCHEMA_VERSION,
     scene_id: sceneId,
     generated_at: (options.now ?? new Date()).toISOString(),
-    linter: 'rule',
-    template_actions_version: templateActions.version,
-    elevation_phrases_version: elevationPhrases.version,
+    linter: reportLevelLinter,
+    template_actions_version:
+      reportLevelLinter === 'llm'
+        ? (previous?.template_actions_version ?? null)
+        : templateActions.version,
+    elevation_phrases_version:
+      reportLevelLinter === 'llm'
+        ? (previous?.elevation_phrases_version ?? null)
+        : elevationPhrases.version,
     disabled_rules: Object.entries(enabled)
       .filter(([, value]) => value === false)
       .map(([key]) => key)
@@ -175,7 +186,7 @@ export async function relintAfterRewrite(options: RelintOptions): Promise<Relint
 
   writeYamlFile(paths.linterReport, report, {
     headerComments: [
-      `Last linted scene: ${sceneId} (rule linter, ${options.scope === 'full' ? 'full' : 'partial re-lint'})`,
+      `Last linted scene: ${sceneId} (${reportLevelLinter} report, ${options.scope === 'full' ? 'full' : 'partial re-lint'})`,
       `局部范围：${range.start}-${range.end}（Rule Linter 只重跑该范围；LLM Linter 的范围独立定义）`,
       'Story 9：warning id 重跑后重新分配，不复用',
     ],

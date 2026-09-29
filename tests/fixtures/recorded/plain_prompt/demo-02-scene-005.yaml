@@ -1,0 +1,15 @@
+contract: plain_prompt
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-005
+input_sha256: "c9f469d99bcd4cd456de6eb184aa55e0b016d8a2fc0d764dea61d04eafd73b1b"
+response:
+  model: recorded-plain-prompt-v0.1
+  text: |
+    门被从外面拉开，走廊的灯亮了起来。
+    
+    他先走出去，沉默了片刻，然后回头看了一眼。
+    
+    她也走出来，两个人并肩站着，谁也没有说话。
+    
+    老人最后一个走出来，往走廊另一头去了。也许，这就是结局。

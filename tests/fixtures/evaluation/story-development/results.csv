@@ -1,0 +1,5 @@
+seed_id,proposal_count,distinctness_ok,proposal_id,seed_preservation_rate,preserved,altered,additions,risks,conflicts,unaccounted_anchors
+demo-01,2,true,PROP_A,100%,6,0,1,1,0,0
+demo-01,2,true,PROP_B,83.3%,5,1,1,1,1,0
+demo-02,2,true,PROP_A,100%,5,0,1,1,0,0
+demo-02,2,true,PROP_B,75%,4,1,1,1,1,0

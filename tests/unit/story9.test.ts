@@ -225,6 +225,34 @@ describe('Local Rewrite：契约（Story 9 裁决 3）', () => {
     expect(result.problems.join()).toContain('重复')
   })
 
+  it('I-71 边界一：与紧邻前文重叠 4 码点属于正常衔接，不拒绝', () => {
+    // 前文以「她看着他」结尾，替换文本同样以「她看着他」开头（4 码点重叠）
+    const sceneText = '他放下筷子。她看着他，忽然不想再解释了。'
+    const result = validateRewrite({
+      originalSpanText: '她看着他，忽然不想再解释了',
+      rewrittenText: '她看着他，把筷子搁在碗沿上',
+      sceneText,
+      blueprintCharacterNames: [],
+      forbiddenTruthPhrases: [],
+      endStatePhrases: [],
+    })
+    expect(result.ok, result.problems.join('；')).toBe(true)
+  })
+
+  it('I-71 边界二：真重复粘贴（8 码点重叠）被拒绝', () => {
+    const sceneText = '出租屋的桌上，那部手机亮了一次，是一条系统提示。'
+    const result = validateRewrite({
+      originalSpanText: '是一条系统提示',
+      rewrittenText: '那部手机亮了一次，又暗下去。',
+      sceneText,
+      blueprintCharacterNames: [],
+      forbiddenTruthPhrases: [],
+      endStatePhrases: [],
+    })
+    expect(result.ok).toBe(false)
+    expect(result.problems.join()).toContain('重叠重复')
+  })
+
   it('原地改写 + 除 span 外字节级一致 + 报告带 rewrite 记录（裁决 4）', async () => {
     const paths = cloneProject('demo-01')
     await runLlmLinter({ paths, provider: recorded('llm_linter'), sceneId: 'scene-001' })

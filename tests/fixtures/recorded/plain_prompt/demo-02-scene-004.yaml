@@ -1,0 +1,15 @@
+contract: plain_prompt
+contract_version: "0.1"
+source_project: projects/demo-02
+scene: scene-004
+input_sha256: "f9cafbdd518aed034acea7741d2d74667180caaaaa926318e57e7cfe4a83e9c1"
+response:
+  model: recorded-plain-prompt-v0.1
+  text: |
+    他深吸一口气，把手从口袋里拿出来。
+    
+    按钮就在手边，他沉默了片刻，然后按了下去。
+    
+    铃声响起来的瞬间，气氛凝固，三个人都没有说话。
+    
+    时间仿佛静止，仿佛整个世界都在等这一声铃响。

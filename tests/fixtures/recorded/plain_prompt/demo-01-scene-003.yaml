@@ -1,0 +1,15 @@
+contract: plain_prompt
+contract_version: "0.1"
+source_project: projects/demo-01
+scene: scene-003
+input_sha256: "7eb0c7318aba094a40bab60cd1316f579e9032db63ecd0ce061ada13f50b6f3d"
+response:
+  model: recorded-plain-prompt-v0.1
+  text: |
+    她推开那扇门，深吸一口气。
+    
+    桌上那部手机亮着，她走过去，目光落在屏幕上，心中不由得一紧。
+    
+    她读了两遍，然后下意识地后退了半步。
+    
+    有些事，一旦错过就是一辈子。
