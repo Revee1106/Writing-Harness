@@ -1,0 +1,9 @@
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+*.log
+
+# DSH platform runtime files (not part of the harness)
+filefix-restart.sh
+filefix-restart.log
