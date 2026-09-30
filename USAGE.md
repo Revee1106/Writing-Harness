@@ -38,8 +38,11 @@ export HARNESS_LLM_MODEL="deepseek-chat"                    # 模型名（示例
 export HARNESS_LLM_TIMEOUT_MS="120000"                      # 可选：超时毫秒数
 ```
 
-之后在命令后加 `--provider openai-compat`，表示"这次真的去调用模型"。
-不加这个参数时，默认是 `auto`：**有离线录制就用录制，没有就需要上面三个变量**。
+**要用真实模型，每一条会调用模型的命令都必须显式加 `--provider openai-compat`。**
+
+> ⚠️ 这是最容易踩的坑：`--provider` 不写时默认是 `auto`，而 **v0.1.1 的 `auto` 恒等于 `recorded`（离线回放）**——
+> 即使你已经设好了上面三个环境变量，它也不会去调用模型，而是回放仓库内置的演示答案。
+> 判断方法：看输出第一行的 `provider=`，`recorded` 就是没走真模型。
 
 ---
 
@@ -339,7 +342,8 @@ pnpm harness final show my-first-story
 | `harness help` | 显示全部帮助（**加 `--help` 的效果一样**） | 忘命令时 |
 
 **通用选项**：`--projects-root <目录>` 可以把项目放到别处（默认 `projects/`）；
-`--provider recorded|openai-compat|auto` 控制"用离线录制还是真的调模型"。
+`--provider recorded|openai-compat|auto` 控制"用离线录制还是真的调模型"——
+注意 **`auto`（默认值）在本版本恒等于 `recorded`**，要用真实模型必须显式写 `--provider openai-compat`（详见第 11 节）。
 
 ---
 
@@ -677,3 +681,146 @@ pnpm harness gate3 my-first-story --provider openai-compat --confirm
   * 看到 `RecordedProvider 未命中` → 你在用离线模式跑新故事，加 `--provider openai-compat` 即可；
   * `gate3` 报"需要显式确认" → 这是故意的，加上 `--confirm`；
   * `gate2` 报"存在未裁决的冲突" → 用 `--resolve` 处理掉那条冲突再确认。
+
+---
+
+## 11. 模型配置（v0.1.1）
+
+这一节讲清楚**怎么把真实模型接上**：配哪些变量、哪些命令要加 `--provider`、怎么选模型省钱、
+以及配错时会看到什么报错。文中所有数字与报错都是本机实测结果。
+
+### 11.1 只有四个环境变量
+
+| 环境变量 | 必填 | 默认值 | 说明 |
+|---|---|---|---|
+| `HARNESS_LLM_BASE_URL` | **是** | 无 | 服务的 OpenAI 兼容根地址；程序会在末尾拼 `/chat/completions` |
+| `HARNESS_LLM_MODEL` | **是** | 无 | 模型名，原样透传给服务端 |
+| `HARNESS_LLM_API_KEY` | 否 | **空字符串** | 为空时**不发送 `Authorization` 头**（本地 Ollama 可以不设） |
+| `HARNESS_LLM_TIMEOUT_MS` | 否 | **120000**（2 分钟） | 必须是正数 |
+
+```bash
+export HARNESS_LLM_BASE_URL="https://api.deepseek.com/v1"
+export HARNESS_LLM_MODEL="deepseek-flash"
+export HARNESS_LLM_API_KEY="sk-你的key"
+export HARNESS_LLM_TIMEOUT_MS="180000"
+```
+
+**不支持 `.env` 文件**（本版本不读取 `.env`）。两种可行做法：
+
+```bash
+# 做法 1：每条命令前内联（不污染当前 shell）
+HARNESS_LLM_BASE_URL=https://api.deepseek.com/v1 \
+HARNESS_LLM_MODEL=deepseek-flash \
+HARNESS_LLM_API_KEY=sk-xxx \
+pnpm harness develop my-first-story --provider openai-compat
+
+# 做法 2：把变量写进自己的文件，然后 source
+set -a; . ~/.harness.env; set +a
+```
+
+**没有 `--model` / `--base-url` / `--api-key` 这类参数**：模型相关只能改环境变量，
+命令行里与模型有关的只有 `--provider` 和 `--fixtures`。
+
+### 11.2 必须显式加 `--provider openai-compat`
+
+`--provider` 不写时默认 `auto`，而**本版本的 `auto` 恒等于 `recorded`**（因为命令总能找到仓库内置的离线录制）。
+所以：**设了环境变量也不会自动调用模型，必须每条命令显式加 `--provider openai-compat`。**
+
+**要加**：`gate1`、`develop`、`gate2`、`breakdown`、`write`、`lint --llm`、`rewrite`、`gate3`
+**不用加**：`init`、`seed set|show`、`config show`、`proposals show`、`blueprint show`、`scenes show`、
+`state show`、`coverage show`、`context`、`drafts show`、`lint`（规则检查）、`lint show`、`final show`
+
+判断自己有没有走真模型：看命令输出的第一行 `provider=`——`recorded` 表示仍在回放内置答案。
+
+### 11.3 三个可直接照抄的端点配置
+
+```bash
+# ① DeepSeek
+export HARNESS_LLM_BASE_URL="https://api.deepseek.com/v1"
+export HARNESS_LLM_MODEL="deepseek-flash"        # 或 deepseek-v4-pro
+export HARNESS_LLM_API_KEY="sk-…"
+
+# ② OpenAI
+export HARNESS_LLM_BASE_URL="https://api.openai.com/v1"
+export HARNESS_LLM_MODEL="gpt-4o"
+export HARNESS_LLM_API_KEY="sk-…"
+
+# ③ 本地 Ollama（不需要 key）
+ollama serve &
+ollama pull qwen3:32b
+export HARNESS_LLM_BASE_URL="http://localhost:11434/v1"
+export HARNESS_LLM_MODEL="qwen3:32b"
+unset HARNESS_LLM_API_KEY          # 留空即可，不会发送 Authorization 头
+```
+
+地址拼接规则（实测）：程序把 `BASE_URL` 末尾斜杠去掉后拼 `/chat/completions`。
+
+| 你设置的 `BASE_URL` | 实际请求路径 |
+|---|---|
+| `http://host/v1` | `/v1/chat/completions` |
+| `http://host/v1/`（尾斜杠） | `/v1/chat/completions`（斜杠自动去重） |
+| `http://host`（不带版本段） | `/chat/completions` ← 服务商要求 `/v1` 时会 404 |
+| `http://host/openai/v1` | `/openai/v1/chat/completions` |
+
+实测发出的请求长这样（本地 mock 服务端抓到的原文）：
+
+```text
+POST /v1/chat/completions
+Authorization: Bearer sk-test-123
+{ "model": "deepseek-flash", "temperature": 0, "messages": [ {role:system,…}, {role:user,…} ] }
+```
+
+注意：请求里**不带 `max_tokens`**，输出上限由服务端默认值决定。
+
+### 11.4 哪些环节用强模型、哪些可以省钱
+
+各环节 prompt 长度与温度（实测，演示项目 5 场、每场约 150 字）：
+
+| 环节 | prompt 字符数 | temperature | 能力要求 | 能省吗 |
+|---|---|---|---|---|
+| Seed Interpreter | 1,187 | 0 | 分类 + 逐字回指原文 | ✅ 可省钱 |
+| Story Developer | 3,182 | 0 | 产出结构差异明显的 2～3 个方案 | ⚠️ 中档以上 |
+| Blueprint Builder（Gate 2） | 4,359 | 0 | 汇总字段计划、严格 YAML | ❌ 建议强模型 |
+| Scene Breakdown | 6,850 | 0 | 拆 5～10 场，输出最长、最易崩 | ❌ 建议强模型 |
+| Prose Writer（逐场） | 2,882–3,399 | **0.7** | 决定"文笔"，唯一非 0 温度 | ❌ **最值得用强模型** |
+| LLM Linter（逐场） | 1,406 | 0 | 五类语义 + 码点区间 | ✅ 可省钱 |
+| Local Rewrite | 1,387 | 0.4 | 局部改写、保持衔接 | ⚠️ 中档以上 |
+| State Extractor（Gate 3） | 2,873 | 0 | 抽取"谁知道了什么" | ✅ 可省钱 |
+
+**省钱三条**：① 用中档模型跑全程即可；要省就把小模型只用在 Seed Interpreter / LLM Linter / State Extractor
+（它们的输出都有本地校验兜底）；② **不要压缩 Prose Writer 与 Scene Breakdown**；
+③ 省钱先用 `--plan` 预览（`gate1/develop/gate2/breakdown/write/lint/gate3` 都支持只看不写）。
+
+### 11.5 常见配置错误（报错原文均为实测）
+
+| 你的操作 | 会看到什么 |
+|---|---|
+| 完全没设 `HARNESS_LLM_BASE_URL` / `HARNESS_LLM_MODEL` | `错误：缺少环境变量：HARNESS_LLM_BASE_URL / HARNESS_LLM_MODEL（真实模型调用需要它们；离线测试请用 RecordedProvider）` |
+| **变量名拼错**（如 `HARNESS_LLM_BASEURL`） | 与上一条**完全一样**——两个名字根本不存在。看到"缺少环境变量"先检查拼写 |
+| 只设了一个（忘设 MODEL） | `错误：缺少环境变量：HARNESS_LLM_MODEL（…）` |
+| `HARNESS_LLM_TIMEOUT_MS` 不是正数 | `错误：HARNESS_LLM_TIMEOUT_MS 必须是正数，收到 "abc"` |
+| **API key 无效** | `错误：LLM 请求失败：HTTP 401 Unauthorized {"error":{"message":"Authentication Fails, Your api key is invalid",…}}` |
+| **模型名不存在** | `错误：LLM 请求失败：HTTP 400 Bad Request {"error":{"message":"The model \`xxx\` does not exist",…}}` |
+| **base_url 少了 `/v1`** | 请求打到 `/chat/completions`；服务商要求版本段时通常 `HTTP 404` |
+| base_url 带尾斜杠 | 无影响（自动去重） |
+| **地址不可达 / 被墙 / 端口没开** | `错误：fetch failed`（**没有更细的解释**，这是已知粗糙点；请先自查网络与端口） |
+| 忘了加 `--provider openai-compat` | 不报错，但输出 `provider=recorded`，内容是内置演示稿——**不是你的故事** |
+
+### 11.6 成本大概多少（写一篇 8,000 字短篇）
+
+调用次数：Seed Interpreter 1 + Story Developer 1 + Blueprint 1 + Breakdown 1 + 写正文 5 +
+语义检查 5 + 局部改写 0～3 + State Extractor 1 ≈ **17 次**（重跑 `develop`/`breakdown`/`gate2` 每次 +1）。
+
+token 量（按 1 汉字 ≈ 0.6–0.8 token 估算）：**≈ 4.6 万输入 + 1.9 万输出 ≈ 6.5 万 token / 篇**。
+
+DeepSeek（官方价，每 1M token，取数 2026-09-30；峰谷计价）：
+
+| 模型 | 输入（未命中缓存） | 输出 | 每篇成本（峰时 / 谷时） |
+|---|---|---|---|
+| `deepseek-flash` | 谷 $0.15 / 峰 $0.30 | 谷 $0.60 / 峰 $1.20 | ≈ $0.036（¥0.26）/ ≈ $0.018（¥0.13） |
+| `deepseek-v4-pro` | 谷 $0.66 / 峰 $1.32 | 谷 $1.98 / 峰 $3.96 | ≈ $0.134（¥0.97）/ ≈ $0.067（¥0.48） |
+
+GPT-4o：按长期公开价（输入 $2.50 / 输出 $10.00 每 1M）估算 ≈ **$0.31 / 篇（≈ ¥2.2）**。
+**这个数字请以官方定价页为准**（本机无法访问 OpenAI 定价页，未能核对）。
+一般规律：成本大头在**输出 token**（Blueprint / Breakdown / 正文三步），所以"低风险环节用便宜模型、写作留强模型"最省钱。
+

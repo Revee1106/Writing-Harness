@@ -1,0 +1,16 @@
+schema_version: "0.1"
+project:
+  id: ns
+  title: null
+  created_at: 2026-09-30T05:58:00.258Z
+  target_length: null
+linter:
+  rules:
+    template_actions: true
+    sentence_length_variance: true
+    paragraph_length_variance: true
+    dialogue_ratio: true
+    paragraph_ending_elevation: true
+draft_context:
+  mode: same_pov_previous
+  max_chars: 600

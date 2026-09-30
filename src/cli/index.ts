@@ -185,7 +185,7 @@ gate1 选项（必须给出一种选择）：
                             demote:SEED_F001           fixed → ambiguous（保留历史 anchor）
                             edit:SEED_F001=<新内容>     编辑条目
                             delete:SEED_A002           删除错误分类
-  --provider <name>       ${PROVIDER_NAMES.join(' / ')}（默认 auto：有 fixtures 用 recorded，否则用环境变量）
+  --provider <name>       ${PROVIDER_NAMES.join(' / ')}（默认 auto：**v0.1.1 的 auto 恒等于 recorded**；要用真实模型必须显式加 --provider openai-compat）
   --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/seed-interpreter）
 
 lint 选项：
