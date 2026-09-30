@@ -298,6 +298,7 @@ source_refs:
   - **记录级（最终写进 Blueprint 的形态）**：`ref_id = EDIT_<NNN>`，即 `blueprint-history/<NNN>.meta.yaml` 中 `user_edits[].id`（跨版本全局递增）；
   - **字段级（装配输入形态）**：`derived_from = user_edit:<字段路径>`，装配时**按 `field` 匹配**该版本的 `user_edits[]`，解析为对应的 `EDIT_<NNN>`；
   - 若某字段声明了 `user_edit:<字段>` 但用户并未手改该字段 → **报错**；字段来源为 `user` 但查不到对应手改记录 → 回落为 `blueprint_gate2`（`GATE2_<NNN>`）；
+  - **`type=user_edit` 的 `ref_id` 是记录级 `EDIT_<NNN>`**；装配阶段的字段级声明 `user_edit:<字段路径>` **不进入 `source_refs`**，只作为装配输入（装配后只留记录级 ID）；
 - `type=blueprint_gate2` → 指向本次 Blueprint 确认动作 ID：`GATE2_<NNN>`；字段来源标记为"Harness 依裁决派生"时也映射到该类型（`harness` → 同一形态）；
 - 不允许使用无法解析的自由字符串作为 source ref。
 
@@ -1055,9 +1056,9 @@ included_sensitive:
 
 excluded_sensitive:
   - id:
-    type: key_knowledge | foreshadowing | future_content | unconfirmed_content | user_override
+    type: key_knowledge | foreshadowing | future_content | unconfirmed_content | user_override | character_inner_state
     source_ref:
-    reason:
+    reason: not_revealed_yet | future_scene | non_pov_inner_state | unconfirmed_content | foreshadowing_backstage | user_override
 
 director_surface:
   - id:
@@ -1081,12 +1082,21 @@ overrides:
 
 约束：
 
-- `excluded_sensitive.reason` 必填；
+- `excluded_sensitive.reason` 必填，且必须是上面六类之一（枚举，不接受自由字符串）；
+- **`excluded_sensitive.type` 共 6 类**（v0.1 扩展枚举，回写项 12）：在原 5 类之上新增 **`character_inner_state`**（"角色内心"这类信息需要能被显式排除，否则 POV 隔离无法在 Manifest 里被审计）；
+- **`included_sensitive.type` 不加新类**，仍为 `key_knowledge | foreshadowing | user_override`；reason 词表不变；
 - 普通非敏感 included facts 不逐条写入；
 - 用户补充的 director note 内容写入 `director_surface`，并使用 `source: user_override`；
 - 同一条用户 override 的审计来源写入 `overrides`，通过 `director_surface_ref` 一对一引用对应 `director_surface.id`；
 - 不允许同一用户 note 在两个数组中形成两份彼此无关的正文内容；
 - Manifest 默认展示摘要，完整内容用于审计。
+
+**存储位置与覆盖语义（v0.1 位置明确，回写项 13）**
+
+- Manifest 落在 `reports/context-manifest.yaml`，**单文件、末次覆盖**（一个项目多场编译只有一份文件）；
+- 文件顶部必须写一行注释 `# Last compiled scene: scene-XXX`，便于人工审计"当前这份是谁留下的"；
+- **`writer_context` 不落盘**：它由 Compiler 返回（CLI 打印 / `--json`），只有 Manifest 持久化；
+- 需要保留多场 Manifest 时，由使用者自行复制 / 重定向（v0.1 不新增文件结构）。
 
 ---
 
@@ -1098,6 +1108,17 @@ overrides:
 - 该 note 进入 Manifest；
 - 不自动修改 Blueprint；
 - 如果该 note 实际改变故事事实，必须回到 Gate 2 更新 Blueprint。
+
+**两条路径必须区分（v0.1 补充定义，回写项 14）**
+
+| 路径 | 命令 | 落点 | `source` |
+|---|---|---|---|
+| **持久化到 Scene** | `breakdown --note` | 写进当前 Scene 的 `director_notes[]`（改 Scene 文件） | `user` |
+| **只影响本次编译** | `context --note` / `--scene` | 只写进本次 Manifest 的 `director_surface` + `overrides`（**不改 Scene 文件**） | `user_override` |
+
+- 两处语义同时成立：同一句用户指令，持久化路径能跨编译保留，降级路径只对这一次编译生效；
+- v0.1 **不允许在编译期静默改写已确认的 Scene**：`context --note` 不写回 Scene；
+- 无论走哪条路径，**note 都不得产生故事事实**；若它改变了事实，必须回 Gate 2 更新 Blueprint。
 
 ---
 
@@ -1142,6 +1163,30 @@ Writer 只参考：
 - 修辞密度；
 - 信息省略方式。
 
+**`style/profile.yaml` 的 Schema（v0.1 补充定义，回写项 15）**
+
+```yaml
+schema_version: "0.1"
+samples:
+  - sample_id: SAMPLE_001
+    tags:
+      pov: CH_LIN_YU            # 必须是 CH_* 角色 ID
+      scene_type: dialogue      # dialogue | action | interior | transition
+      tone: tension             # 与 OBH 相同的 8 值 tone 白名单
+    text: |                     # 原文**原样保留**
+      ……
+    de_entity: true             # 是否已去实体化（§23.2）
+    sanitized_text: |           # de_entity=true 时**必填**
+      [CHAR_A] 把碗推过去。
+```
+
+- `sample_id` 形如 `SAMPLE_<NNN>`，**项目内唯一且不复用**；
+- `de_entity=true` 时必须提供 `sanitized_text`（否则无法验证"Writer 不得抄用原实体"）；
+- `tags.tone` 与 Scene 的 `tone` 使用**同一套 8 值标签集**（§14）；
+- 匹配降级顺序（§23.1）逐级求交：`pov + scene_type + tone` → `pov + scene_type` → `pov` → 不加载样本；
+- 最终命中哪一级必须写进 Manifest 的 `style_samples[].matched_on`（可审计）；
+- **样本永远不阻塞 Writer**：全无匹配时照常写作，只在 Manifest 记录。
+
 ---
 
 ## 24. Prose Writer
@@ -1175,6 +1220,14 @@ Story 8 开发前必须冻结一份版本化模板动作词表：
 
 首版至少包含“沉默了片刻 / 深吸一口气 / 苦笑 / 眼底闪过 / 微微一怔”等测试项，词表变化必须带版本号。
 
+**词表位置与覆盖（v0.1 位置明确，回写项 16）**
+
+- 模板动作词表是**项目级**配置：`projects/<project_id>/config/anti-ai-template-actions.yaml`；
+- 项目未提供时，**回落到仓库级默认词表** `config/anti-ai-template-actions.yaml`（不同题材项目可覆盖，例如悬疑 vs 温情）；
+- 升华词典是**独立文件 + 独立 version**：`config/anti-ai-elevation-phrases.yaml`（项目级可覆盖），结构为
+  `{schema_version, version, phrases: [{id: EL_<NNN>, pattern, severity, note?}]}`——与模板动作词表同构，因此**同样的回落规则**适用；
+- 两份词表都带 `version`，Linter 报告必须记录本次使用的两个版本号（便于复现"当时为什么报警"）。
+
 v0.1 默认启用：
 
 - 明确模板动作列表；
@@ -1201,6 +1254,45 @@ v0.1 默认启用：
 
 Rule Linter 不检测这些语义问题，避免重复报告。
 
+**Linter 报告的存储与结构（v0.1 位置明确，回写项 17）**
+
+- 报告落在 `reports/linter.yaml`，**单文件、末次覆盖**；文件顶部写 `# Last linted scene: scene-XXX`；
+- **Rule 与 LLM 报告共用同一份 Schema**：warning 级字段 `linter: rule | llm` 标明来源；
+  报告级 `linter` 表示"最后一次**完整**运行的 Linter"；局部重跑不会把它改成 `llm`；
+- warning 结构：`{id: LINT_<NNN>, linter, rule, severity, scene_id, span: {start, end} | null, evidence, message, rewrite?}`；
+- **`span` 使用 Unicode 码点偏移（`start` 含、`end` 不含）**；
+- `low_severity_log[]` 记录不弹给用户的低级别信息（词频类、`llm_span_invalid` 等），**不进 `warnings[]`**；
+  `warnings[]` 中不允许出现 `severity: low`。
+
+**`evidence` 的固定结构（v0.1 补充定义，回写项 18）**
+
+| 规则 | `evidence` 字段 |
+|---|---|
+| `template_actions` | `{action_id, pattern, occurrences, severity_basis: hit \| repeated, spans}` |
+| `sentence_length_variance` | `{cv, mean, stddev, sentence_count, lengths}` |
+| `paragraph_length_variance` | `{cv, mean, stddev, paragraph_count, lengths}` |
+| `dialogue_ratio` | `{ratio, dialogue_code_points, total_code_points, dialogue_span_count}` |
+| `paragraph_ending_elevation` | `{consecutive, paragraph_indexes, matched_patterns}` |
+
+- **"段尾"的窗口口径**：段落最后 **16 个非空白码点**内命中升华词典，即视为"以升华句收尾"；
+- 阈值集中在实现内并可被 `project-config.yaml` 的 `linter.thresholds` 覆盖（下文数值为默认值，项目配置是覆盖层）。
+
+**Rule Linter 默认阈值（v0.1 补充定义）**
+
+```text
+sentenceLengthCv          0.3      # 句长变异系数下限
+paragraphLengthCv         0.35     # 段长变异系数下限
+dialogueRatioHigh         0.85     # 对话占比过高
+dialogueRatioLow          0.1      # 对话占比过低
+templateActionEscalateCount 3      # 同一模板动作出现 ≥3 次升为 high
+elevationConsecutiveParagraphs 3   # 连续 3 段以升华句收尾
+sentenceLengthMinCodePoints 100    # 短于该长度（码点）不做句长统计
+paragraphCountMin         3        # 段落数下限（不足则跳过段长方差）
+dialogueMinCodePoints     200      # 对话样本长度下限
+wordFrequencyMinOccurrences 3      # 词频类 low 日志的出现次数阈值
+paragraphSplit            blank_line
+```
+
 ### 25.3 Severity
 
 ```text
@@ -1208,6 +1300,20 @@ high   默认展开
 medium 默认折叠
 low    仅日志
 ```
+
+**五类语义类型的默认 severity（v0.1 补充定义，回写项 18）**
+
+| 类型 | 默认 severity | 含义 |
+|---|---|---|
+| `author_summary` | **high** | 替读者总结（"她终于明白……"） |
+| `subtext_exposed` | **high** | 把潜台词直接说明 |
+| `emotion_repeated` | medium | 同一情绪反复直说 |
+| `voice_blur` | medium | 角色声音模糊（说话人可互换） |
+| `over_explanation` | medium | 过度解释动作 / 因果 |
+
+- severity 决定展示策略，**不改变"Linter 只产 warning、不产生 Hard Error"**；
+- LLM Linter 的 span 必须满足 `0 ≤ start < end ≤ 码点总数` 且回切非空，不合法时**丢弃该条**并写入
+  `low_severity_log: [{code: "llm_span_invalid", …}]`，**不让整个 Linter 失败**。
 
 ---
 
@@ -1247,6 +1353,30 @@ Rewrite 后：
 - LLM Linter 只检查 span 及前后一段；
 - 不默认重跑全篇统计；
 - 用户主动请求或终稿前全检时，才跑完整 Linter。
+
+**Local Rewrite 契约（v0.1 补充定义，回写项 19）**
+
+- 输入：问题 span + 该 span 的切片 + warning + 前后各一段 + Scene 元信息 + Style Samples；
+- 输出：**纯文本**（不带引号、不加前缀、不含 Markdown 包裹）；
+- 长度上限：**≤ 原 span 长度的 3 倍**；
+- 无法改写时输出原文，并记 `rewrite.applied = false`；
+- 不得引入 Scene 之外的实体、不得泄露未授权 truth、**不得改变 `end_state` 语义**；
+- **拼接守恒**：替换后除该 span 之外，正文必须**字节级一致**；
+- **重叠重复防线**：替换文本与紧邻上下文的**最长重叠达到 4 码点即拒绝**（避免"手机亮了一次，手机亮了一次"这类重复粘贴；4 码点以下视为正常衔接）；
+- 落回方式：**原地改写** `drafts/scene-NNN.md`；**不新增备份文件、不实现自动回滚**；
+- 审计：在被处理的 warning 上写 `rewrite: {applied, before, after, rewrite_contract, rewritten_at}`；该记录必须能被后续局部重跑保留。
+
+**二次检查范围（v0.1 补充定义，回写项 20）**
+
+| Linter | 重跑范围 |
+|---|---|
+| Rule Linter | span 所在**段落 + 相邻段落** |
+| LLM Linter | span **± 前后各一段** |
+
+- 两个范围**各自独立定义**，不互相推导；
+- 范围外的旧 warning **不变**；范围内的旧 warning 被新结果替换；
+- 重跑产生的 warning **重新分配 ID**（不复用旧 ID）；
+- 终稿前或用户显式请求时跑完整 Linter（`--full`）。
 
 ---
 

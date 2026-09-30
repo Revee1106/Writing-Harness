@@ -450,7 +450,7 @@ describe('Scene Breakdown 服务（重跑语义 OQ-17）', () => {
       expect(addition.source).toBe('scene_breakdown')
     }
     for (const scene of result.scenes) {
-      expect(scene.narrative_role_ref).toMatch(/^BP_(STR|ARC)_/)
+      expect(scene.narrative_role_ref).toMatch(/^BP_STR_/)
       expect(validateScene(scene)).toBeDefined()
     }
     expect(result.coverage.warnings).toEqual([])

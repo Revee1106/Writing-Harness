@@ -381,8 +381,8 @@
 
 本清单是**唯一入口**：v0.1 实现过程中所有"与三份冻结文档不一致 / 文档未定义而由实现补齐"的事项，
 按"目标文档 + 章节 + 变更性质"逐条列出，供后续统一回写。
-**回写进度**：批次 1（状态模型核心）✅ 已完成 —— 条目 1 / 2 / 3 / 4 / 5 / 6 / 7 / 9 / 32；
-批次 2（POV / 隔离 / 报告 / Style）待用户审核后进行 —— 条目 12 / 13 / 14 / 15 / 16 / 17 / 18 / 19 / 20；
+**回写进度**：批次 1（状态模型核心）✅ 已完成 —— 条目 1 / 2 / 3 / 4 / 5 / 6 / 7 / 9 / 32（+ I-81/I-82/I-83 澄清与代码收紧）；
+批次 2（POV / 隔离 / 报告 / Style）✅ 已完成 —— 条目 12 / 13 / 14 / 15 / 16 / 17 / 18 / 19 / 20；
 批次 3（文件结构 / 评估）—— 条目 21 / 22 / 23 / 24 / 25 / 26 / 27 / 28；
 批次 4（状态与冲突模型补漏）—— 条目 8 / 10 / 11 / 29 / 30 / 31（+ 架构 §17 镜像）。
 章节级进度见 §十五。
@@ -431,7 +431,7 @@
 | 事项 | 裁决 | 落地 |
 |---|---|---|
 | **追问 1：`narrative_role_ref` 允许 `BP_ARC_*` 是需求还是推导？** | **推导补充，不予采纳。** 依据：I-37 与 OQ-42 的状态是 **"已落地（dsh 提议）"**，是 dsh 为实现 §16 的 arc 检查提出的读数，**不是用户裁决的真实需求**；Story 5 I-38 已给出"直接引用**或**映射 structure"的路径。裁决：**文档不得写"Scene 允许挂 `BP_ARC_*`"**，v0.1 走 I-38 的映射路径，Scene 的 `narrative_role_ref` 以 structure 位置为准。 | 已从《需求规格》§14 与《架构设计》§14 删除该声明，改为"arc 覆盖由 §16 按映射判定"；维护清单条目 5 / 7 同步修正。**I-37 标注为"经复议不采纳"** |
-| **I-37 复议后与实现的分歧** | 实现现状 `src/schema/scene.ts` **仍接受** `BP_ARC_*`（正则 + superRefine）——比文档宽松。**本阶段不改代码**，只记录待裁决。 | 新增 **OQ-62**（是否收紧 Scene 的 `narrative_role_ref`，留待 v0.2 或单独裁决） |
+| **I-37 复议后与实现的分歧** | 初次记录时实现 `src/schema/scene.ts` 仍接受 `BP_ARC_*`（比文档宽松）。**用户随后授权同批修代码**：已收紧为只接受 `BP_STR_*`，代码与文档一致。 | 见 **I-83**；OQ-62 状态改为 **"已处理（同批收紧）"** |
 | **追问 2：`user_edit:<字段路径>` 与 `EDIT_<NNN>` 冲突？** | **不是笔误，是两级不同对象。** 依据：I-29（`EDIT_<NNN>` 跨版本全局递增，是 `blueprint-history/<NNN>.meta.yaml` 的 `user_edits[].id` 记录级 ID）+ I-30（`derived_from` 允许 `user_edit:<字段>`，是**装配输入**的字段级形态）+ 实现（`src/gate2/assemble.ts`：`user_edit:<field>` → 按 `field` 匹配 → `{type: user_edit, ref_id: EDIT_<NNN>}`；查不到手改记录即报错；`from: user` 无记录时回落 `blueprint_gate2`/`GATE2_<NNN>`）。 | 需求规格 §7.2 已写明两级与解析规则；新增解读 **I-81**；维护清单条目 32 同步更新 |
 | **跨批镜像规则** | 接受跨文档/跨批镜像，但**后续批次的章节清单不得重复列出已在本批处理的章节**；每批起始给"全局章节处理进度表"。 | 本文件 §十三 的"回写进度"行按批更新 |
 | **批次划分（最终）** | 批次 1 状态模型核心（✅ 已完成）；**批次 2** POV / 隔离 / 报告 / Style（《架构设计》§21 / §22 + 《需求规格》§21 / §22 / §23 / §24 / §25 / §27）；**批次 3** 文件结构 / 评估（《需求规格》§29 / §31 + 《架构设计》§32 + 《开发 Story 拆分》Story 10 G）；**批次 4** 状态与冲突模型补漏（《需求规格》§6.2 / §9.2 / §16 / §18.1 / §19.1 + 《架构设计》§8 / §17 / §34）。 | 见 §十五 的全局章节处理进度表 |
@@ -441,7 +441,8 @@
 | # | 解读 | 依据 | 备注 |
 |---|---|---|---|
 | I-81 | **Gate 2 用户手改的两级区分**：记录级 `EDIT_<NNN>`（`user_edits[].id`，跨版本全局递增，最终写进 Blueprint 的 `source_refs[].ref_id`）与字段级装配输入 `user_edit:<字段路径>`（`derived_from`）。解析规则：按 `field` 在本版本 `user_edits[]` 中匹配；同一字段多次手改取最后一条；查不到即报错；`from: user` 但无手改记录 → 回落 `blueprint_gate2`（`GATE2_<NNN>`）。 | I-29 / I-30 + `src/gate2/assemble.ts` | 两者不是同层对象，不可互相替换。 |
-| I-82 | **I-37 经复议不采纳**：`narrative_role_ref` 的文档形态为 structure 位置；arc 覆盖按 I-38 判定。实现接受 `BP_ARC_*` 属"比文档宽松"，见 OQ-62。 | 回写期批次 1 审核裁决 | 不改代码，仅记录分歧。 |
+| I-82 | **I-37 经复议不采纳**：`narrative_role_ref` 的文档形态为 structure 位置；arc 覆盖按 I-38 判定。 | 回写期批次 1 审核裁决 | 初版仅记录分歧，随后按 I-83 同批收紧代码。 |
+| I-83 | **代码收紧与文档一致（OQ-62 落地）**：`narrative_role_ref` 只接受 `BP_STR_*`（正则 + `STRUCTURE_IDS` 白名单双重约束），`BP_ARC_*` 一律拒绝；arc 覆盖仍由 `runCoverageCheck` 的"直接引用 **或** 映射 structure 已被覆盖"判定（映射链未被移除）。 | 用户裁决"授权同批修代码" | 残留核查：**demo 的 10 个 Scene 与 5 份 `scene_breakdown` fixture 的 `narrative_role_ref` 全部已是 `BP_STR_*`，无需改写**；`referenced_blueprint_items` 中的 `BP_ARC_*` 属合法 Blueprint 项引用（I-43），不受影响。测试：`scene.test.ts` 显式正/反向用例 + Story 5 两处正则断言收紧为 `^BP_STR_`。 |
 
 ---
 
@@ -473,14 +474,14 @@
 | §17 Story State Schema | ✅ | `type` 扩枚举 + 低危日志不落盘 |
 | §18 OCCURRED 生成机制 | B4 | §18.1 payload 命名 + 低危日志字段与取值 |
 | §19 Draft Context | B4 | §19.1 `max_chars` 码点口径 |
-| §20 Context Compiler | B2 | §20.1–§20.3 与 §21/§22 联动核对 |
-| §21 Context Manifest Schema | B2 | Manifest 单文件 + `excluded_sensitive.type` 6 类 |
-| §22 Context Compiler 失败降级 | B2 | director_note 两条路径 |
-| §23 Style Samples | B2 | §23.1 匹配降级（含 `tone`）/ §23.2 去实体化 |
-| §24 Prose Writer | B2 | 与 §23 / §27 的引用一致性检查 |
-| §25 Anti-AI Linter | B2 | §25.1 / §25.2 / §25.3 |
-| §26 Linter 降级与配置 | B2 | 随 §25 一并核对 |
-| §27 Local Rewrite | B2 | 契约 + 二次检查范围 |
+| §20 Context Compiler | ✅ | 核对一致，**无变更**（数据源白名单 / Writer 可获得 / 默认不能获得与实现一致；§20 归属裁决 = (a) 已隐含在镜像检查中） |
+| §21 Context Manifest Schema | ✅ | 6 类 `type` + 六类 `reason` 枚举；Manifest 单文件末次覆盖 + `# Last compiled scene:`；`writer_context` 不落盘 |
+| §22 Context Compiler 失败降级 | ✅ | `breakdown --note`（Scene 持久化 / `source: user`）vs `context --note`（仅 Manifest / `user_override`） |
+| §23 Style Samples | ✅ | `style/profile.yaml` Schema（`SAMPLE_<NNN>` / tags / `de_entity`→`sanitized_text` 必填）+ 降级顺序与 `matched_on` 记录 |
+| §24 Prose Writer | ✅ | 与 §23 / §27 引用一致性核对；Writer 只吃受控上下文（§20 白名单） |
+| §25 Anti-AI Linter | ✅ | §25.1 项目级词表 + 仓库级 fallback + 升华词典同构；§25.2 报告位置/共用 Schema/`evidence` 结构/默认阈值；§25.3 五类语义默认 severity + span 合法性 |
+| §26 Linter 降级与配置 | ✅ | 随 §25 核对：单条规则开关 + `linter.thresholds` 覆盖层 |
+| §27 Local Rewrite | ✅ | Rewrite 契约（纯文本 / ≤3× span / 拼接守恒 / ≥4 码点重叠拒绝 / 原地改写 / `rewrite` 审计）+ 二次检查范围（Rule 段落±1；LLM span±1 段落；ID 重分配） |
 | §28 Proposal 失败降级 | — | |
 | §29 项目文件结构 | B3 | `blueprint-history/` + 无改动备案 |
 | §30 MVP 范围 | — | |
@@ -511,16 +512,16 @@
 | §17 Story State Schema | B4 | 镜像 §17 |
 | §18 OCCURRED 路径 | B4 | 镜像 §18 |
 | §19 Draft Context | B4 | 镜像 §19 |
-| §20 Context Compiler 数据源 | B2 | 与 §21 / §22 联动 |
-| §21 Context Compiler 输出 | B2 | |
-| §22 Context Manifest Schema | B2 | |
-| §23 Context Compiler 降级路径 | B2 | 镜像 §22 |
-| §24 Style Sample Selector | B2 | 镜像 §23 |
-| §25 Prose Writer | B2 | 镜像 §24 |
-| §26 Rule Linter | B2 | 镜像 §25.1 |
-| §27 LLM Linter | B2 | 镜像 §25.2 / §25.3 |
-| §28 Linter 配置与降级 | B2 | 镜像 §26 |
-| §29 Local Rewrite | B2 | 镜像 §27 |
+| §20 Context Compiler 数据源 | ✅ | 核对一致，**无变更**（与需求 §20 同口径） |
+| §21 Context Compiler 输出 | ✅ | `writer_context` 不落盘；输出与 §22 Manifest 的对应关系已写明 |
+| §22 Context Manifest Schema | ✅ | 6 类 `type` + 六类 `reason`（镜像）；位置与覆盖约定（镜像） |
+| §23 Context Compiler 降级路径 | ✅ | 两条路径（镜像 §22） |
+| §24 Style Sample Selector | ✅ | `style/profile.yaml` Schema + `matched_on`（镜像 §23） |
+| §25 Prose Writer | ✅ | 与 §20 白名单 / §29 改写范围一致（核对） |
+| §26 Rule Linter | ✅ | 词表位置 + `low` 只进 `low_severity_log` + 默认阈值 + 段尾 16 码点（镜像） |
+| §27 LLM Linter | ✅ | span 合法性与 `llm_span_invalid`（镜像 §25.2 / §25.3） |
+| §28 Linter 配置与降级 | ✅ | 报告位置与共用 Schema + 五类语义默认 severity（镜像） |
+| §29 Local Rewrite | ✅ | 契约与落回 + 二次检查范围（镜像 §27） |
 | §30 失败降级策略 | — | |
 | §31 Seed Preservation Rate | — | 需求 §10 已写，架构侧仅引用 |
 | §32 文件结构 | B3 | |
@@ -537,10 +538,10 @@
 | Story 1–4 | — | 回写内容落在前两份文档 |
 | Story 5（Scene Schema / Coverage Check / 关键规则） | B4 | `tone`、arc 覆盖判定（I-38）、severity 的镜像检查 |
 | Milestone M1 | — | |
-| Story 6 | B2 | Manifest 单文件 / `excluded_sensitive` 6 类的镜像检查 |
-| Story 7（Style Sample 标签 / 匹配降级 / Draft Context） | B2 | `pov + scene_type + tone` 与需求 §23.1 一致 |
-| Story 8（词频类 / 配置） | B2 | `low severity 日志` 与 §25 一致 |
-| Story 9（Local Rewrite / 二次检查范围） | B2 | 与 §27 一致 |
+| Story 6 | ✅ | Manifest 位置 + 6 类 + 两条降级路径 + `scene_type ∪ tone`（镜像） |
+| Story 7（Style Sample 标签 / 匹配降级 / Draft Context） | ✅ | 标签取值 + `matched_on` + profile Schema + `sanitized_text` 必填（镜像） |
+| Story 8（词频类 / 配置） | ✅ | 报告位置 / 词表回落 / `evidence` / 段尾窗口 / 阈值（镜像） |
+| Story 9（Local Rewrite / 二次检查范围） | ✅ | 默认 severity + span 合法性 + Rewrite 契约 + 范围语义（镜像） |
 | **Story 10 G（v0.1 通过标准）** | **B3** | 8 点自检原文入库 |
 | Story 10 A–F | — | A–F 无清单条目 |
 

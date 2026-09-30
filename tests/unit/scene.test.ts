@@ -92,11 +92,19 @@ describe('Scene Schema（需求规格 §14）', () => {
     expect(() => validateScene(baseScene({ target_length: 0 }))).toThrow(SceneValidationError)
   })
 
-  it('narrative_role_ref 允许 structure 与 arc 位置（OQ-42），拒绝其它形态', () => {
-    for (const ref of ['BP_STR_BEG', 'BP_STR_END', 'BP_ARC_START', 'BP_ARC_SHIFT', 'BP_ARC_END']) {
+  it('narrative_role_ref 接受 BP_STR_TURN（structure 位置；OQ-62 同批收紧）', () => {
+    expect(validateScene(baseScene({ narrative_role_ref: 'BP_STR_TURN' })).narrative_role_ref).toBe('BP_STR_TURN')
+  })
+
+  it('narrative_role_ref 拒绝 BP_ARC_START（arc 位置不再由 Scene 承载；OQ-42 复议）', () => {
+    expect(() => validateScene(baseScene({ narrative_role_ref: 'BP_ARC_START' }))).toThrow(SceneValidationError)
+  })
+
+  it('narrative_role_ref 其它形态一律拒绝，5 个 structure 位置全部合法', () => {
+    for (const ref of ['BP_STR_BEG', 'BP_STR_DEV', 'BP_STR_TURN', 'BP_STR_CLIMAX', 'BP_STR_END']) {
       expect(validateScene(baseScene({ narrative_role_ref: ref })).narrative_role_ref).toBe(ref)
     }
-    for (const bad of ['scene-001', 'BP_THEME_01', 'BP_STR_UNKNOWN']) {
+    for (const bad of ['scene-001', 'BP_THEME_01', 'BP_STR_UNKNOWN', 'BP_ARC_SHIFT']) {
       expect(() => validateScene(baseScene({ narrative_role_ref: bad })), bad).toThrow(SceneValidationError)
     }
   })

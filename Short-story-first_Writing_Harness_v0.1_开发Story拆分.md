@@ -466,6 +466,12 @@ context_manifest
 
 必须使用架构文档唯一 Context Manifest Schema。
 
+位置与覆盖（回写项 13）：`reports/context-manifest.yaml`，**单文件末次覆盖**，顶部写 `# Last compiled scene: scene-XXX`；
+`writer_context` 不落盘。
+
+`excluded_sensitive.type` 6 类（回写项 12）：`key_knowledge` / `foreshadowing` / `future_content` /
+`unconfirmed_content` / `user_override` / **`character_inner_state`**；`reason` 为六类枚举，必填。
+
 ## 物理隔离
 
 Writer Context 不得包含：
@@ -485,6 +491,9 @@ Compiler 漏信息：
 - 进入 Manifest；
 - 若改变故事事实，回 Gate 2。
 
+两条路径（回写项 14）：`breakdown --note` 持久化到 Scene（`source: user`）；`context --note` 只进本次 Manifest 的
+`director_surface` + `overrides`（`source: user_override`），**不改 Scene 文件**。
+
 ## 验收
 
 至少 10 个 POV 场景：
@@ -496,7 +505,7 @@ Compiler 漏信息：
 - excluded_sensitive 有 reason；
 - user override 可追踪（included / excluded 都支持 user_override）；
 - 非当前 POV 角色完整内心不可达；
-- observable_behavior_hints 仅按 scene type 匹配加载；
+- observable_behavior_hints 按 **scene_type ∪ tone** 的联合白名单匹配加载（回写项 4）；
 - 当前 POV 对 K001 的“已知/未知”由 confirmed state 或 planned_knowledge_view 唯一判定；
 - allowed_reveals 只决定当前 Scene reveal 权限；
 - future_content_exposed=false；
@@ -529,7 +538,12 @@ pov + scene_type + tone
 → no sample
 ```
 
-不匹配不阻塞。
+不匹配不阻塞；最终命中的级别写进 Manifest 的 `style_samples[].matched_on`。
+
+标签取值（回写项 15）：`scene_type` ∈ {dialogue, action, interior, transition}；`tone` ∈ {conflict, tension,
+tenderness, restraint, absurdity, suspense, warmth, grief}（与 Scene 的 `tone` 同一套 8 值标签集）。
+样本文件 `style/profile.yaml`：`{schema_version, samples: [{sample_id: SAMPLE_<NNN>, tags, text, de_entity,
+sanitized_text?}]}`；`sample_id` 项目内唯一不复用；`de_entity=true` 时必须给 `sanitized_text`。
 
 ## Draft Context
 
@@ -564,7 +578,7 @@ pov + scene_type + tone
 
 至少 10 个 Scene：
 
-- Style Sample 不搬运实体；
+- Style Sample 不搬运实体（`de_entity=true` 时必须给 `sanitized_text`，该字段在回写项 15 中明确为必填）；
 - POV 不越界；
 - 无 future leak；
 - 无 state mutation；
@@ -613,7 +627,12 @@ Story 8 开始前必须提交并冻结：
 ## 词频类
 
 - 非核心；
-- 如实现，只能 low severity 日志。
+- 如实现，只能 low severity 日志（`low_severity_log[]`，不进 `warnings[]`）。
+
+报告与词表（回写项 16 / 17）：报告落在 `reports/linter.yaml`，单文件末次覆盖（顶部 `# Last linted scene:`）；
+Rule 与 LLM 共用同一 Schema（warning 级 `linter: rule | llm`）；模板动作词表为项目级 + 仓库级 fallback，
+升华词典为同构独立文件（独立 `version`），两份版本号都写进报告。
+`evidence` 按规则固定结构，"段尾"窗口 = 段落最后 16 个非空白码点，默认阈值见《需求规格》§25.2。
 
 ## 配置
 
@@ -654,6 +673,12 @@ over_explanation
 
 不得重复 Story 8 的统计型检查。
 
+默认 severity（回写项 18）：`author_summary` / `subtext_exposed` = high；`emotion_repeated` / `voice_blur` /
+`over_explanation` = medium。
+
+span 合法性（回写项 17）：`0 ≤ start < end ≤ 码点总数` 且回切非空；不合法 → **丢弃该条**并写
+`low_severity_log: [{code: "llm_span_invalid", …}]`，不让整个 Linter 失败。
+
 ## Local Rewrite
 
 输入：
@@ -666,14 +691,26 @@ over_explanation
 
 输出替代 span。
 
+契约（回写项 19）：
+
+- 输出**纯文本**（不带引号 / 前缀 / Markdown 包裹）；长度 ≤ 原 span 的 3 倍；无法改写输出原文并记 `applied: false`；
+- **拼接守恒**：除该 span 外正文字节级一致；
+- 不得引入 Scene 外实体、不得泄露未授权 truth、不得改变 `end_state` 语义；
+- 替换文本与紧邻上下文的**最长重叠 ≥4 码点即拒绝**（防重复粘贴）；
+- **原地改写** `drafts/scene-NNN.md`；不新增备份文件、不实现自动回滚；
+- 被处理的 warning 上写 `rewrite: {applied, before, after, rewrite_contract, rewritten_at}`，且该记录在局部重跑后保留。
+
 ## 二次检查范围
 
 Rewrite 后：
 
-- Rule Linter 只跑 span 所在段落及必要相邻范围；
+- Rule Linter 只跑 span 所在段落及必要相邻范围（span 所在段落 ±1）；
 - LLM Linter 只检查 span + 前后一段；
 - 不默认重跑全文；
-- 终稿前可主动全检。
+- 终稿前可主动全检（`--full`）。
+
+范围语义（回写项 20）：两个范围**各自独立定义**；范围外旧 warning 不变；范围内旧 warning 被替换；
+重跑产生的 warning **重新分配 ID**（不复用）。
 
 ## 验收
 

@@ -98,11 +98,16 @@ export const sceneSchema = z
       .min(1, 'tone 至少要有 1 个取值（OQ-47 裁决）'),
     purpose: z.string().min(1),
     target_length: z.number().int().positive(),
+    /**
+     * 需求规格 §14 / 架构设计 §14（OQ-42 复议 / OQ-62，解读 I-82 / I-83）：
+     * **只接受 structure 位置（`BP_STR_*`）**。arc 是否被覆盖不在 Scene 上表达，
+     * 由 Coverage Check 按"直接引用 **或** 其映射的 structure 位置已被覆盖"判定（I-38）。
+     */
     narrative_role_ref: z
       .string()
       .refine(
-        (value) => /^BP_(STR|ARC)_[A-Z]+$/.test(value),
-        'narrative_role_ref 必须是 structure 位置（BP_STR_*）或 arc 位置（BP_ARC_*）（OQ-42）',
+        (value) => /^BP_STR_[A-Z]+$/.test(value),
+        'narrative_role_ref 必须是 structure 位置（BP_STR_*）；arc 覆盖由 Coverage Check 按映射判定（OQ-42 复议）',
       ),
     characters: z.array(z.string().regex(ID_PATTERNS.character, 'characters 元素必须是 CH_* 角色 ID')),
     location: z.string().min(1),
@@ -124,7 +129,7 @@ export const sceneSchema = z
     proposed_additions: z.array(sceneAdditionSchema),
   })
   .superRefine((scene, ctx) => {
-    if (!(Object.values(STRUCTURE_IDS) as string[]).includes(scene.narrative_role_ref) && !/^BP_ARC_[A-Z]+$/.test(scene.narrative_role_ref)) {
+    if (!(Object.values(STRUCTURE_IDS) as string[]).includes(scene.narrative_role_ref)) {
       ctx.addIssue({
         code: 'custom',
         path: ['narrative_role_ref'],

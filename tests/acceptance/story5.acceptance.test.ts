@@ -99,7 +99,7 @@ describe('验收 2：Scene 引用 Blueprint ID', () => {
     const { result } = await runStory5('s5a-02', { seed: 'multi-sentence.txt' })
     expect(result.coverage.warnings.filter((warning) => warning.type === 'blueprint_reference_integrity')).toEqual([])
     for (const scene of result.scenes) {
-      expect(scene.narrative_role_ref).toMatch(/^BP_(STR|ARC)_/)
+      expect(scene.narrative_role_ref).toMatch(/^BP_STR_/)
       for (const reference of scene.referenced_blueprint_items) {
         expect(reference).toMatch(/^(BP_[A-Z0-9_]+|K\d{3}|CH_[A-Z0-9_]+|OBH_[A-Z0-9_]+|REL_[A-Z0-9_]+)$/)
       }
