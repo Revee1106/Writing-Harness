@@ -665,6 +665,8 @@ v0.1.1 补丁（tag v0.1.1）：Gate 2 提示前缀 / write 无 Scene 退出码 
 | A3 | `harness status <项目>`：一条命令显示"当前进行到哪一步 + 下一步建议 + 待处理事项（未裁决冲突 / 未确认稿 / 未跑检查）" | 实测：写作者常不知道"现在该跑哪条命令" | 中 | 小 |
 | A4 | 报错文本用户向重写：`RecordedProvider 未命中 / input_sha256 / fixture / 补齐方式…` 等改为自然语言（"这个想法还没有离线答案，请加 `--provider openai-compat`"），技术细节降级到 `--debug` | v0.1.1 实测（第 8 节 B 部分的真实报错） | **高** | 小 |
 | A5 | **OQ-25**：Gate 1 跨会话持久化（Interpreter 输出 + Gate 1 预览/编辑落盘，支持"审阅 → 编辑 → 再提交"） | `docs/OPEN-QUESTIONS.md` OQ-25；`docs/DECISIONS.md` §十六 16.3 / 16.4 A1 | 中 | 大 |
+| A6 | **`auto` 真正实现为「有 env → openai-compat；无 env → recorded」**（当前 CLI 的 `auto` 恒等于 recorded，因为总会提供内置 fixtures 目录） | v0.1.2 实测与文档化（`USAGE.md` §11.2、帮助文本措辞） | **高** | 中 |
+| A7 | **检测到已配置 `HARNESS_LLM_*` 但本次仍使用 recorded → 显式提示**（提示「如需真实模型请加 `--provider openai-compat`」），避免静默回放内置演示稿 | v0.1.2 实测：设了 env 但不加 `--provider` 时无任何提示，输出仅 `provider=recorded` | **高** | 小 |
 
 ### B. 评估方向
 
