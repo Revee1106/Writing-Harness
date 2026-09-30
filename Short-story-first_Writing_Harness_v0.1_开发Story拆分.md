@@ -8,6 +8,15 @@
 - 强制里程碑：M1（Story 5 后）
 - 所有 Schema 直接引用《架构设计》，不得在 Story 实现时另建平行结构
 
+**v0.1 最终基线（回写完成，2026-09-30）**
+
+- 封版点（commit）：`d0d65da`
+- 回写批次：批次 1（状态模型核心）→ 批次 2（POV / 隔离 / 报告 / Style）→ 批次 3（文件结构 / 评估）→ 批次 4（状态与冲突模型补漏，待完成）
+- 回写依据：仓库内 `docs/DECISIONS.md` §十三「封版后文档维护清单」（32 条）+ §十四 回写期裁决
+- 回写性质：**只做定义补全、枚举扩展、位置明确、备案**，不改变架构方向；条款级改动逐条带「回写项 N」标记
+- 文档自洽性：三份文档在同一批次内同步修改，不保留中间状态
+
+
 ---
 
 ## 2. 开发原则
@@ -872,6 +881,24 @@ status=PROPOSED
 6. Seed Preservation Rate 可测；
 7. Harness 正文在 AI 感维度出现明确改善趋势；
 8. 用户不承担高频审批。
+
+---
+
+## G.1 每条的 v0.1 证据（回写项 28）
+
+| # | 通过标准 | v0.1 证据（可执行） |
+|---|---|---|
+| 1 | 一句话 Seed 可以形成可用 Blueprint | 两个 demo 的 Blueprint 过 Schema 且 structure / characters / key_knowledge / style_direction 齐全；Seed 锚点被 `preserved ∪ altered` 全覆盖（6/6、4/4） |
+| 2 | Gate 顺序低摩擦 | 每项目 `explicit_gates = 3`（Gate 1+2+3）、`blueprint_versions = 1`、拆场不产生额外审批 |
+| 3 | Blueprint 可稳定拆 Scene | Coverage `structure_covered = 5/5`、`warnings = []`；重跑拆场后 Scene 文件逐字节一致 |
+| 4 | Proposal 不会渗透 Writer | 每场编译上下文（context + manifest）序列化后不含 `PROP_` / `proposal_id`，也不含 `proposals.yaml` 原文行 |
+| 5 | POV / secret / future 不明显泄漏 | 每场 `future_content_exposed=false`、`unconfirmed_proposal_exposed=false`；非 POV 内心只进 `excluded_sensitive`（`non_pov_inner_state`）；Key Knowledge 的 truth 在揭示场景前不出现在正文 |
+| 6 | Seed Preservation Rate 可测 | 7 个 measured Seed 全部给出百分比、`unaccounted_anchors = 0`，且同时存在 100% 与 <100%（指标有区分度） |
+| 7 | Harness 正文在 AI 感维度出现明确改善趋势 | A/B 长度归一化：A **47.56** / 千码点 vs B **2.55** / 千码点（B/A = 0.054，单位长度 AI 味信号下降 ≥75%）；样本量有限（10 组），需 v0.2 扩大验证 |
+| 8 | 用户不承担高频审批 | 每项目 3 次显式 Gate、`explicit_gates / scenes = 0.6 < 1`、rewrite ≤1 次（按需）；Gate 3 为整篇一次性 `--confirm`，无逐场确认 |
+
+证据位置：`tests/acceptance/story10.acceptance.test.ts` 的"验收 F"逐条对应；
+命令：`pnpm harness eval story-development` / `eval author-cost` / `eval ab-report`。
 
 ---
 

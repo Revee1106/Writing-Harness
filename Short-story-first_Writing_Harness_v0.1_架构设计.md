@@ -7,6 +7,15 @@
 - 适用范围：短篇优先模式
 - 本文所有 Schema 与《需求规格》保持唯一版本，不允许实现层自行定义平行结构
 
+**v0.1 最终基线（回写完成，2026-09-30）**
+
+- 封版点（commit）：`d0d65da`
+- 回写批次：批次 1（状态模型核心）→ 批次 2（POV / 隔离 / 报告 / Style）→ 批次 3（文件结构 / 评估）→ 批次 4（状态与冲突模型补漏，待完成）
+- 回写依据：仓库内 `docs/DECISIONS.md` §十三「封版后文档维护清单」（32 条）+ §十四 回写期裁决
+- 回写性质：**只做定义补全、枚举扩展、位置明确、备案**，不改变架构方向；条款级改动逐条带「回写项 N」标记
+- 文档自洽性：三份文档在同一批次内同步修改，不保留中间状态
+
+
 ---
 
 ## 2. 架构目标
@@ -237,7 +246,16 @@ Scene 使用 → 自动升级
 Writer 使用 → 自动升级
 Draft 出现 → 自动升级
 OCCURRED → 自动覆盖 CONFIRMED
+PROPOSED → USER_GIVEN          # G1（v0.1 新增，源自原则 2 推导，见下）
 ```
+
+**G1：`PROPOSED → USER_GIVEN` 无条件禁止**（v0.1 新增，回写项 31）
+
+- 三份文档原有的 6 条禁止流转未明文列出该项，它是**原则 2（可以提案，不能伪装）的直接推论**：
+  Harness 补出的内容一旦被标成 `USER_GIVEN`，就等于把机器推测伪装成用户原意；
+- **无条件禁止**：不存在"用户后来认可所以改标 USER_GIVEN"的流转——用户的确认只能产生 `CONFIRMED`，
+  若要改变"这是用户自己说的"这一事实，只能由用户**重新编辑 Seed**（新 item / Gate 1 操作）；
+- v0.1 已落地：`src/core/state-machine.ts` 在 F 表之外单独守卫该条（OQ-22）。
 
 ## 8. 冲突模型
 
@@ -903,6 +921,10 @@ overrides:
 
 - excluded 的 reason 必填，且必须是六类枚举之一；
 - **`excluded_sensitive.type` 共 6 类**（回写项 12）：新增 `character_inner_state`；`included_sensitive.type` 保持 3 类不加新类；
+
+- **`type` 与 `reason` 不强制 1:1，但语义必须一致**（回写项 12）：`character_inner_state` → `non_pov_inner_state` / `user_override`；
+  `key_knowledge` → `not_revealed_yet` / `user_override`；`foreshadowing` → `foreshadowing_backstage`；
+  `future_content` → `future_scene` / `non_pov_inner_state`；`unconfirmed_content` → `unconfirmed_content`；`user_override` → `user_override`（详见《需求规格》§21）；
 - 普通 included fact 不记录；
 - 用户 director note 的正文指令进入 `director_surface`，source=`user_override`；
 - `overrides` 只保存审计来源，并通过 `director_surface_ref` 一对一引用对应指令；
@@ -1036,6 +1058,10 @@ over_explanation
 
 不得与 Rule Linter 重复同一类检测。
 
+**span 合法性（回写项 17）**：LLM Linter 输出的 span 必须满足 `0 ≤ start < end ≤ 码点总数` 且回切非空；
+不合法时**丢弃该条**并写入 `low_severity_log: [{code: "llm_span_invalid", …}]`，**不让整个 Linter 失败**
+（LLM 输出不承诺字节级稳定，稳定性由 recorded fixture 回放保证）。
+
 ---
 
 ## 28. Linter 配置与降级
@@ -1110,6 +1136,9 @@ Rewrite 后：
 
 ---
 
+**v0.1 回写核对（2026-09-30，批次 3）：无变更（备案）。** 各降级路径（Gate 1 手改 / 跳过、Proposal 重做与手动方向、
+Context Compiler 的 director_note、单条 Linter 规则开关、局部 Rewrite）均已在实现中落地，条款本身未变。
+
 ## 31. Seed Preservation Rate
 
 初始化 Seed Interpreter 后冻结：
@@ -1150,6 +1179,9 @@ USER_GIVEN 被 Proposal 改写仍必须进入 conflict，不能只靠该指标�
   /history
     blueprint-001.yaml
 
+  /blueprint-history          # v0.1 新增（回写项 22 / 24）
+    001.meta.yaml             # Gate 2 元数据（field_plan / field_sources / user_edits / conflict_resolutions / GATE2_<NNN> / warnings）
+
   /scenes
     scene-001.yaml
 
@@ -1166,6 +1198,10 @@ USER_GIVEN 被 Proposal 改写仍必须进入 conflict，不能只靠该指标�
     context-manifest.yaml
     linter.yaml
 ```
+
+**v0.1 回写核对（2026-09-30，批次 3）**：唯一**新增**条目是 `blueprint-history/<NNN>.meta.yaml`（与
+`history/blueprint-<NNN>.yaml` 同一 `<NNN>` 一一对应）；**其余无变更（备案）**——`drafts/final.md` 在既有 `/drafts` 下，
+评估资产在仓库的 `tests/fixtures/evaluation/`（不在项目树内），`/config` 词表为项目级可选覆盖（缺省回落仓库级默认）。
 
 ---
 
@@ -1196,6 +1232,8 @@ Writer 链路不得读取 proposals 文件。
 - 改用户 Seed；
 - 把 PROPOSED 升为 CONFIRMED；
 - 用 OCCURRED 覆盖 CONFIRMED。
+
+**v0.1 回写核对（2026-09-30，批次 3）：无变更（备案）。** 另见 §7 的禁止流转表（v0.1 新增 G1）。
 
 ---
 
@@ -1235,3 +1273,15 @@ Key Knowledge reveal 契约
 ```
 
 而不是复杂 Agent 或大型状态系统。
+
+**v0.1 架构冻结声明（2026-09-30，批次 3）**
+
+```text
+封版点（commit）  d0d65da
+本文件            《架构设计》v0.1（回写完成版，35 章）
+同批冻结          《需求规格》v0.1、《开发 Story 拆分》v0.1
+新增条目          projects/<id>/blueprint-history/<NNN>.meta.yaml（§32）
+新增规则          §7 禁止流转第 7 条 G1（PROPOSED → USER_GIVEN 无条件禁止）
+                   §14 Scene 必填 tone；§11.1 Blueprint 顶层 seed_fidelity
+待执行            批次 4（状态与冲突模型补漏：§8 / §16 / §17 / §18 / §19 / §34 与需求 §6.2 / §9.2 / §16 / §18.1 / §19.1）
+```

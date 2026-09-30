@@ -10,6 +10,15 @@
 - 核心目标：将一句话或一段模糊故事种子，发展为可用故事蓝图，并进一步生成低 AI 感正文
 - 本文与《架构设计》《开发 Story 拆分》共同构成 v0.1 唯一开发基线
 
+**v0.1 最终基线（回写完成，2026-09-30）**
+
+- 封版点（commit）：`d0d65da`
+- 回写批次：批次 1（状态模型核心）→ 批次 2（POV / 隔离 / 报告 / Style）→ 批次 3（文件结构 / 评估）→ 批次 4（状态与冲突模型补漏，待完成）
+- 回写依据：仓库内 `docs/DECISIONS.md` §十三「封版后文档维护清单」（32 条）+ §十四 回写期裁决
+- 回写性质：**只做定义补全、枚举扩展、位置明确、备案**，不改变架构方向；条款级改动逐条带「回写项 N」标记
+- 文档自洽性：三份文档在同一批次内同步修改，不保留中间状态
+
+
 ---
 
 ## 2. 产品定义
@@ -1085,6 +1094,25 @@ overrides:
 - `excluded_sensitive.reason` 必填，且必须是上面六类之一（枚举，不接受自由字符串）；
 - **`excluded_sensitive.type` 共 6 类**（v0.1 扩展枚举，回写项 12）：在原 5 类之上新增 **`character_inner_state`**（"角色内心"这类信息需要能被显式排除，否则 POV 隔离无法在 Manifest 里被审计）；
 - **`included_sensitive.type` 不加新类**，仍为 `key_knowledge | foreshadowing | user_override`；reason 词表不变；
+
+**`type` 与 `reason` 的关系（v0.1 补充定义，回写项 12）**
+
+`type` 与 `reason` **不强制 1:1 对应**，但**每条 `excluded_sensitive` 条目的 `reason` 必须与 `type` 语义一致**
+（例如 `type: character_inner_state` 的 `reason` 只能是 `non_pov_inner_state` 或 `user_override`）。
+实际合法的组合：
+
+| `type` | 允许的 `reason` |
+|---|---|
+| `key_knowledge` | `not_revealed_yet`（尚未揭示） / `user_override`（用户已在前文揭示） |
+| `foreshadowing` | `foreshadowing_backstage`（伏笔幕后解释） |
+| `future_content` | `future_scene`（后续场景内容） / `non_pov_inner_state`（**未出场**角色的内心） |
+| `unconfirmed_content` | `unconfirmed_content`（未确认内容） |
+| `user_override` | `user_override` |
+| `character_inner_state` | `non_pov_inner_state` / `user_override` |
+
+> 注：`future_content` + `non_pov_inner_state` 用于"本场未出场角色的内心"这条隔离路径——语义上偏"内心"而非"未来"，
+> 该配对是否应改为 `character_inner_state` 或拆成两条，属实现细节待裁决（见 OQ-63）。
+
 - 普通非敏感 included facts 不逐条写入；
 - 用户补充的 director note 内容写入 `director_surface`，并使用 `source: user_override`；
 - 同一条用户 override 的审计来源写入 `overrides`，通过 `director_surface_ref` 一对一引用对应 `director_surface.id`；
@@ -1407,6 +1435,10 @@ Rewrite 后：
     blueprint-001.yaml
     blueprint-002.yaml
 
+  /blueprint-history          # v0.1 新增（回写项 21 / 23）
+    001.meta.yaml             # Gate 2 元数据，与 history/blueprint-<NNN>.yaml 按同一 NNN 一一对应
+    002.meta.yaml
+
   /scenes
     scene-001.yaml
     scene-002.yaml
@@ -1429,6 +1461,13 @@ Rewrite 后：
 ```
 
 不维护 `proposals.md`。
+
+**v0.1 回写核对（2026-09-30，批次 3）**：
+
+- **新增条目**：`blueprint-history/<NNN>.meta.yaml`（Gate 2 的字段计划 / 字段来源 / 用户手改 `EDIT_<NNN>` / 冲突裁决 `CONF_<NNN>` / Gate 2 action `GATE2_<NNN>` / warnings）；
+  快照仍在 `history/blueprint-<NNN>.yaml`，两者按同一 `<NNN>` 一一对应；`blueprint.yaml` 内容不受该文件影响；
+- **其余文件树无变更（备案）**：`drafts/final.md` 落在既有 `/drafts` 下；评估资产放在仓库的 `tests/fixtures/evaluation/`（**不在 `projects/` 内**，因此不改变本节的目录结构）；
+  `/config` 下的词表为**项目级可选覆盖**（缺省回落仓库级默认，见 §25.1）。
 
 ---
 
@@ -1468,6 +1507,8 @@ Rewrite 后：
 - RAG / Vector DB；
 - 自动知识传播图；
 - 多 Agent；
+
+**v0.1 回写核对（2026-09-30，批次 3）：无变更（备案）。**
 - 自动无限续写。
 
 ---
@@ -1481,6 +1522,15 @@ Rewrite 后：
 - 用户对 Blueprint 的修改量；
 - **Seed Preservation Rate**；
 - 新增主题喧宾夺主率。
+
+**v0.1 落地（回写项 25）**
+
+- **测试集**：`tests/fixtures/evaluation/story-development/seeds.yaml`，收录 **10 个 Seed**（≥10 的最低要求写在文件里，加载时强制校验）；
+- **measured 7 个** = 2 个项目型（`demo-01` / `demo-02`，指标从 Gate 2 产物汇总）+ 5 个 fixture 型
+  （情感 / 悬疑 / 温情 / 现实 / 轻科幻，由**离线回放**走与产品相同的代码路径现算：`seed_interpreter` → Gate 1 → `story_developer`）；
+- **corpus_only 3 个**（开放结局 / 单场景 / 强反转）：只保留输入，**不产出指标行**，命令必须显式列出它们而不得假装跑过；
+- **结果文件**：`results.csv`，列为 `seed_id, proposal_count, distinctness_ok, proposal_id, seed_preservation_rate, preserved, altered, additions, risks, conflicts, unaccounted_anchors`；
+- Seed Preservation Rate 的口径见 §10.2（分子只由 `preserved` 贡献，未记账锚点必须为 0）。
 
 ### 31.2 正文质量
 
@@ -1501,6 +1551,18 @@ Writing Harness
 - AI 感更低；
 - 更愿意继续阅读。
 
+**v0.1 落地与边界（回写项 26）**
+
+- **v0.1 不执行盲测、不自动评分**：只准备"可运行的 A/B 对照 + 人工填写模板"；
+- 对照集：`tests/fixtures/evaluation/anti-ai/session-<NNN>/`，含 **≥10 个 Scene Intent**（两个 demo 各 5 场），
+  每个分组给出 `group-G<NN>.a.txt`（**普通一次性 Prompt**，输入仅 Scene Intent）与 `group-G<NN>.b.txt`（**Writing Harness**）；
+- 人工评分模板 `ratings.csv` 的列固定为：
+  `group_id, text_a_file, text_b_file, rater_id, more_humanlike, more_natural, dialogue_more_natural, characters_more_alive, lower_ai_feel, want_to_continue, notes`
+  （评分列在 v0.1 由人工填写，工具不写入）；
+- **长度归一化口径**：因为 A / B 两侧文本长度可能相差很大，报告必须同时给出"平均码点数"与
+  "**每千个非空白码点的 warning 数**"；两侧平均长度差 **≤ ±20%** 时原始计数可信，否则以归一化结果为准；
+- 该归一化结果作为 v0.1 通过标准第 7 条（AI 感改善趋势）的证据；**样本量有限（10 组）**，方向明确但需在 v0.2 扩大样本验证。
+
 ### 31.3 作者成本
 
 记录：
@@ -1516,6 +1578,12 @@ Writing Harness
 ```text
 显式 Author Gate = 3
 ```
+
+**v0.1 落地（回写项 27）**
+
+- 结果文件：`tests/fixtures/evaluation/story-development/author-cost.csv`，列固定为
+  `project_id, explicit_gates, gate1_status, gate1_fixed_items, gate1_gate1_confirmed_items, blueprint_versions, blueprint_conflicts_resolved, linter_warnings, rewrites_applied, scenes, confirmed_scenes, occurred, unresolved_state_conflicts`；
+- 所有数值**可从项目状态复算**（不手工填），"显式 Gate 次数"按 Gate 1 / Gate 2 / Gate 3 各计一次；两个 demo 实测均为 **3 次**。
 
 ---
 
@@ -1567,6 +1635,9 @@ status = PROPOSED
 状态不自动升级
 ```
 
+**v0.1 回写核对（2026-09-30，批次 3）：无变更（备案）。** 四条原则的自动 / 固定测试已在 Story 10 F 落地
+（`tests/acceptance/story10.principles.test.ts` + 各 Story 的状态机表驱动测试）。
+
 ---
 
 ## 33. 冻结结论
@@ -1589,3 +1660,17 @@ Story State Schema 固定
 Context Manifest Schema 固定
 Proposal 与 Writer 物理隔离
 ```
+
+**v0.1 冻结声明（2026-09-30，批次 3）**
+
+```text
+封版点（commit）      d0d65da
+本文件                《需求规格》v0.1（回写完成版，33 章）
+同批冻结              《架构设计》v0.1、《开发 Story 拆分》v0.1
+通过标准              《开发 Story 拆分》Story 10 G（8 条，逐条有可执行证据）
+遗留待裁决            OQ-62（已处理：同批收紧）、OQ-63（type/reason 配对是否入 Schema）、
+                      架构 §7 的 G1（已入文档）、批次 4 尚未执行
+```
+
+- 通过标准 8 条与其实证据见《开发 Story 拆分》Story 10 G / G.1；
+- 本文件所有与 v0.1 实现相关的补充定义，均带「回写项 N」标记，可在 `docs/DECISIONS.md` §十三 逐条追溯。
