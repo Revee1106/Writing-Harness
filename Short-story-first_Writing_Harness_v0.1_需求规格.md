@@ -294,8 +294,11 @@ source_refs:
 
 - `type=seed` → `ref_id` 指向 Seed item ID；
 - `type=proposal` → 指向 Proposal 或 Proposal 内可追溯项 ID，统一采用**字段路径** `<proposal_id>.<field_path>`（如 `PROP_A.core_premise`）；
-- `type=user_edit` → 指向 Gate 2 用户编辑记录 ID，统一采用 `user_edit:<字段路径>`；
-- `type=blueprint_gate2` → 指向本次 Blueprint 确认动作 ID：`GATE2_<NNN>`；字段来源标记为"Harness 依裁决派生"时也映射到该类型；
+- `type=user_edit` → 指向 **Gate 2 用户手改记录**。这里有两级，不要混用：
+  - **记录级（最终写进 Blueprint 的形态）**：`ref_id = EDIT_<NNN>`，即 `blueprint-history/<NNN>.meta.yaml` 中 `user_edits[].id`（跨版本全局递增）；
+  - **字段级（装配输入形态）**：`derived_from = user_edit:<字段路径>`，装配时**按 `field` 匹配**该版本的 `user_edits[]`，解析为对应的 `EDIT_<NNN>`；
+  - 若某字段声明了 `user_edit:<字段>` 但用户并未手改该字段 → **报错**；字段来源为 `user` 但查不到对应手改记录 → 回落为 `blueprint_gate2`（`GATE2_<NNN>`）；
+- `type=blueprint_gate2` → 指向本次 Blueprint 确认动作 ID：`GATE2_<NNN>`；字段来源标记为"Harness 依裁决派生"时也映射到该类型（`harness` → 同一形态）；
 - 不允许使用无法解析的自由字符串作为 source ref。
 
 **Gate 2 的字段来源纪律（v0.1 补充定义，回写项 32）**：
@@ -734,7 +737,8 @@ proposed_additions: []
 - 取值集合（8 值最小标签集）：`conflict` / `tension` / `tenderness` / `restraint` / `absurdity` / `suspense` / `warmth` / `grief`，**至少 1 个**，可多选；
 - 由 Scene Breakdown 阶段产出，**不从 Scene 正文或场景文本推断**；
 - 用途：与 `scene_type` 组成**匹配集合 `scene_type ∪ tone`**，供 Observable Behavior Hint（§11.3）与 Style Sample 匹配（§23.1）使用；
-- `narrative_role_ref` 允许引用结构位置（`BP_STR_*`）**或 arc 位置（`BP_ARC_*`）**（v0.1 补充定义，回写项 7）。
+- **arc 的覆盖判定不在 Scene 上做**：`narrative_role_ref` 以 structure 位置（`BP_STR_*`）为准，v0.1 **不要求** Scene 挂 arc 位置；
+  arc 是否被覆盖由 §16 Coverage Check 按"该 arc 位置被 Scene 直接引用，**或其映射的 structure 位置已被覆盖**（START→BEG、SHIFT→TURN、END→END）"判定。
 
 ### 14.1 Structure Resolver
 

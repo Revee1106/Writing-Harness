@@ -587,7 +587,7 @@ proposed_additions: []
 - 取值集合（8 值最小标签集）：`conflict` / `tension` / `tenderness` / `restraint` / `absurdity` / `suspense` / `warmth` / `grief`，**至少 1 个**，可多选；
 - 由 Scene Breakdown 阶段产出，**不从 Scene 正文或场景文本推断**；
 - 与 `scene_type` 组成匹配集合 `scene_type ∪ tone`，供 Observable Behavior Hint（§11.3）与 Style Sample 匹配（§24）使用；
-- `narrative_role_ref` 允许引用结构位置（`BP_STR_*`）**或 arc 位置（`BP_ARC_*`）**（回写项 5）。
+- **arc 的覆盖判定不在 Scene 上做**：`narrative_role_ref` 以 structure 位置（`BP_STR_*`）为准，v0.1 **不要求** Scene 挂 arc 位置；arc 覆盖由 §16 Coverage Check 按"直接引用，或其映射的 structure 位置已被覆盖（START→BEG、SHIFT→TURN、END→END）"判定。
 
 ### 14.1 Structure Resolver
 

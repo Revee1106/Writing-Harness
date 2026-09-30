@@ -381,8 +381,11 @@
 
 本清单是**唯一入口**：v0.1 实现过程中所有"与三份冻结文档不一致 / 文档未定义而由实现补齐"的事项，
 按"目标文档 + 章节 + 变更性质"逐条列出，供后续统一回写。
-**回写进度**：批次 1（状态模型）✅ 已完成 —— 条目 1 / 2 / 3 / 4 / 5 / 6 / 7 / 9 / 32；
-批次 2（POV / 隔离 / 报告）待用户审核后进行；批次 3（文件结构 / 评估）待定。
+**回写进度**：批次 1（状态模型核心）✅ 已完成 —— 条目 1 / 2 / 3 / 4 / 5 / 6 / 7 / 9 / 32；
+批次 2（POV / 隔离 / 报告 / Style）待用户审核后进行 —— 条目 12 / 13 / 14 / 15 / 16 / 17 / 18 / 19 / 20；
+批次 3（文件结构 / 评估）—— 条目 21 / 22 / 23 / 24 / 25 / 26 / 27 / 28；
+批次 4（状态与冲突模型补漏）—— 条目 8 / 10 / 11 / 29 / 30 / 31（+ 架构 §17 镜像）。
+章节级进度见 §十五。
 
 （章节号以 v0.1 冻结版文档为准；`性质` 取值：**新增** / **扩展枚举** / **补充定义** / **收窄解读** / **位置明确** / **无改动（仅备案）**。）
 
@@ -392,9 +395,9 @@
 | 2 | 《架构设计》 | §11.1 | 补充定义 | OBH / REL 的 ID 由 Harness 依角色 ID 生成：`OBH_<角色后缀>_<NN>`、`REL_<来源后缀>_<目标后缀>`（重名追加 `_2`） | I-27 |
 | 3 | 《架构设计》 | §11.3 | 收窄解读 | 单 POV 的 `inner_state_pov_visible` 默认规则：POV 角色 `[self]`、非 POV 角色 `[]`（避免非 POV 内心进入 Writer 输入） | OQ-39 / I-34 |
 | 4 | 《架构设计》 | §11.3 | 补充定义 | OBH 的 `applicable_scene_types` = **scene_type ∪ tone 的联合白名单**（交集非空即加载） | OQ-36 / OQ-41 |
-| 5 | 《架构设计》 | §14 | 新增字段 | Scene 新增**必填** `tone: [tone_value, ...]`（≥1，八值枚举：conflict / tension / tenderness / restraint / absurdity / suspense / warmth / grief），由 `scene_breakdown@0.1` 输出，不从正文推断 | OQ-47 |
+| 5 | 《架构设计》 | §14 | 新增字段 | Scene 新增**必填** `tone: [tone_value, ...]`（≥1，八值枚举：conflict / tension / tenderness / restraint / absurdity / suspense / warmth / grief），由 `scene_breakdown@0.1` 输出，不从正文推断；**`narrative_role_ref` 保持 structure 位置（`BP_STR_*`），不挂 arc 位置**（arc 覆盖由 §16 判定） | OQ-47 / OQ-42（复议） |
 | 6 | 《需求规格》 | §9.4 / §10.2 | 补充定义 | Seed Preservation Rate 的计算对象与公式：分母 = `raw_seed_anchor_ids`，分子按 preserved + 部分计权 altered，未记账锚点必须为 0 | OQ-01 / I-26 |
-| 7 | 《需求规格》 | §14 | 新增字段 | 同第 5 条（Scene 的 `tone`），并说明 `narrative_role_ref` 允许 `BP_STR_*` 与 `BP_ARC_*` | OQ-42 / OQ-47 |
+| 7 | 《需求规格》 | §14 | 新增字段 | 同第 5 条（Scene 的 `tone`）；`narrative_role_ref` **以 `BP_STR_*` 为准**，arc 覆盖判定按 §16（映射 START→BEG / SHIFT→TURN / END→END） | OQ-42（复议）/ OQ-47 |
 | 8 | 《需求规格》 | §16 | 补充定义 | Coverage 各类型 severity：structure / ending / reveal_alignment / blueprint_reference_integrity = high，length / arc = medium；warning 一律不阻塞 | OQ-44 |
 | 9 | 《需求规格》 / 《架构设计》 | §17 | 扩展枚举 | `low_severity_log[].code` 字段与取值（`llm_span_invalid`、`revealed_to_narrower_than_plan`）；并注明低危日志在 v0.1 **不落盘**，需要留档用 CLI stdout 重定向 | OQ-59 / I-65 / I-75 / I-76 |
 | 10 | 《需求规格》 | §18.1 | 补充定义 | OCCURRED 的 payload 命名：knowledge 用 `payload.knowledge_ref`、relationship 用 `payload.relationship_ref`；`story_state.*_state[].blueprint_ref` 保持不变，代码保证二者指向同一 ID | OQ-06 |
@@ -419,5 +422,128 @@
 | 29 | 《架构设计》 | §8 | 补充定义 | `story_state.state_rebuild_conflicts[].type` 扩为 `['ORPHANED', 'OCCURRED_CONFLICT']`（枚举扩展，不新增 Schema） | I-77 |
 | 30 | 《架构设计》 | §34 | 补充定义 | P2 原则的可执行判定补充：Blueprint 内容项 `status` 只允许 `CONFIRMED`，唯一例外是 `seed_fidelity.added[].status = PROPOSED` | I-26 |
 | 31 | 《需求规格》 | §6.2 / §9.2 | 补充定义 | 参与本次 Gate 2 的提案若存在 `resolution=pending` 的冲突则**拒绝确认**；裁决只写 meta，不回写 `proposals.yaml` | I-28 / I-29 |
-| 32 | 《需求规格》 | §7.2 | 补充定义 | Gate 2 的 `source_refs` 三形态：`<参与提案>.<字段>` / `user_edit:<字段>` / `harness`（映射为 `blueprint_gate2` + `GATE2_<NNN>`）；合并时字段来源必须与字段计划一致，不静默换源 | I-30 / I-32 |
+| 32 | 《需求规格》 | §7.2 | 补充定义 | Gate 2 的 `source_refs` 三形态：`<参与提案>.<字段>` / `user_edit:<字段>` / `harness`（→ `blueprint_gate2` + `GATE2_<NNN>`）；**用户手改的两级区分**：记录级 `EDIT_<NNN>`（meta.`user_edits[].id`，最终写进 Blueprint）与字段级装配输入 `user_edit:<字段路径>`（按 `field` 解析为 `EDIT_<NNN>`，查不到即报错）；合并时字段来源必须与字段计划一致，不静默换源 | I-30 / I-32 / I-29 / I-81 |
+
+---
+
+## 十四、回写期裁决（批次 1 审核 → 批次 2 起始会）
+
+| 事项 | 裁决 | 落地 |
+|---|---|---|
+| **追问 1：`narrative_role_ref` 允许 `BP_ARC_*` 是需求还是推导？** | **推导补充，不予采纳。** 依据：I-37 与 OQ-42 的状态是 **"已落地（dsh 提议）"**，是 dsh 为实现 §16 的 arc 检查提出的读数，**不是用户裁决的真实需求**；Story 5 I-38 已给出"直接引用**或**映射 structure"的路径。裁决：**文档不得写"Scene 允许挂 `BP_ARC_*`"**，v0.1 走 I-38 的映射路径，Scene 的 `narrative_role_ref` 以 structure 位置为准。 | 已从《需求规格》§14 与《架构设计》§14 删除该声明，改为"arc 覆盖由 §16 按映射判定"；维护清单条目 5 / 7 同步修正。**I-37 标注为"经复议不采纳"** |
+| **I-37 复议后与实现的分歧** | 实现现状 `src/schema/scene.ts` **仍接受** `BP_ARC_*`（正则 + superRefine）——比文档宽松。**本阶段不改代码**，只记录待裁决。 | 新增 **OQ-62**（是否收紧 Scene 的 `narrative_role_ref`，留待 v0.2 或单独裁决） |
+| **追问 2：`user_edit:<字段路径>` 与 `EDIT_<NNN>` 冲突？** | **不是笔误，是两级不同对象。** 依据：I-29（`EDIT_<NNN>` 跨版本全局递增，是 `blueprint-history/<NNN>.meta.yaml` 的 `user_edits[].id` 记录级 ID）+ I-30（`derived_from` 允许 `user_edit:<字段>`，是**装配输入**的字段级形态）+ 实现（`src/gate2/assemble.ts`：`user_edit:<field>` → 按 `field` 匹配 → `{type: user_edit, ref_id: EDIT_<NNN>}`；查不到手改记录即报错；`from: user` 无记录时回落 `blueprint_gate2`/`GATE2_<NNN>`）。 | 需求规格 §7.2 已写明两级与解析规则；新增解读 **I-81**；维护清单条目 32 同步更新 |
+| **跨批镜像规则** | 接受跨文档/跨批镜像，但**后续批次的章节清单不得重复列出已在本批处理的章节**；每批起始给"全局章节处理进度表"。 | 本文件 §十三 的"回写进度"行按批更新 |
+| **批次划分（最终）** | 批次 1 状态模型核心（✅ 已完成）；**批次 2** POV / 隔离 / 报告 / Style（《架构设计》§21 / §22 + 《需求规格》§21 / §22 / §23 / §24 / §25 / §27）；**批次 3** 文件结构 / 评估（《需求规格》§29 / §31 + 《架构设计》§32 + 《开发 Story 拆分》Story 10 G）；**批次 4** 状态与冲突模型补漏（《需求规格》§6.2 / §9.2 / §16 / §18.1 / §19.1 + 《架构设计》§8 / §17 / §34）。 | 见 §十五 的全局章节处理进度表 |
+
+### 实现解读（回写期）
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-81 | **Gate 2 用户手改的两级区分**：记录级 `EDIT_<NNN>`（`user_edits[].id`，跨版本全局递增，最终写进 Blueprint 的 `source_refs[].ref_id`）与字段级装配输入 `user_edit:<字段路径>`（`derived_from`）。解析规则：按 `field` 在本版本 `user_edits[]` 中匹配；同一字段多次手改取最后一条；查不到即报错；`from: user` 但无手改记录 → 回落 `blueprint_gate2`（`GATE2_<NNN>`）。 | I-29 / I-30 + `src/gate2/assemble.ts` | 两者不是同层对象，不可互相替换。 |
+| I-82 | **I-37 经复议不采纳**：`narrative_role_ref` 的文档形态为 structure 位置；arc 覆盖按 I-38 判定。实现接受 `BP_ARC_*` 属"比文档宽松"，见 OQ-62。 | 回写期批次 1 审核裁决 | 不改代码，仅记录分歧。 |
+
+---
+
+## 十五、全局章节处理进度表（三份文档 × 全部章节）
+
+状态：✅ 已处理（批次 1，含镜像）｜**B2 / B3 / B4** = 待对应批次｜`—` = 核对后无需变更（无清单条目且与实现一致，见备注）。
+每批只列**未处理**章节（跨批镜像规则，见 §十四）。
+
+### 《需求规格》
+
+| 章节 | 状态 | 备注 |
+|---|---|---|
+| §1 文档状态 | B3 | 批次 3 末更新为"v0.1 最终基线" |
+| §2 产品定义 | — | |
+| §3 四条底层原则 | — | P1–P4 已在 Story 10 F 落地 |
+| §4 核心用户流程 | — | |
+| §5 Author Gate | — | §5.2 的 pending 冲突处理在 B4 经 §6.2 / §9.2 补 |
+| §6 状态模型 | B4 | §6.2（USER_GIVEN / pending 冲突拒绝确认） |
+| §7 状态数据必须保留来源 | ✅ | §7.2 已完成（含 I-81 两级 `user_edit`） |
+| §8 Story Seed | — | |
+| §9 Story Proposal | B4 | §9.2 冲突处理（§9.4 已于批次 1 完成） |
+| §10 Seed Preservation Rate | ✅ | §10.2 可执行口径 |
+| §11 Story Blueprint | ✅ | §11.1 / §11.3（镜像） |
+| §12 Blueprint 版本快照 | — | |
+| §13 Key Knowledge | — | |
+| §14 Scene Breakdown | ✅ | `tone` 必填；`narrative_role_ref` 保持 `BP_STR_*` |
+| §15 allowed_reveals 与结构位置解析 | — | |
+| §16 Blueprint Coverage Check | B4 | severity 定义 + arc 覆盖判定措辞（I-38） |
+| §17 Story State Schema | ✅ | `type` 扩枚举 + 低危日志不落盘 |
+| §18 OCCURRED 生成机制 | B4 | §18.1 payload 命名 + 低危日志字段与取值 |
+| §19 Draft Context | B4 | §19.1 `max_chars` 码点口径 |
+| §20 Context Compiler | B2 | §20.1–§20.3 与 §21/§22 联动核对 |
+| §21 Context Manifest Schema | B2 | Manifest 单文件 + `excluded_sensitive.type` 6 类 |
+| §22 Context Compiler 失败降级 | B2 | director_note 两条路径 |
+| §23 Style Samples | B2 | §23.1 匹配降级（含 `tone`）/ §23.2 去实体化 |
+| §24 Prose Writer | B2 | 与 §23 / §27 的引用一致性检查 |
+| §25 Anti-AI Linter | B2 | §25.1 / §25.2 / §25.3 |
+| §26 Linter 降级与配置 | B2 | 随 §25 一并核对 |
+| §27 Local Rewrite | B2 | 契约 + 二次检查范围 |
+| §28 Proposal 失败降级 | — | |
+| §29 项目文件结构 | B3 | `blueprint-history/` + 无改动备案 |
+| §30 MVP 范围 | — | |
+| §31 评估指标 | B3 | §31.1 / §31.2 / §31.3 |
+| §32 四条原则必须落入测试 | — | |
+| §33 冻结结论 | B3 | 随最终冻结声明更新 |
+
+### 《架构设计》
+
+| 章节 | 状态 | 备注 |
+|---|---|---|
+| §1 文档状态 | B3 | 同上 |
+| §2 架构目标 | — | |
+| §3 总体架构 | — | |
+| §4 Seed Interpreter | — | |
+| §5 Author Gate 1 | — | |
+| §6 Story Developer | — | |
+| §7 状态机 | ✅ | 核对一致，**无变更**；G1（`PROPOSED → USER_GIVEN`）是否入文档待裁决 |
+| §8 冲突模型 | B4 | `state_rebuild_conflicts.type` 扩枚举（模型侧） |
+| §9 Proposal Schema | — | |
+| §10 Blueprint Builder | — | 字段来源纪律已在需求 §7.2（I-81） |
+| §11 Blueprint Schema | ✅ | §11.1 / §11.3 |
+| §12 Blueprint Versioning | — | |
+| §13 Key Knowledge Schema | — | |
+| §14 Scene Schema | ✅ | `tone`（镜像；`BP_ARC_*` 声明已撤销） |
+| §15 allowed_reveals 契约 | — | |
+| §16 Blueprint Coverage Check | B4 | 镜像 §16 |
+| §17 Story State Schema | B4 | 镜像 §17 |
+| §18 OCCURRED 路径 | B4 | 镜像 §18 |
+| §19 Draft Context | B4 | 镜像 §19 |
+| §20 Context Compiler 数据源 | B2 | 与 §21 / §22 联动 |
+| §21 Context Compiler 输出 | B2 | |
+| §22 Context Manifest Schema | B2 | |
+| §23 Context Compiler 降级路径 | B2 | 镜像 §22 |
+| §24 Style Sample Selector | B2 | 镜像 §23 |
+| §25 Prose Writer | B2 | 镜像 §24 |
+| §26 Rule Linter | B2 | 镜像 §25.1 |
+| §27 LLM Linter | B2 | 镜像 §25.2 / §25.3 |
+| §28 Linter 配置与降级 | B2 | 镜像 §26 |
+| §29 Local Rewrite | B2 | 镜像 §27 |
+| §30 失败降级策略 | — | |
+| §31 Seed Preservation Rate | — | 需求 §10 已写，架构侧仅引用 |
+| §32 文件结构 | B3 | |
+| §33 技术实现原则 | — | |
+| §34 四条原则的架构测试要求 | B4 | P2 的 `status` 例外 |
+| §35 架构冻结结论 | B3 | 随最终冻结声明更新 |
+
+### 《开发 Story 拆分》
+
+| 章节 | 状态 | 备注 |
+|---|---|---|
+| §1 文档状态 | B3 | 同上 |
+| §2 开发原则 | — | |
+| Story 1–4 | — | 回写内容落在前两份文档 |
+| Story 5（Scene Schema / Coverage Check / 关键规则） | B4 | `tone`、arc 覆盖判定（I-38）、severity 的镜像检查 |
+| Milestone M1 | — | |
+| Story 6 | B2 | Manifest 单文件 / `excluded_sensitive` 6 类的镜像检查 |
+| Story 7（Style Sample 标签 / 匹配降级 / Draft Context） | B2 | `pov + scene_type + tone` 与需求 §23.1 一致 |
+| Story 8（词频类 / 配置） | B2 | `low severity 日志` 与 §25 一致 |
+| Story 9（Local Rewrite / 二次检查范围） | B2 | 与 §27 一致 |
+| **Story 10 G（v0.1 通过标准）** | **B3** | 8 点自检原文入库 |
+| Story 10 A–F | — | A–F 无清单条目 |
+
+> 说明：《开发 Story 拆分》以 Story 为章节单位，其内容是对前两份文档的验收化表达；
+> 本表把 B2 / B3 / B4 涉及的 Story 段落逐条标出，避免"只改前两份、Story 拆分不同步"。
 
