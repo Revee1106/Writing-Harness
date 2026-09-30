@@ -324,3 +324,92 @@
 | 《开发 Story 拆分》Story 10 | **v0.1 的 8 点自检条款原文**（仓库中缺失，见 OQ-61，需要原文回填） |
 | 《架构设计》§29 / §32 | **无改动**：Story 10 的产物（`drafts/final.md`）落在既有 `drafts/` 下，评估资产在 `tests/`，文件树未新增条目 |
 
+---
+
+## 十二、Story 10 封版裁决（v0.1 收尾）
+
+### 用户裁决
+
+| 事项 | 裁决 | 落地 |
+|---|---|---|
+| OQ-61（8 点自检原文） | v0.1 的 8 点自检**原文在《开发 Story 拆分》Story 10 G 节**：① 一句话 Seed 可以形成可用 Blueprint ② Gate 顺序低摩擦 ③ Blueprint 可稳定拆 Scene ④ Proposal 不会渗透 Writer ⑤ POV / secret / future 不明显泄漏 ⑥ Seed Preservation Rate 可测 ⑦ Harness 正文在 AI 感维度出现明确改善趋势 ⑧ 用户不承担高频审批。**重建版在第 1、7、8 条偏离原文，必须替换**（第 1 条泛化成"链路"丢了 Blueprint；第 7 条把"改善趋势"降级为"可运行"；第 8 条跑偏成技术指标，原文是产品指标）。 | `tests/acceptance/story10.acceptance.test.ts` 的"验收 F"已按原文逐条替换，每条给出可执行证据（见下表） |
+| OQ-59（低危日志） | **不新增 `reports/state-extraction.yaml`**；低危日志保持 CLI 输出可见，需要留档用 **stdout 重定向**。 | `runGate3()` 返回 `lowSeverity`，`harness gate3 --confirm` 打印 `low_severity_log`；`--json` 同样可见；不落盘 |
+| OQ-60（测试集覆盖） | **补齐 5 个 fixture：情感 / 悬疑 / 温情 / 现实 / 轻科幻**；**接受 3 个 `corpus_only`：开放结局 / 单场景 / 强反转**；**补齐后 `measured` 达到 7 个**。 | `seeds.yaml`：measured = SD_001/SD_002（项目型）+ SD_003…SD_007（fixture 型，离线回放）；corpus_only = SD_008…SD_010 |
+| A/B 归一化验证 | 报告 A 侧 / B 侧**平均码点数**与**每千码点 warning 数**；长度接近（±20%）时 41:4 直接可信，否则以归一化结果为准；该归一化结果**进自检第 7 条证据**。 | `summarizeAbSession()` + `harness eval ab-report`；结果见下 |
+| demo 说明 | 在 README 注明"demo 为离线可复现的压缩样本（110–200 码点/场），非产品级输出"，避免误读为产品能力。 | `README.md` 的"演示项目"小节 |
+
+### 8 点自检（原文版）与可执行证据
+
+| # | 原文 | 可执行证据（`tests/acceptance/story10.acceptance.test.ts` 验收 F） |
+|---|---|---|
+| ① | 一句话 Seed 可以形成可用 Blueprint | 两个 demo 的 Blueprint 通过 Schema，且 structure / characters / key_knowledge / style_direction 齐全；Seed 锚点被 preserved ∪ altered 全覆盖（无静默丢弃） |
+| ② | Gate 顺序低摩擦 | `explicit_gates === 3`（Gate 1 + Gate 2 + Gate 3），`blueprint_versions === 1`，拆场不产生额外审批 |
+| ③ | Blueprint 可稳定拆 Scene | Coverage：`structure_covered === scenes.length`、`warnings === []`；重跑拆场后 Scene 文件**逐字节一致** |
+| ④ | Proposal 不会渗透 Writer | 每场编译上下文（context + manifest）序列化后不含 `PROP_` / `proposal_id`，且不含 proposals.yaml 的任何原文行 |
+| ⑤ | POV / secret / future 不明显泄漏 | 每场 `future_content_exposed === false`、`unconfirmed_proposal_exposed === false`；内心状态只允许 POV 自己（非 POV 只能进 `excluded_sensitive`，`reason: non_pov_inner_state`）；Key Knowledge 的 truth 在揭示场景之前不出现在正文 |
+| ⑥ | Seed Preservation Rate 可测 | 7 个 measured Seed 全部给出百分比，`unaccounted_anchors === 0`，且既有 100% 也有 <100%（有区分度） |
+| ⑦ | Harness 正文在 AI 感维度出现明确改善趋势 | 归一化后 A 47.56/千码点 : B 2.55/千码点（B/A = 0.054，单位长度 AI 味信号下降 ≥75%） |
+| ⑧ | 用户不承担高频审批 | 每项目 3 次显式 Gate、`explicit_gates / scenes < 1`、rewrite ≤1 次（按需）；gate3 只有整篇 `--confirm`，无逐场确认 |
+
+### A/B 归一化结果（封版证据）
+
+| 口径 | A 侧（普通 Prompt） | B 侧（Writing Harness） | B/A |
+|---|---|---|---|
+| 分组数 | 10 | 10 | — |
+| 平均码点 / 场 | 86 | 157 | 1.817（B 长 82%） |
+| 合计非空白码点 | 862 | 1566 | — |
+| Rule Linter warning 合计 | 41 | 4 | 0.098 |
+| **每千码点 warning** | **47.56** | **2.55** | **0.054** |
+| 判定 | 长度差 82% > 20% → **以归一化结果为准** | | |
+
+命令：`pnpm harness eval ab-report`（只做长度归一化，不做质量判定）。
+
+### 实现解读
+
+| # | 解读 | 依据 | 备注 |
+|---|---|---|---|
+| I-78 | **fixture 型 measured Seed 走产品同一条代码路径量测**：`runSeedInterpreter` → `applyGate1Operations` → `runStoryDeveloper`（provider = recorded），指标由 `buildStoryDevelopmentRows()` 现算。 | OQ-60 裁决要求 measured 达到 7 个，而评估资产不得写进 `projects/`（Story 10 起始会裁决）。 | `eval story-development` 与 `tests/` 共用此函数；不允许硬编码指标。 |
+| I-79 | 测试集条目的 `text` **直接读 Seed 文件**（`seed_file`），并在加载时校验与内联 `text` 一致；文件缺失即报错。 | 测试集里的文本必须与真正喂给模型的那份逐字一致。 | 见 `loadStoryDevelopmentSeedSet()`。 |
+| I-80 | A/B 归一化阈值 `AB_LENGTH_TOLERANCE = 0.2`：`|B/A − 1| ≤ 0.2` 时原始计数可信，否则以每千码点为准。 | 封版裁决"4"要求给出归一化口径。 | 判定与两个口径都打印，不隐藏。 |
+
+---
+
+## 十三、封版后文档维护清单（v0.1 → 三份冻结文档的统一回写）
+
+本清单是**唯一入口**：v0.1 实现过程中所有"与三份冻结文档不一致 / 文档未定义而由实现补齐"的事项，
+按"目标文档 + 章节 + 变更性质"逐条列出，供后续统一回写。
+（章节号以 v0.1 冻结版文档为准；`性质` 取值：**新增** / **扩展枚举** / **补充定义** / **收窄解读** / **位置明确** / **无改动（仅备案）**。）
+
+| # | 目标文档 | 章节 | 变更性质 | 需要回写的内容 | 来源 |
+|---|---|---|---|---|---|
+| 1 | 《架构设计》 | §11.1 | 新增 | Blueprint 顶层新增 `seed_fidelity`（`preserved / altered / added / risk`，结构与 Proposal 一致），Seed Preservation Rate 以它为准 | OQ-01 / I-26 |
+| 2 | 《架构设计》 | §11.1 | 补充定义 | OBH / REL 的 ID 由 Harness 依角色 ID 生成：`OBH_<角色后缀>_<NN>`、`REL_<来源后缀>_<目标后缀>`（重名追加 `_2`） | I-27 |
+| 3 | 《架构设计》 | §11.3 | 收窄解读 | 单 POV 的 `inner_state_pov_visible` 默认规则：POV 角色 `[self]`、非 POV 角色 `[]`（避免非 POV 内心进入 Writer 输入） | OQ-39 / I-34 |
+| 4 | 《架构设计》 | §11.3 | 补充定义 | OBH 的 `applicable_scene_types` = **scene_type ∪ tone 的联合白名单**（交集非空即加载） | OQ-36 / OQ-41 |
+| 5 | 《架构设计》 | §14 | 新增字段 | Scene 新增**必填** `tone: [tone_value, ...]`（≥1，八值枚举：conflict / tension / tenderness / restraint / absurdity / suspense / warmth / grief），由 `scene_breakdown@0.1` 输出，不从正文推断 | OQ-47 |
+| 6 | 《需求规格》 | §9.4 / §10.2 | 补充定义 | Seed Preservation Rate 的计算对象与公式：分母 = `raw_seed_anchor_ids`，分子按 preserved + 部分计权 altered，未记账锚点必须为 0 | OQ-01 / I-26 |
+| 7 | 《需求规格》 | §14 | 新增字段 | 同第 5 条（Scene 的 `tone`），并说明 `narrative_role_ref` 允许 `BP_STR_*` 与 `BP_ARC_*` | OQ-42 / OQ-47 |
+| 8 | 《需求规格》 | §16 | 补充定义 | Coverage 各类型 severity：structure / ending / reveal_alignment / blueprint_reference_integrity = high，length / arc = medium；warning 一律不阻塞 | OQ-44 |
+| 9 | 《需求规格》 / 《架构设计》 | §17 | 扩展枚举 | `low_severity_log[].code` 字段与取值（`llm_span_invalid`、`revealed_to_narrower_than_plan`）；并注明低危日志在 v0.1 **不落盘**，需要留档用 CLI stdout 重定向 | OQ-59 / I-65 / I-75 / I-76 |
+| 10 | 《需求规格》 | §18.1 | 补充定义 | OCCURRED 的 payload 命名：knowledge 用 `payload.knowledge_ref`、relationship 用 `payload.relationship_ref`；`story_state.*_state[].blueprint_ref` 保持不变，代码保证二者指向同一 ID | OQ-06 |
+| 11 | 《需求规格》 | §19.1 | 补充定义 | `draft_context.max_chars` 的计数口径：Unicode **码点**，含非空白字符、不含空白与换行 | OQ-16 |
+| 12 | 《需求规格》 | §21 | 扩展枚举 | `excluded_sensitive.type` 扩为 6 类（新增 `character_inner_state`）；`reason` 六类枚举（含 `non_pov_inner_state`） | OQ-44 / OQ-50 |
+| 13 | 《需求规格》 | §21 | 位置明确 | Manifest 为**单文件、末次覆盖**（`reports/context-manifest.yaml`），顶部加 `# Last compiled scene: scene-XXX`；`writer_context` 不落盘 | OQ-48 / OQ-49 / I-44 |
+| 14 | 《需求规格》 | §22 | 补充定义 | `director_note` 的两条路径：`breakdown --note` 持久化到 Scene（`source: user`）；`context --note` 只进 Manifest 的 `director_surface` + `overrides`（`source: user_override`），不改 Scene 文件 | I-46 |
+| 15 | 《需求规格》 / 《架构设计》 | §23 / §24 | 补充定义 | `style/profile.yaml` 的 Schema（含 `de_entity` / `sanitized_text` 规则）；Style Sample 匹配降级顺序 `pov+scene_type+tone → pov+scene_type → pov → none` | OQ-12 / OQ-36 |
+| 16 | 《需求规格》 | §25.1 | 位置明确 | `anti-ai-template-actions.yaml` 为**项目级**配置 + 仓库级默认词表 fallback；升华词典 `anti-ai-elevation-phrases.yaml` 同构（独立 `version`） | OQ-07 / OQ-52 |
+| 17 | 《需求规格》 | §25.2 | 补充定义 | `reports/linter.yaml` 为**单文件、末次覆盖**（顶部 `# Last linted scene:`），rule 与 llm 报告共用同一 Schema（各自 `linter` 字段标识） | OQ-55 / OQ-57 / I-61 / I-64 / I-67 |
+| 18 | 《需求规格》 | §25.2 / §25.3 | 补充定义 | `evidence` 按规则的固定结构（template_actions / sentence_length_variance / paragraph_length_variance / dialogue_ratio / paragraph_ending_elevation）；"段尾"窗口 = 段落最后 16 个非空白码点；五类语义类型默认 severity（author_summary / subtext_exposed = high，其余 medium） | OQ-53 / OQ-54 / OQ-56 / I-60 / I-66 |
+| 19 | 《需求规格》 | §27 | 补充定义 | Local Rewrite 契约与落回规则：输出纯文本、长度 ≤ 原 span 的 3 倍、拼接后除 span 外字节级一致、原地改 `drafts/scene-NNN.md`、warning 上留 `rewrite` 审计、不备份不回滚；重叠重复 ≥4 码点拒绝（I-71） | Story 9 裁决 / I-68 / I-71 |
+| 20 | 《需求规格》 | §27 | 补充定义 | 局部二次 Linter 范围：Rule = span 所在段落 ±1；LLM = span ±1 段落；范围独立定义、ID 重新分配、`--full` 跑全篇 | Story 9 裁决 / I-69 |
+| 21 | 《需求规格》 / 《架构设计》 | §29 / §32 | 新增目录 | 新增 `projects/<id>/blueprint-history/<NNN>.meta.yaml`（Gate 2 元数据），与 `history/blueprint-<NNN>.yaml` 按同一 NNN 一一对应 | OQ-10 / OQ-35 / I-31 |
+| 22 | 《需求规格》 / 《架构设计》 | §29 / §32 | 无改动（仅备案） | v0.1 的文件树未新增其它条目：`drafts/final.md` 落在既有 `drafts/` 下，评估资产在 `tests/fixtures/evaluation/`（不在 `projects/`） | Story 10 起始会裁决 |
+| 23 | 《需求规格》 | §31.1 | 位置明确 | Story Development Test Set 存放于 `tests/fixtures/evaluation/story-development/`；10 个 Seed，measured 7（2 项目型 + 5 fixture 型：情感 / 悬疑 / 温情 / 现实 / 轻科幻），corpus_only 3（开放结局 / 单场景 / 强反转） | OQ-60 / I-78 / I-79 |
+| 24 | 《需求规格》 | §31.2 | 补充定义 | Anti-AI A/B Test Set 的 11 个人工评分列；**v0.1 不执行盲测、不自动评分**；长度归一化口径（±20% 阈值 + 每千码点 warning） | Story 10 裁决 4 / I-80 |
+| 25 | 《需求规格》 | §31.3 | 补充定义 | Author Cost 的列定义（`AUTHOR_COST_CSV_COLUMNS`），可由项目状态复算 | Story 10 E |
+| 26 | 《开发 Story 拆分》 | Story 10 G | 补充定义 | v0.1 的 **8 点自检原文**（本文件 §十二 已收录）与逐条可执行证据；建议在文档中给出证据位置 | OQ-61 |
+| 27 | 《架构设计》 | §8 | 补充定义 | `story_state.state_rebuild_conflicts[].type` 扩为 `['ORPHANED', 'OCCURRED_CONFLICT']`（枚举扩展，不新增 Schema） | I-77 |
+| 28 | 《架构设计》 | §34 | 补充定义 | P2 原则的可执行判定补充：Blueprint 内容项 `status` 只允许 `CONFIRMED`，唯一例外是 `seed_fidelity.added[].status = PROPOSED` | I-26 |
+| 29 | 《需求规格》 | §6.2 / §9.2 | 补充定义 | 参与本次 Gate 2 的提案若存在 `resolution=pending` 的冲突则**拒绝确认**；裁决只写 meta，不回写 `proposals.yaml` | I-28 / I-29 |
+| 30 | 《需求规格》 | §7.2 | 补充定义 | Gate 2 的 `source_refs` 三形态：`<参与提案>.<字段>` / `user_edit:<字段>` / `harness`（映射为 `blueprint_gate2` + `GATE2_<NNN>`）；合并时字段来源必须与字段计划一致，不静默换源 | I-30 / I-32 |
+

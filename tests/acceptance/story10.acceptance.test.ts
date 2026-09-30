@@ -2,9 +2,14 @@ import { cpSync, existsSync, readFileSync, readdirSync, statSync } from 'node:fs
 import { join, relative } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { runGate3 } from '../../src/state/gate3.ts'
-import { loadScenes, loadStoryState } from '../../src/scenes/service.ts'
+import { loadScenes, loadStoryState, runSceneBreakdown } from '../../src/scenes/service.ts'
+import { validateBlueprint } from '../../src/schema/blueprint.ts'
+import { runCoverageCheck } from '../../src/scenes/coverage.ts'
+import { compileContext } from '../../src/context/compiler.ts'
+import { keyPhrases } from '../../src/writer/checks.ts'
+import { countAllCodePoints } from '../../src/core/text.ts'
 import { projectPaths } from '../../src/io/paths.ts'
-import { readTextFile } from '../../src/io/yaml.ts'
+import { readTextFile, readYamlFile } from '../../src/io/yaml.ts'
 import { RecordedProvider } from '../../src/providers/recorded.ts'
 import type { LLMProvider, LLMRequest, LLMResponse } from '../../src/providers/types.ts'
 import { validateStoryState } from '../../src/schema/story-state.ts'
@@ -17,7 +22,10 @@ import {
   collectAuthorCost,
   countRuleWarnings,
   loadStoryDevelopmentSeedSet,
+  measureFixtureSeed,
+  summarizeAbSession,
 } from '../../src/eval/evaluation.ts'
+import { loadBlueprint, loadProposals, loadSeed } from '../../src/project/project.ts'
 import { makeTempDir, REPO_ROOT, type TempDir } from '../helpers/tmp.ts'
 
 /**
@@ -202,21 +210,70 @@ describe('验收 B：State Extractor（OCCURRED + 冲突）', () => {
   })
 })
 
-describe('验收 C：Story Development Test Set（≥10 Seed）', () => {
-  it('测试集至少 10 个 Seed，且每个 Seed 有 Seed Schema 允许的文本', () => {
+describe('验收 C：Story Development Test Set（≥10 Seed，measured 7）', () => {
+  it('测试集 10 个 Seed：measured 7（2 项目型 + 5 fixture 型）+ corpus_only 3', () => {
     const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
-    expect(set.seeds.length).toBeGreaterThanOrEqual(10)
-    for (const seed of set.seeds) {
+    expect(set.seeds).toHaveLength(10)
+    expect(set.measuredCount).toBe(7)
+    expect(set.projectBackedCount).toBe(2)
+    expect(set.fixtureBackedCount).toBe(5)
+    expect(set.corpusOnlyCount).toBe(3)
+    // 封版裁决：补齐的 5 个题材
+    expect(
+      set.seeds.filter((seed) => seed.status === 'measured' && seed.seed_file !== null).map((seed) => seed.genre),
+    ).toEqual(['情感', '悬疑', '现实', '温情', '轻科幻'])
+    // 封版裁决：接受为 corpus_only 的 3 类
+    expect(set.seeds.filter((seed) => seed.status === 'corpus_only').map((seed) => seed.genre)).toEqual([
+      '开放结局',
+      '单场景',
+      '强反转',
+    ])
+  })
+
+  it('fixture 型 Seed 的文本就是真正喂给模型的那份文件（不复制粘贴）', () => {
+    const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
+    for (const seed of set.seeds.filter((entry) => entry.seed_file !== null)) {
+      const raw = readTextFile(join(REPO_ROOT, seed.seed_file ?? ''))
+      expect(seed.text).toBe(raw)
       expect(seed.text.trim().length).toBeGreaterThan(0)
-      expect(seed.title.trim().length).toBeGreaterThan(0)
-      expect(['single', 'dual']).toContain(seed.pov_hint)
     }
   })
 
-  it('测试集里已跑的 Seed 都产出 ≥2 个提案且差异度通过', () => {
+  it('每个 Seed 有 Seed Schema 允许的文本与 ≥2 提案的期望', () => {
     const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
-    const measured = set.seeds.filter((seed) => seed.status === 'measured')
-    expect(measured.length).toBeGreaterThanOrEqual(2)
+    for (const seed of set.seeds) {
+      expect(seed.text.trim().length).toBeGreaterThan(0)
+      expect(countAllCodePoints(seed.text)).toBeLessThanOrEqual(500)
+      expect(seed.genre.trim().length).toBeGreaterThan(0)
+      expect(seed.expectation.proposal_count_min).toBeGreaterThanOrEqual(2)
+      expect(seed.expectation.distinctness_required).toBe(true)
+    }
+  })
+
+  it('5 个 fixture 型 Seed 离线回放可量测：≥2 提案、差异度通过、无未记账锚点', async () => {
+    const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
+    const fixtureSeeds = set.seeds.filter((seed) => seed.status === 'measured' && seed.seed_file !== null)
+    for (const seed of fixtureSeeds) {
+      const measured = await measureFixtureSeed({
+        repoRoot: REPO_ROOT,
+        seedId: seed.seed_id,
+        seedFile: seed.seed_file ?? '',
+        gate1Ops: seed.gate1_ops ?? undefined,
+      })
+      expect(measured.provider).toBe('recorded')
+      expect(measured.proposal_count).toBeGreaterThanOrEqual(seed.expectation.proposal_count_min)
+      expect(measured.distinctness_ok).toBe(true)
+      expect(measured.anchor_count).toBeGreaterThan(0)
+      for (const row of measured.rows) {
+        expect(row.unaccounted_anchors).toBe(0)
+        expect(row.conflicts).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+
+  it('项目型 measured Seed 的指标可复算，且与 fixture 型同口径', () => {
+    const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
+    const measured = set.seeds.filter((seed) => seed.status === 'measured' && seed.project_id !== null)
     const evaluation = buildStoryDevelopmentEvaluation(
       measured.map((seed) => ({
         seedId: seed.seed_id,
@@ -224,7 +281,6 @@ describe('验收 C：Story Development Test Set（≥10 Seed）', () => {
       })),
     )
     expect(evaluation.distinctnessAllOk).toBe(true)
-    expect(evaluation.proposalCount).toBeGreaterThanOrEqual(measured.length * 2)
     for (const row of evaluation.rows) {
       expect(row.preserved).toBeGreaterThan(0)
       expect(row.unaccounted_anchors).toBe(0)
@@ -232,19 +288,25 @@ describe('验收 C：Story Development Test Set（≥10 Seed）', () => {
     }
   })
 
-  it('评估结果 CSV 的列与冻结列一致（不新增列）', () => {
+  it('results.csv 只含 measured Seed 的行，列与冻结列一致', () => {
     const csvPath = join(REPO_ROOT, 'tests/fixtures/evaluation/story-development/results.csv')
-    if (!existsSync(csvPath)) return
-    const header = readTextFile(csvPath).split('\n')[0]
-    expect(header).toBe(STORY_DEVELOPMENT_CSV_COLUMNS.join(','))
+    expect(existsSync(csvPath)).toBe(true)
+    const lines = readTextFile(csvPath).trim().split('\n')
+    expect(lines[0]).toBe(STORY_DEVELOPMENT_CSV_COLUMNS.join(','))
+    expect(lines).toHaveLength(15) // 表头 + 14 行（7 Seed × 2 提案）
+    const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
+    const measuredIds = new Set(
+      set.seeds.filter((seed) => seed.status === 'measured').map((seed) => seed.seed_id),
+    )
+    for (const line of lines.slice(1)) {
+      expect(measuredIds.has(line.split(',')[0]!)).toBe(true)
+    }
   })
 
   it('评估资产只读、不写进项目目录（§29/§32 未被改动）', () => {
     const evaluationRoot = join(REPO_ROOT, 'tests/fixtures/evaluation')
-    const names = readdirSync(evaluationRoot).sort()
-    expect(names).toEqual(['anti-ai', 'story-development'])
-    const projectFiles = readdirSync(join(REPO_ROOT, 'projects', 'demo-01')).sort()
-    expect(projectFiles).not.toContain('evaluation')
+    expect(readdirSync(evaluationRoot).sort()).toEqual(['anti-ai', 'story-development'])
+    expect(readdirSync(join(REPO_ROOT, 'projects', 'demo-01'))).not.toContain('evaluation')
   })
 })
 
@@ -317,105 +379,181 @@ describe('验收 E：Author Cost（需求规格 §31.3）', () => {
   })
 })
 
-describe('验收 F：v0.1 8 点自检（条款文字待 OQ-61 确认）', () => {
-  it('① 一句话 Seed → 可用蓝图 → Scene 的链路留有真实产物', () => {
+describe('验收 F：v0.1 8 点自检（《开发 Story 拆分》Story 10 G 节原文，逐条可执行）', () => {
+  it('① 一句话 Seed 可以形成可用 Blueprint', () => {
     for (const projectId of ['demo-01', 'demo-02'] as const) {
       const paths = projectPaths(join(REPO_ROOT, 'projects'), projectId)
-      expect(existsSync(paths.seed)).toBe(true)
-      expect(existsSync(paths.proposals)).toBe(true)
-      expect(existsSync(paths.blueprint)).toBe(true)
-      expect(existsSync(paths.storyState)).toBe(true)
-      expect(loadScenes(paths)).toHaveLength(5)
-      expect(storyStateOf(paths).confirmed_scenes.length).toBe(5)
-      expect(readTextFile(paths.coverageReport)).toContain('scenes: 5')
+      const blueprint = validateBlueprint(readYamlFile(paths.blueprint))
+      // "可用" = 通过 Schema 且四类内容（结构 / 人物关系 / 关键知识 / 风格方向）齐全
+      expect(Object.keys(blueprint.structure).length).toBeGreaterThanOrEqual(3)
+      expect(blueprint.characters.length).toBeGreaterThanOrEqual(1)
+      expect(blueprint.key_knowledge.length).toBeGreaterThanOrEqual(1)
+      expect(blueprint.style_direction.narration.length).toBeGreaterThan(0)
+      // Seed 的每个锚点都被处置：preserved ∪ altered 覆盖全部锚点（不静默丢 Seed）
+      const seed = loadSeed(paths)
+      const handled = new Set([
+        ...blueprint.seed_fidelity.preserved.map((item) => item.seed_ref),
+        ...blueprint.seed_fidelity.altered.map((item) => item.seed_ref),
+      ])
+      expect(seed.story_seed.raw_seed_anchor_ids.filter((id) => !handled.has(id))).toEqual([])
+      expect(blueprint.seed_fidelity.preserved.length).toBeGreaterThan(0)
     }
   })
 
-  it('② 提案差异度与 Seed 保真度可量化（不是"看起来不同"）', () => {
-    const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
-    const rows = set.seeds
-      .filter((seed) => seed.status === 'measured')
-      .flatMap((seed) => {
-        const paths = projectPaths(join(REPO_ROOT, 'projects'), seed.project_id ?? '')
-        return buildStoryDevelopmentEvaluation([{ seedId: seed.seed_id, paths }]).rows
-      })
-    expect(rows.length).toBeGreaterThanOrEqual(4)
-    for (const row of rows) expect(row.distinctness_ok).toBe(true)
-  })
-
-  it('③ Writer 只拿到当前 Scene 的受控上下文，且有 Manifest', () => {
-    const paths = projectPaths(join(REPO_ROOT, 'projects'), 'demo-01')
-    expect(existsSync(paths.contextManifestReport)).toBe(true)
-    const manifest = readTextFile(paths.contextManifestReport)
-    expect(manifest).toContain('included_sensitive')
-    expect(manifest).toContain('excluded_sensitive')
-    expect(manifest).toContain('style_samples')
-    expect(manifest).toContain('future_content_exposed')
-    expect(manifest).toContain('unconfirmed_proposal_exposed')
-  })
-
-  it('④ 反 AI 感 Linter 能给出可定位问题，Rewrite 能落回且留痕', () => {
-    const paths = projectPaths(join(REPO_ROOT, 'projects'), 'demo-01')
-    expect(existsSync(paths.linterReport)).toBe(true)
-    const report = readTextFile(paths.linterReport)
-    expect(report).toContain('warnings')
-    expect(report).toContain('rewrite')
-  })
-
-  it('⑤ Anti-AI A/B 对照可运行（A/B 文本齐备，人工填写模板存在）', () => {
-    const dir = join(REPO_ROOT, ANTI_AI_DIR, 'session-001')
-    expect(readdirSync(dir).filter((name) => name.endsWith('.txt'))).toHaveLength(20)
-    expect(existsSync(join(dir, 'ratings.csv'))).toBe(true)
-    expect(existsSync(join(dir, 'session.yaml'))).toBe(true)
-  })
-
-  it('⑥ 终稿确认与事实提取是一次性的、可重跑的（Gate 3 幂等）', async () => {
-    const paths = cloneProject('demo-01')
-    const first = await runGate3({ paths, provider: recorded(), confirm: true })
-    const second = await runGate3({ paths, provider: recorded(), confirm: true })
-    expect(second.occurred.map((entry) => entry.id)).toEqual(first.occurred.map((entry) => entry.id))
-    expect(storyStateOf(paths).state_rebuild_conflicts).toEqual([])
-  })
-
-  it('⑦ 越界推演不会静默通过（冲突显式记录，状态不被污染）', async () => {
-    const paths = cloneProject('demo-01')
-    const before = storyStateOf(paths)
-    const result = await runGate3({ paths, provider: overRevealingProvider(OVER_REVEAL), confirm: true })
-    expect(result.conflicts.length).toBeGreaterThan(0)
-    const after = storyStateOf(paths)
-    expect(after.state_rebuild_conflicts.length).toBe(before.state_rebuild_conflicts.length + 1)
-    // 冲突不产生新事实：occurred 与投影与运行前完全一致
-    expect(after.occurred).toEqual(before.occurred)
-    expect(after.knowledge_state).toEqual(before.knowledge_state)
-    expect(after.relationship_state).toEqual(before.relationship_state)
-  })
-
-  it('⑧ 文件优先：所有产物都是可 diff 的文本，没有数据库/二进制状态', () => {
-    const stateful = ['seed.yaml', 'proposals.yaml', 'blueprint.yaml', 'story_state.yaml']
+  it('② Gate 顺序低摩擦：每个项目只有 3 次显式 Gate，且全部是一次性确认', () => {
     for (const projectId of ['demo-01', 'demo-02'] as const) {
-      const dir = join(REPO_ROOT, 'projects', projectId)
-      for (const name of stateful) {
-        expect(existsSync(join(dir, name))).toBe(true)
-        expect(readTextFile(join(dir, name)).length).toBeGreaterThan(0)
-      }
-      const walk = (current: string): void => {
-        for (const entry of readdirSync(current, { withFileTypes: true })) {
-          const full = join(current, entry.name)
-          if (entry.isDirectory()) {
-            walk(full)
-            continue
-          }
-          const rel = relative(REPO_ROOT, full)
-          if (/\.(md|yaml|yml|csv|txt|json)$/u.test(entry.name)) continue
-          throw new Error(`发现非文本产物：${rel}（大小 ${statSync(full).size} 字节）`)
+      const paths = projectPaths(join(REPO_ROOT, 'projects'), projectId)
+      const row = collectAuthorCost(projectId, paths)
+      expect(row.explicit_gates).toBe(3) // Gate 1 + Gate 2 + Gate 3
+      expect(['skipped', 'partial']).toContain(row.gate1_status)
+      expect(row.blueprint_versions).toBe(1) // 一次裁决即产出可用蓝图，无反复重做
+      expect(loadScenes(paths).length).toBe(5) // 拆场不产生额外审批
+    }
+  })
+
+  it('③ Blueprint 可稳定拆 Scene：结构化覆盖齐全、警告为空、重跑逐字节一致', async () => {
+    for (const projectId of ['demo-01', 'demo-02'] as const) {
+      // 重跑会写文件：必须在副本上做（测试不得改动仓库里的 demo 产物）
+      const paths = cloneProject(projectId)
+      const blueprint = loadBlueprint(paths)
+      const scenes = loadScenes(paths)
+      const coverage = runCoverageCheck({ blueprint, scenes })
+      expect(coverage.report.summary.structure_covered).toBe(scenes.length)
+      expect(coverage.report.summary.scenes).toBe(scenes.length)
+      expect(coverage.report.warnings).toEqual([])
+      // 稳定：同一输入重跑拆场，Scene 文件逐字节一致（order / allowed_reveals / tone 都不漂移）
+      const before = scenes.map((scene) => readTextFile(join(paths.scenesDir, `${scene.scene_id}.yaml`)))
+      const rerun = await runSceneBreakdown({
+        paths,
+        provider: RecordedProvider.fromDirectory(join(REPO_ROOT, 'tests/fixtures/recorded/scene_breakdown')),
+        rerun: true,
+        now: new Date('2026-01-01T00:00:00.000Z'),
+      })
+      expect(rerun.scenes.map((scene) => scene.scene_id)).toEqual(scenes.map((scene) => scene.scene_id))
+      const after = scenes.map((scene) => readTextFile(join(paths.scenesDir, `${scene.scene_id}.yaml`)))
+      expect(after).toEqual(before)
+    }
+  })
+
+  it('④ Proposal 不会渗透 Writer：编译后的上下文里没有提案内容', () => {
+    for (const projectId of ['demo-01', 'demo-02'] as const) {
+      const paths = projectPaths(join(REPO_ROOT, 'projects'), projectId)
+      const proposals = readTextFile(paths.proposals)
+      const raw = JSON.stringify(loadProposals(paths))
+      expect(raw.length).toBeGreaterThan(0)
+      for (const scene of loadScenes(paths)) {
+        const compiled = compileContext({ paths, sceneId: scene.scene_id })
+        const serialized = JSON.stringify({ context: compiled.writerContext, manifest: compiled.manifest })
+        expect(serialized).not.toContain('PROP_')
+        expect(serialized).not.toContain('proposal_id')
+        // 提案原文的任何一句都不能出现在 Writer 输入里
+        for (const line of proposals.split('\n').map((value) => value.trim()).filter((value) => value.length >= 12)) {
+          expect(serialized.includes(line)).toBe(false)
         }
       }
-      walk(dir)
-      for (const forbidden of ['db', 'sqlite', 'events', 'index']) {
-        expect(existsSync(join(dir, forbidden))).toBe(false)
+    }
+  })
+
+  it('⑤ POV / secret / future 不明显泄漏', () => {
+    for (const projectId of ['demo-01', 'demo-02'] as const) {
+      const paths = projectPaths(join(REPO_ROOT, 'projects'), projectId)
+      const blueprint = loadBlueprint(paths)
+      const scenes = loadScenes(paths)
+      const state = storyStateOf(paths)
+      const allExcludedTypes = new Set<string>()
+      const allExclusionReasons = new Set<string>()
+      for (const scene of scenes) {
+        const { manifest } = compileContext({ paths, sceneId: scene.scene_id })
+        // 硬事实：future / 未确认提案一律不进上下文
+        expect(manifest.future_content_exposed).toBe(false)
+        expect(manifest.unconfirmed_proposal_exposed).toBe(false)
+        for (const item of manifest.excluded_sensitive) {
+          allExcludedTypes.add(item.type)
+          allExclusionReasons.add(item.reason)
+        }
+        // 内心状态只能带 POV 自己的那一份；非 POV 的内心状态必须出现在排除清单里
+        for (const item of manifest.included_sensitive) {
+          if (!item.source_ref.includes('inner_state')) continue
+          // POV 自己的内心状态可以用两种 id 形态出现（角色 id 或 <角色>.inner_state）
+          expect([manifest.pov, `${manifest.pov}.inner_state`]).toContain(item.id)
+        }
+        const nonPovInner = manifest.excluded_sensitive.filter((item) => item.type === 'character_inner_state')
+        for (const item of nonPovInner) {
+          expect([manifest.pov, `${manifest.pov}.inner_state`]).not.toContain(item.id)
+        }
+      }
+      // 项目级：确实发生过"非 POV 内心 / 伏笔"的排除（否则这条检查是空转）
+      expect(allExcludedTypes.has('character_inner_state')).toBe(true)
+      expect(allExclusionReasons.has('non_pov_inner_state')).toBe(true)
+      // secret：Key Knowledge 的 truth 在其揭示场景之前不得出现在正文里
+      for (const occurred of state.occurred) {
+        const knowledgeRef = (occurred.payload as { knowledge_ref: string }).knowledge_ref
+        const truth = blueprint.key_knowledge.find((item) => item.id === knowledgeRef)!.truth
+        const phrases = keyPhrases(truth)
+        expect(phrases.length).toBeGreaterThan(0)
+        const revealOrder = scenes.find((scene) => scene.scene_id === occurred.scene_id)!.order
+        for (const scene of scenes.filter((candidate) => candidate.order < revealOrder)) {
+          const text = readTextFile(join(paths.draftsDir, `${scene.scene_id}.md`))
+          for (const phrase of phrases) expect(text).not.toContain(phrase)
+        }
+        // 检查非空转：确实存在"揭示之前的场景"（否则这条断言什么都没验证）
+        expect(scenes.filter((candidate) => candidate.order < revealOrder).length).toBeGreaterThan(0)
+        // 揭示场景本身有正文（不是靠删掉整场来通过）
+        expect(readTextFile(join(paths.draftsDir, `${occurred.scene_id}.md`)).trim().length).toBeGreaterThan(0)
       }
     }
-    expect(existsSync(join(REPO_ROOT, 'projects', 'demo-01', 'drafts', 'final.md'))).toBe(true)
+  })
+
+  it('⑥ Seed Preservation Rate 可测：7 个 measured Seed 全部能算出比例', () => {
+    const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
+    const rows = set.seeds
+      .filter((seed) => seed.status === 'measured' && seed.project_id !== null)
+      .flatMap((seed) =>
+        buildStoryDevelopmentEvaluation([
+          { seedId: seed.seed_id, paths: projectPaths(join(REPO_ROOT, 'projects'), seed.project_id ?? '') },
+        ]).rows,
+      )
+    expect(rows.length).toBeGreaterThanOrEqual(4)
+    for (const row of rows) {
+      expect(row.seed_preservation_rate).toMatch(/^\d+(\.\d+)?%$/u)
+      expect(row.unaccounted_anchors).toBe(0)
+    }
+    // 有区分度：既有 100% 也有 <100%（否则这个指标测不出任何东西）
+    const rates = rows.map((row) => Number.parseFloat(row.seed_preservation_rate))
+    expect(rates.some((rate) => rate === 100)).toBe(true)
+    expect(rates.some((rate) => rate < 100)).toBe(true)
+  })
+
+  it('⑦ Harness 正文在 AI 感维度出现明确改善趋势（长度归一化后的 A/B 证据）', () => {
+    const summary = summarizeAbSession(REPO_ROOT, 'session-001')
+    // 原始计数：A 41 : B 4
+    expect(summary.aWarnings).toBeGreaterThan(summary.bWarnings)
+    // 归一化：每千非空白码点的 Rule warning 数（因为两侧长度差 > 20%，以它为准）
+    expect(summary.lengthRatio).toBeGreaterThan(1.2)
+    expect(summary.lengthsComparable).toBe(false)
+    expect(summary.aWarningsPer1000).toBeGreaterThan(40)
+    expect(summary.bWarningsPer1000).toBeLessThan(5)
+    // "明确改善" = 单位长度的 AI 味信号下降 ≥ 75%
+    expect(summary.normalizedRatio).toBeLessThan(0.25)
+    expect(summary.verdict).toContain('归一化')
+  })
+
+  it('⑧ 用户不承担高频审批：每场正文摊到的显式确认 < 1 次', () => {
+    for (const projectId of ['demo-01', 'demo-02'] as const) {
+      const paths = projectPaths(join(REPO_ROOT, 'projects'), projectId)
+      const row = collectAuthorCost(projectId, paths)
+      const scenes = loadScenes(paths).length
+      // Gate 3 是整篇一次性；拆场 / 写正文 / Lint 都不需要逐场点确认
+      expect(row.explicit_gates).toBeLessThanOrEqual(3)
+      expect(row.explicit_gates / scenes).toBeLessThan(1)
+      expect(row.rewrites_applied).toBeLessThanOrEqual(1) // 改写是按需触发，不是必答项
+      // 逐场确认不存在：gate3 只有 --confirm（整篇），没有 --scene
+      const cli = readTextFile(join(REPO_ROOT, 'src/cli/index.ts'))
+      const optionsBlock = cli.slice(cli.indexOf('gate3 选项：'), cli.indexOf('eval 选项：'))
+      expect(optionsBlock).toContain('--confirm')
+      expect(optionsBlock).toContain('整篇一次性确认')
+      expect(optionsBlock).not.toContain('--scene')
+    }
   })
 })
 

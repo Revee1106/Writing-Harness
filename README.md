@@ -136,6 +136,7 @@ pnpm harness final show demo-02             # 显示 final.md 状态（长度 / 
 pnpm harness eval story-development         # Story Development Test Set（≥10 Seed）→ results.csv
 pnpm harness eval author-cost               # Author Cost（§31.3）→ author-cost.csv
 pnpm harness eval ab-generate               # Anti-AI A/B 对照（10 Scene Intent）→ session-00N/ + ratings.csv
+pnpm harness eval ab-report                 # A/B 归一化摘要：平均码点 + 每千码点 warning（不做质量判定）
 
 # fixture 与 Seed 文本 / Gate 1 状态一致性（离线回放依赖）
 pnpm fixtures:check
@@ -146,6 +147,16 @@ pnpm fixtures:refresh
 `--provider openai-compat`（需要 `HARNESS_LLM_BASE_URL` / `HARNESS_LLM_API_KEY` / `HARNESS_LLM_MODEL`）。
 
 Node 24 可直接执行 TypeScript，CLI 无需构建步骤。
+
+## 演示项目（demo-01 / demo-02）
+
+仓库里带两个**离线可复现**的演示项目（`projects/demo-01`、`projects/demo-02`），
+用于端到端回归与评估资产：
+
+> ⚠️ **demo 是压缩样本，不是产品级输出**：每场正文约 **110–200 码点**（两个 demo 的
+> `drafts/final.md` 分别约 818 / 824 码点），目标是让整条链路在离线 fixture 下秒级复跑，
+> 而不是展示成稿质量。真实使用时 `project.target_length` 与逐场 `scene.target_length`
+> 决定篇幅，产品级短篇为 1,000–30,000 字符。
 
 ## 进度
 
@@ -165,6 +176,9 @@ Node 24 可直接执行 TypeScript，CLI 无需构建步骤。
 
 交付物：
 - 命令面：`init / seed / gate1 / develop / gate2 / breakdown / context / style / write / lint / rewrite / gate3 / final / state / coverage / eval`
-- 评估资产：`tests/fixtures/evaluation/story-development/`（≥10 Seed 测试集 + 两类 CSV）与
-  `tests/fixtures/evaluation/anti-ai/session-001/`（10 组 A/B 对照 + 人工评分模板）
-- 已知缺口：见 `docs/OPEN-QUESTIONS.md` 的 OQ-59 / OQ-60 / OQ-61
+- 评估资产：`tests/fixtures/evaluation/story-development/`（10 Seed 测试集，measured 7 = 2 项目型 +
+  5 fixture 型（情感 / 悬疑 / 温情 / 现实 / 轻科幻），corpus_only 3 = 开放结局 / 单场景 / 强反转）
+  与 `tests/fixtures/evaluation/anti-ai/session-001/`（10 组 A/B 对照 + 人工评分模板）
+- A/B 归一化（封版证据）：A 86 码点/场、B 157 码点/场；每千码点 Rule warning **A 47.56 : B 2.55**
+  （B/A = 0.054），见 `pnpm harness eval ab-report`
+- 待回写三份冻结文档的条目：见 `docs/DECISIONS.md` 的**封版后文档维护清单**（30 条）

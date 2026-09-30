@@ -10,6 +10,7 @@ import { loadScenes, loadStoryState } from '../scenes/service.ts'
 import type { Scene } from '../schema/scene.ts'
 import { compileContext } from '../context/compiler.ts'
 import { checkProposalDistinctness, computeSeedPreservationRate } from '../schema/proposal.ts'
+import type { Proposal } from '../schema/proposal.ts'
 import { loadLinterReport, runRuleLinter } from '../linter/rule-linter.ts'
 import { listDraftFiles } from '../state/gate3.ts'
 import { loadElevationPhrases, loadTemplateActions } from '../schema/anti-ai-vocab.ts'
@@ -112,7 +113,13 @@ export const STORY_DEVELOPMENT_SEED_SET_FILE = join(STORY_DEVELOPMENT_DIR, 'seed
 export interface StoryDevelopmentSeedEntry {
   readonly seed_id: string
   readonly status: 'measured' | 'corpus_only'
+  /** project 型 measured：指向 `projects/<project_id>/`。 */
   readonly project_id: string | null
+  /** fixture 型（measured 或 corpus_only）：指向 `tests/fixtures/seeds/...` 的 Seed 文本。 */
+  readonly seed_file: string | null
+  readonly gate1_ops: readonly unknown[] | null
+  /** 题材标签（Story 10 C 节要求的类型矩阵）。 */
+  readonly genre: string
   readonly title: string
   readonly text: string
   readonly pov_hint: string
@@ -127,6 +134,9 @@ export interface StoryDevelopmentSeedSet {
   readonly seed_count_minimum: number
   readonly seeds: readonly StoryDevelopmentSeedEntry[]
   readonly measuredCount: number
+  readonly projectBackedCount: number
+  readonly fixtureBackedCount: number
+  readonly corpusOnlyCount: number
 }
 
 /** Seed Schema 对 `story_seed.text` 的长度约束（Story 1 已冻结）。 */
@@ -147,6 +157,9 @@ export function loadStoryDevelopmentSeedSet(repoRoot: string = REPO_ROOT_FALLBAC
       seed_id?: string
       status?: string
       project_id?: string
+      seed_file?: string
+      gate1_ops?: unknown[]
+      genre?: string
       title?: string
       text?: string
       pov_hint?: string
@@ -162,8 +175,22 @@ export function loadStoryDevelopmentSeedSet(repoRoot: string = REPO_ROOT_FALLBAC
     if (status !== 'measured' && status !== 'corpus_only') {
       throw new Error(`Story Development Test Set：${label} 的 status 必须是 measured 或 corpus_only`)
     }
-    const text = entry.text ?? ''
-    if (text.trim() === '') throw new Error(`Story Development Test Set：${label} 缺少 text`)
+    const seedFile = entry.seed_file ?? null
+    // fixture 型条目的文本直接从 Seed 文件读取：测试集里的文本与真正喂给模型的输入
+    // 必须是同一份（不复制粘贴，避免两处漂移）。
+    let text = entry.text ?? ''
+    if (seedFile !== null) {
+      const seedPath = join(repoRoot, seedFile)
+      if (!existsSync(seedPath)) {
+        throw new Error(`Story Development Test Set：${label} 引用的 Seed 文件不存在：${seedFile}`)
+      }
+      const fromFile = readTextFile(seedPath)
+      if (text.trim() !== '' && text !== fromFile) {
+        throw new Error(`Story Development Test Set：${label} 的 text 与 ${seedFile} 不一致`)
+      }
+      text = fromFile
+    }
+    if (text.trim() === '') throw new Error(`Story Development Test Set：${label} 缺少 text 或 seed_file`)
     if (countAllCodePoints(text) > SEED_TEXT_MAX_CHARS) {
       throw new Error(`Story Development Test Set：${label} 的 text 超过 Seed Schema 上限 ${SEED_TEXT_MAX_CHARS} 字符`)
     }
@@ -174,13 +201,16 @@ export function loadStoryDevelopmentSeedSet(repoRoot: string = REPO_ROOT_FALLBAC
     if (expectation.distinctness_required !== true) {
       throw new Error(`Story Development Test Set：${label} 必须要求差异度（distinctness_required: true）`)
     }
-    if (status === 'measured' && (entry.project_id ?? '') === '') {
-      throw new Error(`Story Development Test Set：${label} 标记为 measured 时必须给出 project_id`)
+    if (status === 'measured' && (entry.project_id ?? '') === '' && seedFile === null) {
+      throw new Error(`Story Development Test Set：${label} 标记为 measured 时必须给出 project_id 或 seed_file`)
     }
     return {
       seed_id: label,
       status,
       project_id: entry.project_id ?? null,
+      seed_file: seedFile,
+      gate1_ops: entry.gate1_ops ?? null,
+      genre: entry.genre ?? '',
       title: entry.title ?? '',
       text,
       pov_hint: entry.pov_hint ?? 'single',
@@ -195,11 +225,20 @@ export function loadStoryDevelopmentSeedSet(repoRoot: string = REPO_ROOT_FALLBAC
   if (seeds.length < minimum) {
     throw new Error(`Story Development Test Set：只有 ${seeds.length} 个 Seed，少于要求的 ${minimum} 个`)
   }
+  const measured = seeds.filter((seed) => seed.status === 'measured')
+  for (const seed of measured) {
+    if (seed.project_id === null && seed.seed_file === null) {
+      throw new Error(`Story Development Test Set：measured 的 ${seed.seed_id} 既没有 project_id 也没有 seed_file`)
+    }
+  }
   return {
     set_id: set,
     seed_count_minimum: minimum,
     seeds,
-    measuredCount: seeds.filter((seed) => seed.status === 'measured').length,
+    measuredCount: measured.length,
+    projectBackedCount: measured.filter((seed) => seed.project_id !== null).length,
+    fixtureBackedCount: measured.filter((seed) => seed.project_id === null).length,
+    corpusOnlyCount: seeds.length - measured.length,
   }
 }
 
@@ -217,17 +256,23 @@ export interface StoryDevelopmentRow {
   readonly unaccounted_anchors: number
 }
 
-/** 从已跑完 Gate 2 的项目生成 Story Development 评估行（离线，可复跑）。 */
-export function collectStoryDevelopmentRows(paths: ProjectPaths, seedId: string): StoryDevelopmentRow[] {
-  const proposals = loadProposals(paths)
-  const seed = loadSeed(paths)
-  const anchors = seed.story_seed.raw_seed_anchor_ids
-  const distinctness = checkProposalDistinctness(proposals.proposals)
-  return proposals.proposals.map((proposal) => {
-    const rate = computeSeedPreservationRate(proposal, anchors)
+/**
+ * 由"提案集合 + Seed 锚点"构造评估行。
+ *
+ * 项目（Gate 2 已跑完）与 fixture（离线回放 5 个题材 Seed）共用这一条计算路径，
+ * 保证两类 measured Seed 的口径完全一致。
+ */
+export function buildStoryDevelopmentRows(
+  seedId: string,
+  proposals: readonly Proposal[],
+  anchorIds: readonly string[],
+): StoryDevelopmentRow[] {
+  const distinctness = checkProposalDistinctness(proposals)
+  return proposals.map((proposal) => {
+    const rate = computeSeedPreservationRate(proposal, anchorIds)
     return {
       seed_id: seedId,
-      proposal_count: proposals.proposals.length,
+      proposal_count: proposals.length,
       distinctness_ok: distinctness.ok,
       proposal_id: proposal.proposal_id,
       seed_preservation_rate: rate.rate_percent === null ? 'n/a' : `${rate.rate_percent}%`,
@@ -239,6 +284,76 @@ export function collectStoryDevelopmentRows(paths: ProjectPaths, seedId: string)
       unaccounted_anchors: rate.unaccounted_anchor_ids.length,
     }
   })
+}
+
+/** 从已跑完 Gate 2 的项目生成 Story Development 评估行（离线，可复跑）。 */
+export function collectStoryDevelopmentRows(paths: ProjectPaths, seedId: string): StoryDevelopmentRow[] {
+  const proposals = loadProposals(paths)
+  const seed = loadSeed(paths)
+  return buildStoryDevelopmentRows(seedId, proposals.proposals, seed.story_seed.raw_seed_anchor_ids)
+}
+
+export interface FixtureSeedMeasurement {
+  readonly seed_id: string
+  readonly seed_file: string
+  readonly rows: readonly StoryDevelopmentRow[]
+  readonly proposal_count: number
+  readonly distinctness_ok: boolean
+  readonly anchor_count: number
+  readonly provider: string
+}
+
+/**
+ * 离线量测"fixture Seed"（Story 10 C 节：情感 / 悬疑 / 温情 / 现实 / 轻科幻）。
+ *
+ * 走的是**与产品完全相同的代码路径**：`seed_interpreter` → Gate 1 → `story_developer`，
+ * 只是模型回应来自 `tests/fixtures/recorded/`（离线回放）。因此这些指标是真实的
+ * "Seed → 提案"指标，不是硬编码数字。
+ *
+ * 为什么需要它：这 5 类 Seed 没有独立的 `projects/<id>/` 目录（评估资产不得写进
+ * `projects/`，见 Story 10 起始会裁决），但它们是 Story Development Test Set 的
+ * measured 成员。
+ */
+export async function measureFixtureSeed(options: {
+  readonly repoRoot: string
+  readonly seedId: string
+  readonly seedFile: string
+  readonly gate1Ops?: readonly unknown[] | undefined
+}): Promise<FixtureSeedMeasurement> {
+  const [{ readFileSync }, { runSeedInterpreter }, { applyGate1Operations, seedFromInterpreterResult }, { runStoryDeveloper }, { RecordedProvider }] =
+    await Promise.all([
+      import('node:fs'),
+      import('../interpreter/interpreter.ts'),
+      import('../gate1/operations.ts'),
+      import('../developer/developer.ts'),
+      import('../providers/recorded.ts'),
+    ])
+  const seedPath = join(options.repoRoot, options.seedFile)
+  if (!existsSync(seedPath)) {
+    throw new Error(`Story Development Test Set：找不到 Seed 文件 ${options.seedFile}`)
+  }
+  const rawInput = readFileSync(seedPath, 'utf8')
+  const interpreter = await runSeedInterpreter({
+    provider: RecordedProvider.fromDirectory(join(options.repoRoot, 'tests/fixtures/recorded/seed-interpreter')),
+    rawInput,
+  })
+  const candidate = seedFromInterpreterResult(rawInput, interpreter)
+  const ops = (options.gate1Ops ?? [{ kind: 'skip' }]) as Parameters<typeof applyGate1Operations>[1]
+  const seed = applyGate1Operations(candidate, ops).seed
+  const result = await runStoryDeveloper({
+    provider: RecordedProvider.fromDirectory(join(options.repoRoot, 'tests/fixtures/recorded/story_developer')),
+    seed,
+  })
+  const rows = buildStoryDevelopmentRows(options.seedId, result.file.proposals, seed.story_seed.raw_seed_anchor_ids)
+  return {
+    seed_id: options.seedId,
+    seed_file: options.seedFile,
+    rows,
+    proposal_count: result.file.proposals.length,
+    distinctness_ok: checkProposalDistinctness(result.file.proposals).ok,
+    anchor_count: seed.story_seed.raw_seed_anchor_ids.length,
+    provider: result.provider,
+  }
 }
 
 export interface StoryDevelopmentEvaluation {
@@ -430,6 +545,97 @@ export function generateAbSession(options: AbGenerateOptions): AbSession {
     { headerComments: ['Anti-AI A/B 对照（Story 10 D）：A = 普通 Prompt，B = Writing Harness'] },
   )
   return { session_id: options.sessionId, session_dir: sessionDir, groups, csvPath, metadataPath }
+}
+
+/** ±20% 之内视为"两侧长度接近"，此时原始 warning 计数可直接比较。 */
+export const AB_LENGTH_TOLERANCE = 0.2
+
+export interface AbNormalization {
+  readonly session_id: string
+  readonly groupCount: number
+  readonly aCodePoints: number
+  readonly bCodePoints: number
+  readonly aAvgCodePoints: number
+  readonly bAvgCodePoints: number
+  /** A/B 平均长度之比（A 为基准）。 */
+  readonly lengthRatio: number
+  readonly lengthsComparable: boolean
+  readonly aWarnings: number
+  readonly bWarnings: number
+  /** 归一化：每 1000 个非空白码点的 Rule Linter warning 数。 */
+  readonly aWarningsPer1000: number
+  readonly bWarningsPer1000: number
+  readonly normalizedRatio: number
+  /** 结论句（写给报告，不做自动评分）。 */
+  readonly verdict: string
+}
+
+function per1000(warnings: number, codePoints: number): number {
+  if (codePoints === 0) return 0
+  return Math.round((warnings / codePoints) * 1000 * 100) / 100
+}
+
+/**
+ * A/B 对照的**归一化**摘要（Story 10 封版裁决"4"）。
+ *
+ * 为什么需要：A 侧（普通 Prompt）与 B 侧（Harness）的平均长度如果差得远，
+ * "A=41 : B=4" 这种原始计数就不公平。规则：
+ * - 两侧平均码点差在 ±20% 内 → 原始计数直接可信；
+ * - 否则以"每千码点 warning 数"为准；
+ * - 两种口径都给出，判定不隐藏。
+ */
+export function summarizeAbSession(
+  repoRoot: string,
+  sessionId: string,
+  options: { readonly vocabRoot?: string | undefined } = {},
+): AbNormalization {
+  const sessionDir = join(repoRoot, ANTI_AI_DIR, sessionId)
+  const metadata = readYamlFile(join(sessionDir, 'session.yaml')) as {
+    session_id?: string
+    groups?: { group_id?: string; text_a_file?: string; text_b_file?: string }[]
+  }
+  const groups = metadata.groups ?? []
+  let aCodePoints = 0
+  let bCodePoints = 0
+  let aWarnings = 0
+  let bWarnings = 0
+  for (const group of groups) {
+    const aText = readTextFile(join(sessionDir, group.text_a_file ?? ''))
+    const bText = readTextFile(join(sessionDir, group.text_b_file ?? ''))
+    aCodePoints += countNonWhitespaceCodePoints(aText)
+    bCodePoints += countNonWhitespaceCodePoints(bText)
+    aWarnings += countRuleWarnings(aText, options.vocabRoot ?? repoRoot)
+    bWarnings += countRuleWarnings(bText, options.vocabRoot ?? repoRoot)
+  }
+  const groupCount = groups.length
+  const aAvgCodePoints = groupCount === 0 ? 0 : Math.round(aCodePoints / groupCount)
+  const bAvgCodePoints = groupCount === 0 ? 0 : Math.round(bCodePoints / groupCount)
+  const lengthRatio = aCodePoints === 0 ? 0 : Math.round((bCodePoints / aCodePoints) * 1000) / 1000
+  const lengthsComparable = Math.abs(lengthRatio - 1) <= AB_LENGTH_TOLERANCE
+  const aWarningsPer1000 = per1000(aWarnings, aCodePoints)
+  const bWarningsPer1000 = per1000(bWarnings, bCodePoints)
+  const normalizedRatio =
+    aWarningsPer1000 === 0 ? 0 : Math.round((bWarningsPer1000 / aWarningsPer1000) * 1000) / 1000
+  const basis = lengthsComparable
+    ? `两侧平均长度相差 ${Math.round(Math.abs(lengthRatio - 1) * 100)}%（≤${AB_LENGTH_TOLERANCE * 100}%），原始计数直接可信`
+    : `两侧平均长度相差 ${Math.round(Math.abs(lengthRatio - 1) * 100)}%（>${AB_LENGTH_TOLERANCE * 100}%），以每千码点归一化结果为准`
+  const verdict = `${basis}：A ${aWarnings}/${aCodePoints} 码点 = ${aWarningsPer1000}/千码点，B ${bWarnings}/${bCodePoints} 码点 = ${bWarningsPer1000}/千码点（B/A = ${normalizedRatio}）`
+  return {
+    session_id: metadata.session_id ?? sessionId,
+    groupCount,
+    aCodePoints,
+    bCodePoints,
+    aAvgCodePoints,
+    bAvgCodePoints,
+    lengthRatio,
+    lengthsComparable,
+    aWarnings,
+    bWarnings,
+    aWarningsPer1000,
+    bWarningsPer1000,
+    normalizedRatio,
+    verdict,
+  }
 }
 
 export function nextSessionId(repoRoot: string): string {

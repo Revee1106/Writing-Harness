@@ -2,6 +2,7 @@ import { cpSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  AB_LENGTH_TOLERANCE,
   ANTI_AI_CSV_COLUMNS,
   AUTHOR_COST_CSV_COLUMNS,
   STORY_DEVELOPMENT_CSV_COLUMNS,
@@ -10,9 +11,12 @@ import {
   collectStoryDevelopmentRows,
   countRuleWarnings,
   draftTextsOf,
+  ANTI_AI_DIR,
   generateAbSession,
   loadStoryDevelopmentSeedSet,
+  measureFixtureSeed,
   nextSessionId,
+  summarizeAbSession,
   toCsv,
 } from '../../src/eval/evaluation.ts'
 import {
@@ -28,6 +32,7 @@ import { loadScenes, loadStoryState } from '../../src/scenes/service.ts'
 import { projectPaths } from '../../src/io/paths.ts'
 import type { Scene } from '../../src/schema/scene.ts'
 import { readTextFile, readYamlFile } from '../../src/io/yaml.ts'
+import { countAllCodePoints } from '../../src/core/text.ts'
 import { makeTempDir, REPO_ROOT, type TempDir } from '../helpers/tmp.ts'
 
 /**
@@ -273,6 +278,8 @@ describe('D：Story Development Test Set（≥10 Seed）', () => {
     expect(set.set_id).toBe('story-development-test-set')
     expect(set.seed_count_minimum).toBeGreaterThanOrEqual(10)
     expect(set.seeds.length).toBeGreaterThanOrEqual(10)
+    expect(set.measuredCount).toBe(set.projectBackedCount + set.fixtureBackedCount)
+    expect(set.corpusOnlyCount).toBe(set.seeds.length - set.measuredCount)
   })
 
   it('每个 Seed 都有唯一 id、非空文本、≥2 提案与差异度要求', () => {
@@ -286,13 +293,13 @@ describe('D：Story Development Test Set（≥10 Seed）', () => {
       expect(seed.expectation.proposal_count_min).toBeGreaterThanOrEqual(2)
       expect(seed.expectation.distinctness_required).toBe(true)
       expect(['measured', 'corpus_only']).toContain(seed.status)
-      if (seed.status === 'measured') expect(seed.project_id).toBeTruthy()
+      if (seed.status === 'measured') expect(seed.project_id !== null || seed.seed_file !== null).toBe(true)
     }
   })
 
   it('被标记为 measured 的 Seed 都能在真实项目里量出 Proposal 指标', () => {
     const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
-    const measured = set.seeds.filter((seed) => seed.status === 'measured')
+    const measured = set.seeds.filter((seed) => seed.status === 'measured' && seed.project_id !== null)
     expect(measured.length).toBeGreaterThan(0)
     const rows = measured.flatMap((seed) =>
       collectStoryDevelopmentRows(projectPaths(join(REPO_ROOT, 'projects'), seed.project_id ?? ''), seed.seed_id),
@@ -311,6 +318,48 @@ describe('D：Story Development Test Set（≥10 Seed）', () => {
     )
     expect(evaluation.seedCount).toBe(measured.length)
     expect(evaluation.distinctnessAllOk).toBe(true)
+  })
+
+  it('fixture 型 measured Seed 走产品同一条代码路径离线量测（≥2 提案 / 差异度通过 / 无未记账锚点）', async () => {
+    const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
+    const fixtureSeeds = set.seeds.filter((seed) => seed.status === 'measured' && seed.seed_file !== null)
+    expect(fixtureSeeds.length).toBeGreaterThanOrEqual(5)
+    for (const seed of fixtureSeeds) {
+      const measured = await measureFixtureSeed({
+        repoRoot: REPO_ROOT,
+        seedId: seed.seed_id,
+        seedFile: seed.seed_file ?? '',
+      })
+      expect(measured.provider).toBe('recorded')
+      expect(measured.rows.length).toBe(measured.proposal_count)
+      expect(measured.proposal_count).toBeGreaterThanOrEqual(2)
+      expect(measured.distinctness_ok).toBe(true)
+      expect(measured.anchor_count).toBeGreaterThan(0)
+      expect(measured.rows.every((row) => row.unaccounted_anchors === 0)).toBe(true)
+      expect(measured.rows.every((row) => row.seed_preservation_rate.endsWith('%'))).toBe(true)
+    }
+  })
+
+  it('fixture 型 Seed 的 text 直接来自 Seed 文件（不复制粘贴，避免漂移）', () => {
+    const set = loadStoryDevelopmentSeedSet(REPO_ROOT)
+    for (const seed of set.seeds.filter((entry) => entry.seed_file !== null)) {
+      expect(seed.text).toBe(readTextFile(join(REPO_ROOT, seed.seed_file ?? '')))
+    }
+  })
+
+  it('引用了不存在的 Seed 文件时测试集加载失败（不静默降级）', () => {
+    const root = tempRoot()
+    const dir = join(root.dir, 'tests/fixtures/evaluation/story-development')
+    mkdirSync(dir, { recursive: true })
+    const entries = Array.from({ length: 10 }, (_, index) => {
+      const id = `SD_${String(index + 1).padStart(3, '0')}`
+      if (index === 0) {
+        return `  - seed_id: ${id}\n    status: measured\n    seed_file: tests/fixtures/seeds/story2/does-not-exist.txt\n    title: t\n    expectation:\n      proposal_count_min: 2\n      distinctness_required: true\n`
+      }
+      return `  - seed_id: ${id}\n    status: corpus_only\n    title: t\n    text: 一粒种子。\n    expectation:\n      proposal_count_min: 2\n      distinctness_required: true\n`
+    })
+    writeFileSync(join(dir, 'seeds.yaml'), `schema_version: '0.1'\nset_id: broken\nseed_count_minimum: 10\nseeds:\n${entries.join('')}`, 'utf8')
+    expect(() => loadStoryDevelopmentSeedSet(root.dir)).toThrow(/Seed 文件不存在/u)
   })
 
   it('损坏的测试集会被拒绝（不静默通过）', () => {
@@ -420,6 +469,43 @@ describe('E：Anti-AI A/B 测试集与 CSV 模板', () => {
     expect(rows[0]).toBe(ANTI_AI_CSV_COLUMNS.join(','))
     expect(rows[1]!.startsWith('G01,a,b,')).toBe(true)
     expect(rows).toHaveLength(2)
+  })
+
+  it('A/B 归一化：报告两侧平均码点数与每千码点 warning 数，并给出可比性判定', () => {
+    const summary = summarizeAbSession(REPO_ROOT, 'session-001')
+    expect(summary.groupCount).toBe(10)
+    expect(summary.aCodePoints).toBeGreaterThan(0)
+    expect(summary.bCodePoints).toBeGreaterThan(summary.aCodePoints)
+    expect(summary.aAvgCodePoints).toBe(Math.round(summary.aCodePoints / 10))
+    expect(summary.bAvgCodePoints).toBe(Math.round(summary.bCodePoints / 10))
+    expect(summary.aWarningsPer1000).toBeCloseTo((summary.aWarnings / summary.aCodePoints) * 1000, 2)
+    expect(summary.bWarningsPer1000).toBeCloseTo((summary.bWarnings / summary.bCodePoints) * 1000, 2)
+    // 长度比与判定一致（±20% 阈值）
+    expect(summary.lengthsComparable).toBe(Math.abs(summary.lengthRatio - 1) <= AB_LENGTH_TOLERANCE)
+    expect(summary.normalizedRatio).toBeCloseTo(summary.bWarningsPer1000 / summary.aWarningsPer1000, 2)
+    expect(summary.verdict).toContain(summary.lengthsComparable ? '原始计数直接可信' : '归一化结果为准')
+  })
+
+  it('归一化判定可切换：长度接近时以原始计数为准（阈值语义对称）', () => {
+    const root = tempRoot()
+    const dir = join(root.dir, ANTI_AI_DIR, 'session-900')
+    mkdirSync(dir, { recursive: true })
+    // A/B 长度相同（各 100 码点），A 侧 AI 味更重
+    const aText = '她深吸一口气，心中五味杂陈。' + '甲'.repeat(86)
+    const bText = '她把碗推过去。' + '乙'.repeat(91)
+    writeFileSync(join(dir, 'group-G01.a.txt'), aText, 'utf8')
+    writeFileSync(join(dir, 'group-G01.b.txt'), bText, 'utf8')
+    writeFileSync(
+      join(dir, 'session.yaml'),
+      ['session_id: session-900', 'groups:', '  - group_id: G01', '    text_a_file: group-G01.a.txt', '    text_b_file: group-G01.b.txt', ''].join('\n'),
+      'utf8',
+    )
+    const summary = summarizeAbSession(root.dir, 'session-900', { vocabRoot: REPO_ROOT })
+    expect(summary.groupCount).toBe(1)
+    expect(summary.aCodePoints).toBe(countAllCodePoints(aText) - 0)
+    expect(summary.lengthsComparable).toBe(true)
+    expect(summary.verdict).toContain('原始计数直接可信')
+    expect(summary.normalizedRatio).toBeLessThan(1)
   })
 
   it('countRuleWarnings 能区分明显 AI 味文本与人类文本', () => {

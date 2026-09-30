@@ -71,6 +71,8 @@ import {
   AUTHOR_COST_CSV_COLUMNS,
   STORY_DEVELOPMENT_CSV_COLUMNS,
   loadStoryDevelopmentSeedSet,
+  measureFixtureSeed,
+  summarizeAbSession,
   STORY_DEVELOPMENT_DIR,
   buildStoryDevelopmentEvaluation,
   collectAuthorCost,
@@ -123,7 +125,7 @@ import { normalizeForEvidence } from '../interpreter/interpreter.ts'
  *         lint / lint show（Story 8 Rule Linter；Story 9 LLM Linter）
  *         rewrite（Story 9，Local Rewrite + 局部二次 Linter）
  *         gate3 / final show（Story 10，Gate 3 + State Extractor）
- *         eval story-development / eval author-cost / eval ab-generate（Story 10，评估资产）
+ *         eval story-development / eval author-cost / eval ab-generate / eval ab-report（Story 10，评估资产）
  */
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..')
@@ -204,6 +206,7 @@ eval 选项：
   eval story-development [--projects demo-01,demo-02] [--out <path>]
   eval author-cost [--projects demo-01,demo-02] [--out <path>]
   eval ab-generate [--session <session-NNN>] [--projects demo-01,demo-02]
+  eval ab-report [--session session-001]    A/B 长度归一化摘要（不做质量判定）
 
 rewrite 选项：
   --scene <scene-###>     目标 Scene（必填）
@@ -1320,30 +1323,73 @@ function projectIdsOf(parsed: ParsedCli): string[] {
   return ['demo-01', 'demo-02']
 }
 
-function runEvalStoryDevelopment(parsed: ParsedCli): number {
+async function runEvalStoryDevelopment(parsed: ParsedCli): Promise<number> {
   const seedSet = loadStoryDevelopmentSeedSet(REPO_ROOT)
-  const projects = projectIdsOf(parsed).map((projectId) => ({
-    seedId: projectId,
-    paths: projectPaths(projectsRootOf(parsed), projectId),
+  const projectsRoot = projectsRootOf(parsed)
+  const projectSeeds = seedSet.seeds.filter((seed) => seed.status === 'measured' && seed.project_id !== null)
+  const fixtureSeeds = seedSet.seeds.filter((seed) => seed.status === 'measured' && seed.project_id === null)
+  const projects = projectSeeds.map((seed) => ({
+    seedId: seed.seed_id,
+    paths: projectPaths(projectsRoot, seed.project_id ?? ''),
   }))
   const evaluation = buildStoryDevelopmentEvaluation(projects)
-  const rows = evaluation.rows.map((row) => STORY_DEVELOPMENT_CSV_COLUMNS.map((column) => String(row[column])))
+  const measured = await Promise.all(
+    fixtureSeeds.map((seed) =>
+      measureFixtureSeed({
+        repoRoot: REPO_ROOT,
+        seedId: seed.seed_id,
+        seedFile: seed.seed_file ?? '',
+        gate1Ops: seed.gate1_ops ?? undefined,
+      }),
+    ),
+  )
+  const rows = [...evaluation.rows, ...measured.flatMap((entry) => entry.rows)].map((row) =>
+    STORY_DEVELOPMENT_CSV_COLUMNS.map((column) => String(row[column])),
+  )
   const csv = toCsv(STORY_DEVELOPMENT_CSV_COLUMNS, rows)
   const outRaw = parsed.values.out
   const outPath = typeof outRaw === 'string' ? resolve(outRaw) : join(REPO_ROOT, STORY_DEVELOPMENT_DIR, 'results.csv')
   writeTextFile(outPath, csv)
+  const distinctnessAllOk = evaluation.distinctnessAllOk && measured.every((entry) => entry.distinctness_ok)
   process.stdout.write(
-    `Story Development Test Set：${seedSet.seeds.length} 个 Seed（要求 ≥${seedSet.seed_count_minimum}，已跑完 Gate 2 的 ${seedSet.measuredCount} 个）\n`,
+    `Story Development Test Set：${seedSet.seeds.length} 个 Seed（要求 ≥${seedSet.seed_count_minimum}，measured ${seedSet.measuredCount} = 项目型 ${seedSet.projectBackedCount} + fixture 型 ${seedSet.fixtureBackedCount}）\n`,
   )
-  process.stdout.write(`  本次汇总：${evaluation.seedCount} 个项目 / ${evaluation.proposalCount} 个 Proposal\n`)
-  process.stdout.write(`  差异度全部通过：${evaluation.distinctnessAllOk ? '是' : '否'}\n`)
+  process.stdout.write(
+    `  项目型：${projectSeeds.map((seed) => `${seed.seed_id}(${seed.project_id})`).join(', ')} → ${evaluation.proposalCount} 个 Proposal\n`,
+  )
+  process.stdout.write(
+    `  fixture 型（离线回放 seed_interpreter → Gate 1 → story_developer）：${measured.map((entry) => `${entry.seed_id}(${entry.proposal_count} 提案 / ${entry.anchor_count} 锚点)`).join(', ')}\n`,
+  )
+  process.stdout.write(`  差异度全部通过：${distinctnessAllOk ? '是' : '否'}\n`)
   const corpusOnly = seedSet.seeds.filter((seed) => seed.status === 'corpus_only')
   if (corpusOnly.length > 0) {
     process.stdout.write(
-      `  仅有输入、尚无 fixture 覆盖：${corpusOnly.map((seed) => seed.seed_id).join(', ')}\n`,
+      `  仅输入、不产出指标（封版裁决接受）：${corpusOnly.map((seed) => `${seed.seed_id}(${seed.genre})`).join(', ')}\n`,
     )
   }
-  process.stdout.write(`已写入：${outPath}\n`)
+  process.stdout.write(`已写入：${outPath}（${rows.length} 行）\n`)
+  return 0
+}
+
+function runEvalAbReport(parsed: ParsedCli): number {
+  const sessionId = typeof parsed.values.session === 'string' ? parsed.values.session : 'session-001'
+  const summary = summarizeAbSession(REPO_ROOT, sessionId)
+  process.stdout.write(`Anti-AI A/B 归一化摘要：${summary.session_id}\n`)
+  process.stdout.write(`  分组数：${summary.groupCount}\n`)
+  process.stdout.write(
+    `  A 侧（普通 Prompt）：平均 ${summary.aAvgCodePoints} 码点/场，合计 ${summary.aCodePoints} 码点，Rule warning ${summary.aWarnings}\n`,
+  )
+  process.stdout.write(
+    `  B 侧（Writing Harness）：平均 ${summary.bAvgCodePoints} 码点/场，合计 ${summary.bCodePoints} 码点，Rule warning ${summary.bWarnings}\n`,
+  )
+  process.stdout.write(
+    `  长度比（B/A）：${summary.lengthRatio} → ${summary.lengthsComparable ? '长度接近（±20%），原始计数可信' : '长度不可比（>20%），以归一化结果为准'}\n`,
+  )
+  process.stdout.write(
+    `  归一化：A ${summary.aWarningsPer1000}/千码点，B ${summary.bWarningsPer1000}/千码点（B/A = ${summary.normalizedRatio}）\n`,
+  )
+  process.stdout.write(`  结论：${summary.verdict}\n`)
+  process.stdout.write('  说明：v0.1 不执行盲测、不自动评分；本命令只做长度归一化，不做质量判定\n')
   return 0
 }
 
@@ -1440,9 +1486,12 @@ function runEvalAbGenerate(parsed: ParsedCli): number {
 async function runEvalCommand(parsed: ParsedCli): Promise<number> {
   const sub = parsed.subcommand
   if (sub === 'story-development') return runEvalStoryDevelopment(parsed)
+  if (sub === 'ab-report') return runEvalAbReport(parsed)
   if (sub === 'author-cost') return runEvalAuthorCost(parsed)
   if (sub === 'ab-generate') return runEvalAbGenerate(parsed)
-  throw new UsageError(`未知子命令：eval ${sub ?? ''}（可用：story-development / author-cost / ab-generate）`)
+  throw new UsageError(
+    `未知子命令：eval ${sub ?? ''}（可用：story-development / author-cost / ab-generate / ab-report）`,
+  )
 }
 
 async function main(argv: string[]): Promise<number> {

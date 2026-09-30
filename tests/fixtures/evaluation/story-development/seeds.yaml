@@ -3,16 +3,21 @@
 # 用途：检验"同一个 Seed → 2~3 个提案"的**保真度**与**差异度**
 # （需求规格 §31.1；《架构设计》§34 P2 的"Seed 保真度"检查）。
 #
+# 封版裁决（Story 10 收尾，OQ-60）：
+# - 补齐 5 个 fixture：情感 / 悬疑 / 温情 / 现实 / 轻科幻（SD_003…SD_007）；
+# - 接受 3 个 corpus_only：开放结局 / 单场景 / 强反转（SD_008…SD_010）；
+# - measured 达到 7 个 = 2 个项目型（SD_001/SD_002）+ 5 个 fixture 型（SD_003…SD_007）。
+#
 # 边界（v0.1）：
 # - 本文件只是**测试集输入**，不进入任何项目目录（projects/ 不变）；
-# - `status: measured` 的 Seed 已跑完 Gate 2，指标由
-#   `pnpm harness eval story-development` 从项目状态汇总；
-# - `status: corpus_only` 的 Seed 只有输入，尚无离线 fixture 覆盖
-#   （离线 fixture 需要真实模型产出后才能录制），因此不产出指标行。
-#   这是 v0.1 的已知缺口，已记入 docs/OPEN-QUESTIONS.md（OQ-60）。
+# - `project_id` 型 measured：指标从 `projects/<project_id>/` 的 Gate 2 产物汇总；
+# - `seed_file` 型 measured：指标由**离线回放**走与产品相同的代码路径现算
+#   （`seed_interpreter` → Gate 1 → `story_developer`，fixture 在
+#   `tests/fixtures/recorded/`），因此不是硬编码数字；
+# - `corpus_only`：只有输入，不产出指标行（在 `eval story-development` 输出中显式列出）。
 #
 # 约束：
-# - 每个 Seed 的 `text` 必须满足 Story Seed Schema（1..500 字符，非空白）；
+# - 每个 Seed 的文本必须满足 Story Seed Schema（1..500 字符，非空白）；
 # - `expectation.distinctness_required` 恒为 true（差异度是硬门槛）；
 # - `expectation.proposal_count_min` 至少 2（Story 2 起的最低要求）。
 
@@ -23,6 +28,7 @@ seeds:
   - seed_id: SD_001
     status: measured
     project_id: demo-01
+    genre: 情感
     title: 一次性筷子
     text: 一对情侣因为一件小事争吵，女方提出分手。
     pov_hint: single
@@ -32,6 +38,7 @@ seeds:
   - seed_id: SD_002
     status: measured
     project_id: demo-02
+    genre: 悬疑
     title: 两层之间的电梯
     text: 两个人在电梯里被困了十分钟，谁也按不下那个按钮。
     pov_hint: dual
@@ -39,65 +46,73 @@ seeds:
       proposal_count_min: 3
       distinctness_required: true
   - seed_id: SD_003
-    status: corpus_only
-    title: 借来的伞
-    text: 一个女孩把同事的伞借走，后来又还了一把一样的。
+    status: measured
+    seed_file: tests/fixtures/seeds/story2/01-emotion.txt
+    genre: 情感
+    title: 情感（fixture）
     pov_hint: single
     expectation:
       proposal_count_min: 2
       distinctness_required: true
   - seed_id: SD_004
-    status: corpus_only
-    title: 迟到的电话
-    text: 一个男人删掉了一个没接的电话记录。
+    status: measured
+    seed_file: tests/fixtures/seeds/story2/02-mystery.txt
+    genre: 悬疑
+    title: 悬疑（fixture）
     pov_hint: single
     expectation:
       proposal_count_min: 2
       distinctness_required: true
   - seed_id: SD_005
-    status: corpus_only
-    title: 空座位
-    text: 教室里有个座位一直空着，老师从来不点名。
-    pov_hint: dual
+    status: measured
+    seed_file: tests/fixtures/seeds/story2/03-realism.txt
+    genre: 现实
+    title: 现实（fixture）
+    pov_hint: single
     expectation:
       proposal_count_min: 2
       distinctness_required: true
   - seed_id: SD_006
-    status: corpus_only
-    title: 搬家
-    text: 一个老人决定搬去和儿子住，但行李一直没收拾。
+    status: measured
+    seed_file: tests/fixtures/seeds/story2/04-warmth.txt
+    genre: 温情
+    title: 温情（fixture）
     pov_hint: single
     expectation:
       proposal_count_min: 2
       distinctness_required: true
   - seed_id: SD_007
-    status: corpus_only
-    title: 加错的好友
-    text: 两个人加错了微信，聊了半年才发现。
-    pov_hint: dual
+    status: measured
+    seed_file: tests/fixtures/seeds/story2/05-light-scifi.txt
+    genre: 轻科幻
+    title: 轻科幻（fixture）
+    pov_hint: single
     expectation:
       proposal_count_min: 2
       distinctness_required: true
   - seed_id: SD_008
     status: corpus_only
-    title: 夜班
-    text: 便利店店员注意到，每晚三点都会有一个只买一瓶水的人。
+    seed_file: tests/fixtures/seeds/story2/06-open-ending.txt
+    genre: 开放结局
+    title: 开放结局（仅输入）
     pov_hint: single
     expectation:
       proposal_count_min: 2
       distinctness_required: true
   - seed_id: SD_009
     status: corpus_only
-    title: 旧照片
-    text: 一个人在整理遗物时，发现一张有自己却完全不记得的照片。
+    seed_file: tests/fixtures/seeds/story2/07-single-scene.txt
+    genre: 单场景
+    title: 单场景（仅输入）
     pov_hint: single
     expectation:
       proposal_count_min: 2
       distinctness_required: true
   - seed_id: SD_010
     status: corpus_only
-    title: 顺路的车
-    text: 一个女孩每天都搭同一个同事的车回家，从没说过谢谢。
+    seed_file: tests/fixtures/seeds/story2/08-twist.txt
+    genre: 强反转
+    title: 强反转（仅输入）
     pov_hint: single
     expectation:
       proposal_count_min: 2
