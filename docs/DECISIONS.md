@@ -403,7 +403,7 @@
 | 7 | 《需求规格》 | §14 | 新增字段 | 同第 5 条（Scene 的 `tone`）；`narrative_role_ref` **以 `BP_STR_*` 为准**，arc 覆盖判定按 §16（映射 START→BEG / SHIFT→TURN / END→END） | OQ-42（复议）/ OQ-47 |
 | 8 | 《需求规格》 | §16 | 补充定义 | Coverage 各类型 severity：structure / ending / reveal_alignment / blueprint_reference_integrity = high，length / arc = medium；warning 一律不阻塞 | OQ-44 |
 | 9 | 《需求规格》 / 《架构设计》 | §17 | 扩展枚举 | `low_severity_log[].code` 字段与取值（`llm_span_invalid`、`revealed_to_narrower_than_plan`）；并注明低危日志在 v0.1 **不落盘**，需要留档用 CLI stdout 重定向 | OQ-59 / I-65 / I-75 / I-76 |
-| 10 | 《需求规格》 | §18.1 | 补充定义 | OCCURRED 的 payload 命名：knowledge 用 `payload.knowledge_ref`、relationship 用 `payload.relationship_ref`；`story_state.*_state[].blueprint_ref` 保持不变，代码保证二者指向同一 ID | OQ-06 |
+| 10 | 《需求规格》 | §18（**新增小节**，§18.1–§18.4 编号未变） | 补充定义 | OCCURRED 的 payload 命名：knowledge 用 `payload.knowledge_ref`、relationship 用 `payload.relationship_ref`；`story_state.*_state[].blueprint_ref` 保持不变，代码保证二者指向同一 ID | OQ-06 |
 | 11 | 《需求规格》 | §19.1 | 补充定义 | `draft_context.max_chars` 的计数口径：Unicode **码点**，含非空白字符、不含空白与换行 | OQ-16 |
 | 12 | 《需求规格》 | §21 | 扩展枚举 | `excluded_sensitive.type` 扩为 6 类（新增 `character_inner_state`）；`reason` 六类枚举（含 `non_pov_inner_state`） | OQ-44 / OQ-50 |
 | 13 | 《需求规格》 | §21 | 位置明确 | Manifest 为**单文件、末次覆盖**（`reports/context-manifest.yaml`），顶部加 `# Last compiled scene: scene-XXX`；`writer_context` 不落盘 | OQ-48 / OQ-49 / I-44 |
@@ -481,7 +481,7 @@
 | §15 allowed_reveals 与结构位置解析 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
 | §16 Blueprint Coverage Check | ✅ | 六类 warning 的 severity 表（high 4 / medium 2，全部不阻塞）+ arc 映射判定（START→BEG / SHIFT→TURN / END→END，空值跳过） |
 | §17 Story State Schema | ✅ | `type` 扩枚举 + 低危日志不落盘 |
-| §18 OCCURRED 生成机制 | ✅ | §18.0 payload 命名分工表 + 校验/低危日志表（真子集 → `revealed_to_narrower_than_plan`、不落盘；真超集/无交集/`from_state` 不符 → conflict） |
+| §18 OCCURRED 生成机制 | ✅ | §18 新增小节「payload 命名与低危日志」：命名分工表 + 校验/低危日志表（真子集 → `revealed_to_narrower_than_plan`、不落盘；真超集/无交集/`from_state` 不符 → conflict） |
 | §19 Draft Context | ✅ | `max_chars` = Unicode 码点、只计非空白码点、末尾向前 + 段落边界回退；口径与 Linter / target_length / A-B 归一化统一 |
 | §20 Context Compiler | ✅（备案：核对无变更，批次 2） | 数据源白名单 / Writer 可获得 / 默认不能获得与实现一致；§20 归属裁决 = (a) 已隐含在镜像检查中 |
 | §21 Context Manifest Schema | ✅ | 6 类 `type` + 六类 `reason` 枚举；Manifest 单文件末次覆盖 + `# Last compiled scene:`；`writer_context` 不落盘 |
@@ -556,4 +556,92 @@
 
 > 说明：《开发 Story 拆分》以 Story 为章节单位，其内容是对前两份文档的验收化表达；
 > 本表把 B2 / B3 / B4 涉及的 Story 段落逐条标出，避免"只改前两份、Story 拆分不同步"。
+---
 
+## 十六、封版记录（v0.1 最终交接）
+
+> 本章是 v0.1 的**最终交接记录**：封版点、三份冻结文档的完整 sha256、遗留 OQ 分类与复核时机、
+> 以及"未来版本清单"。后续任何修改都应先更新本章，再改文档本体。
+
+### 16.1 封版点与提交链
+
+| 里程碑 | commit | 说明 |
+|---|---|---|
+| Story 10 封版（代码 + 测试 + 评估资产） | `d0d65da49935eda7fd0f02d2c4807039084498d9` | v0.1 功能冻结：10 个 Story 全部完成，M1 通过，666 项测试全绿 |
+| 文档回写批次 1（状态模型核心） | `37ff39a` | 条目 1–7 / 9 / 32；含 I-81（Gate 2 两级 user_edit） |
+| 回写期澄清（批次 1 审核） | `dbfab90` | I-82（I-37 不采纳）+ OQ-62（实现待收紧）；§十四 回写期裁决、§十五 全局进度表 |
+| 文档回写批次 2（POV / 隔离 / 报告 / Style） | `2bfa6bd` | 条目 12–20；**代码收紧 OQ-62**（`narrative_role_ref` 只接受 `BP_STR_*`）+ I-83 |
+| 文档回写批次 3（文件结构 / 评估 / 备案 / 冻结声明） | `0b41f9a` | 条目 21–28；G1 入架构 §7；§30/§32/§33 备案；OQ-63 记录 |
+| 文档回写批次 4（状态与冲突模型补漏） | `86fd538bd5a0d85c827cf2b961b84a995a7119da` | 条目 8 / 10 / 11 / 29 / 30 / 31 + 需求 §6.3 的 G1 + Story 5 镜像；**代码收窄 OQ-63**（未出场角色内心 → `character_inner_state`） |
+| 冻结后收尾（本章） | 见 `git log -1` | §18 新增小节编号澄清 + OQ-52~58 复核时机 + 完整 sha256 + 未来版本清单 |
+
+### 16.2 三份冻结文档（最终版本）
+
+| 文档 | 字节数 | 章节数 | **完整 sha256（64 位）** |
+|---|---|---|---|
+| `Short-story-first_Writing_Harness_v0.1_需求规格.md` | 59617 | 33 | `ceb4233a9c01bac95b3f184cf4102d9f2cfdd8169ff3be35da0c6414aa3d13e8` |
+| `Short-story-first_Writing_Harness_v0.1_架构设计.md` | 38479 | 35 | `3c03fe445ecb166c1f3f102246cc9c5cd6872cf9bac4417968c7b47bd2451b22` |
+| `Short-story-first_Writing_Harness_v0.1_开发Story拆分.md` | 23615 | 10 Story + M1 | `9782fce87a64c5709f14bb3607b755cefe754f3df37a19f47d538155b2be0c1d` |
+
+- 三份文档的 §1 均标注"**v0.1 最终基线（回写完成 2026-09-30）**"，并指向本章；
+- 校验方式：`shasum -a 256 "Short-story-first_Writing_Harness_v0.1_<文档名>.md"`；
+- 回写完成的判定：§十五 中**所有章节均为 ✅**（含备案行），§十三 中**条目 1–32 全部处置**。
+
+### 16.3 遗留 OQ 与复核时机
+
+| OQ | 内容 | 状态 / 复核时机 |
+|---|---|---|
+| OQ-52 | 升华词典文件 Schema（`schema_version` / `version` / `phrases[]`） | **v0.1 落地；复核时机：v0.2 或用户使用反馈** |
+| OQ-53 | 各规则的 `evidence` 固定结构 | 同上 |
+| OQ-54 | "段尾"窗口 = 段落最后 16 个非空白码点 | 同上 |
+| OQ-55 | `reports/linter.yaml` 单文件末次覆盖 | 同上 |
+| OQ-56 | 五类语义类型默认 severity | 同上 |
+| OQ-57 | 报告可能同时含 rule / llm warning（报告级 `linter` = 最后一次完整运行） | 同上 |
+| OQ-58 | "不得引入 Scene 中没有的实体"的保守判定口径 | 同上 |
+| OQ-59 | 低危日志不落盘（stdout 留档） | 已处理（封版前裁决） |
+| OQ-60 | Story Development Test Set：measured 7 / corpus_only 3 | 已处理 |
+| OQ-61 | 8 点自检原文入库（Story 10 G） | 已处理 |
+| OQ-62 | `narrative_role_ref` 收紧为只接受 `BP_STR_*` | 已处理（同批收紧，I-83） |
+| OQ-63 | type↔reason 不强校验 + 组合收窄 | 已处理（软检查落在 Story 10 验收 ⑤） |
+
+**v0.1 未决、且明确不属于 v0.1 的**：OQ-25（Gate 1 跨会话"审阅-编辑-再提交"持久化）。
+
+### 16.4 未来版本清单（三类，v0.2 起按需启动）
+
+**A. 功能扩展**
+
+| # | 事项 | 来源 | 说明 |
+|---|---|---|---|
+| A1 | Gate 1 跨会话持久化（Interpreter 输出 + Gate 1 预览/编辑落盘） | OQ-25 | 会触及 §29/§32 文件结构，需先裁决新增文件 |
+| A2 | 长篇模式 / Chapter Facts / Canon 管理 | §30 不支持清单 | v0.1 明确排除，需在核心命题验证后讨论 |
+| A3 | 多 Agent 编排 | §33.1 | v0.1 为单模型 + 多 Prompt Contract，不提前引入 |
+
+**B. 评估扩展**
+
+| # | 事项 | 来源 | 说明 |
+|---|---|---|---|
+| B1 | **A/B 扩大样本**（当前 10 组、A 侧 862 码点） | Story 10 裁决 4 + 自检第 7 条 | 需 ≥30–50 组、多名评分者；当前结论仅"方向明确" |
+| B2 | 执行真正的盲测（随机化 A/B 顺序 + 双盲编号） | §31.2 | v0.1 只准备对照集与人工模板，不自动评分 |
+| B3 | Story Development Test Set 补齐 3 个 corpus_only（开放结局 / 单场景 / 强反转） | OQ-60 | 需新增对应 Seed Interpreter / Story Developer fixture |
+| B4 | Author Cost 基线化（与人工写作对照组比较） | §31.3 | 目前只有"显式 Gate = 3"的目标值 |
+
+**C. Schema 演进**
+
+| # | 事项 | 来源 | 说明 |
+|---|---|---|---|
+| C1 | `excluded_sensitive` 的 type↔reason 是否入 Schema 强校验 | OQ-63 ① | 当前为文档组合表 + 运行时软检查；强校验会让用户 override 复杂化，需权衡 |
+| C2 | `narrative_role_ref` 是否恢复"可挂 arc 位置" | OQ-62 / I-82 | 当前只允许 `BP_STR_*`；若要支持直接引用 arc，需同时改 Coverage 与 Scene Schema |
+| C3 | 低危日志持久化（是否新增只读报告文件） | OQ-59 | 当前不落盘；若要长期审计，需新增 `reports/state-extraction.yaml`（单文件末次覆盖） |
+| C4 | 报告文件"单文件末次覆盖"是否改为按场/按次留存 | OQ-49 / OQ-55 / OQ-57 | 会触及 §29/§32 |
+
+### 16.5 交接状态
+
+```text
+代码              10 个 Story 全部完成；666 项测试全绿；typecheck 无错；fixtures:check 83/83
+文档              三份冻结文档回写完成（条目 1–32 全部处置，§十五 全章节 ✅）
+文档/代码一致性    仅两处授权收紧：OQ-62（BP_STR_*）、OQ-63（character_inner_state）
+演示项目          demo-01 / demo-02 为 110–200 码点/场的压缩样本（非产品级输出）
+验证入口          pnpm test / pnpm typecheck / pnpm fixtures:check
+评估入口          pnpm harness eval story-development / eval author-cost / eval ab-report
+后续动作          不启动 v0.2；等待 v0.1 实际使用反馈
+```
