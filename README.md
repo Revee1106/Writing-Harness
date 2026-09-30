@@ -180,5 +180,7 @@ Node 24 可直接执行 TypeScript，CLI 无需构建步骤。
   5 fixture 型（情感 / 悬疑 / 温情 / 现实 / 轻科幻），corpus_only 3 = 开放结局 / 单场景 / 强反转）
   与 `tests/fixtures/evaluation/anti-ai/session-001/`（10 组 A/B 对照 + 人工评分模板）
 - A/B 归一化（封版证据）：A 86 码点/场、B 157 码点/场；每千码点 Rule warning **A 47.56 : B 2.55**
-  （B/A = 0.054），见 `pnpm harness eval ab-report`
+  （B/A = 0.054），见 `pnpm harness eval ab-report`。
+  限定：本 A/B 为 v0.1 初版信号，样本量有限（10 组，A 侧合计 862 码点），结论方向明确但需要在
+  v0.2 扩大样本验证
 - 待回写三份冻结文档的条目：见 `docs/DECISIONS.md` 的**封版后文档维护清单**（30 条）

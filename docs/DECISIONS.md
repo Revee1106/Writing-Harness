@@ -348,7 +348,7 @@
 | ④ | Proposal 不会渗透 Writer | 每场编译上下文（context + manifest）序列化后不含 `PROP_` / `proposal_id`，且不含 proposals.yaml 的任何原文行 |
 | ⑤ | POV / secret / future 不明显泄漏 | 每场 `future_content_exposed === false`、`unconfirmed_proposal_exposed === false`；内心状态只允许 POV 自己（非 POV 只能进 `excluded_sensitive`，`reason: non_pov_inner_state`）；Key Knowledge 的 truth 在揭示场景之前不出现在正文 |
 | ⑥ | Seed Preservation Rate 可测 | 7 个 measured Seed 全部给出百分比，`unaccounted_anchors === 0`，且既有 100% 也有 <100%（有区分度） |
-| ⑦ | Harness 正文在 AI 感维度出现明确改善趋势 | 归一化后 A 47.56/千码点 : B 2.55/千码点（B/A = 0.054，单位长度 AI 味信号下降 ≥75%） |
+| ⑦ | Harness 正文在 AI 感维度出现明确改善趋势 | 归一化后 A 47.56/千码点 : B 2.55/千码点（B/A = 0.054，单位长度 AI 味信号下降 ≥75%）。**限定：v0.1 初版信号，样本量有限（10 组 / A 侧 862 码点），方向明确但需 v0.2 扩大样本验证** |
 | ⑧ | 用户不承担高频审批 | 每项目 3 次显式 Gate、`explicit_gates / scenes < 1`、rewrite ≤1 次（按需）；gate3 只有整篇 `--confirm`，无逐场确认 |
 
 ### A/B 归一化结果（封版证据）
@@ -364,6 +364,9 @@
 
 命令：`pnpm harness eval ab-report`（只做长度归一化，不做质量判定）。
 
+> **限定**：本 A/B 为 v0.1 初版信号，样本量有限（10 组，A 侧合计 862 码点），
+> 结论方向明确但**需要在 v0.2 扩大样本验证**。
+
 ### 实现解读
 
 | # | 解读 | 依据 | 备注 |
@@ -378,6 +381,9 @@
 
 本清单是**唯一入口**：v0.1 实现过程中所有"与三份冻结文档不一致 / 文档未定义而由实现补齐"的事项，
 按"目标文档 + 章节 + 变更性质"逐条列出，供后续统一回写。
+**回写进度**：批次 1（状态模型）✅ 已完成 —— 条目 1 / 2 / 3 / 4 / 5 / 6 / 7 / 9 / 32；
+批次 2（POV / 隔离 / 报告）待用户审核后进行；批次 3（文件结构 / 评估）待定。
+
 （章节号以 v0.1 冻结版文档为准；`性质` 取值：**新增** / **扩展枚举** / **补充定义** / **收窄解读** / **位置明确** / **无改动（仅备案）**。）
 
 | # | 目标文档 | 章节 | 变更性质 | 需要回写的内容 | 来源 |
@@ -402,14 +408,16 @@
 | 18 | 《需求规格》 | §25.2 / §25.3 | 补充定义 | `evidence` 按规则的固定结构（template_actions / sentence_length_variance / paragraph_length_variance / dialogue_ratio / paragraph_ending_elevation）；"段尾"窗口 = 段落最后 16 个非空白码点；五类语义类型默认 severity（author_summary / subtext_exposed = high，其余 medium） | OQ-53 / OQ-54 / OQ-56 / I-60 / I-66 |
 | 19 | 《需求规格》 | §27 | 补充定义 | Local Rewrite 契约与落回规则：输出纯文本、长度 ≤ 原 span 的 3 倍、拼接后除 span 外字节级一致、原地改 `drafts/scene-NNN.md`、warning 上留 `rewrite` 审计、不备份不回滚；重叠重复 ≥4 码点拒绝（I-71） | Story 9 裁决 / I-68 / I-71 |
 | 20 | 《需求规格》 | §27 | 补充定义 | 局部二次 Linter 范围：Rule = span 所在段落 ±1；LLM = span ±1 段落；范围独立定义、ID 重新分配、`--full` 跑全篇 | Story 9 裁决 / I-69 |
-| 21 | 《需求规格》 / 《架构设计》 | §29 / §32 | 新增目录 | 新增 `projects/<id>/blueprint-history/<NNN>.meta.yaml`（Gate 2 元数据），与 `history/blueprint-<NNN>.yaml` 按同一 NNN 一一对应 | OQ-10 / OQ-35 / I-31 |
-| 22 | 《需求规格》 / 《架构设计》 | §29 / §32 | 无改动（仅备案） | v0.1 的文件树未新增其它条目：`drafts/final.md` 落在既有 `drafts/` 下，评估资产在 `tests/fixtures/evaluation/`（不在 `projects/`） | Story 10 起始会裁决 |
-| 23 | 《需求规格》 | §31.1 | 位置明确 | Story Development Test Set 存放于 `tests/fixtures/evaluation/story-development/`；10 个 Seed，measured 7（2 项目型 + 5 fixture 型：情感 / 悬疑 / 温情 / 现实 / 轻科幻），corpus_only 3（开放结局 / 单场景 / 强反转） | OQ-60 / I-78 / I-79 |
-| 24 | 《需求规格》 | §31.2 | 补充定义 | Anti-AI A/B Test Set 的 11 个人工评分列；**v0.1 不执行盲测、不自动评分**；长度归一化口径（±20% 阈值 + 每千码点 warning） | Story 10 裁决 4 / I-80 |
-| 25 | 《需求规格》 | §31.3 | 补充定义 | Author Cost 的列定义（`AUTHOR_COST_CSV_COLUMNS`），可由项目状态复算 | Story 10 E |
-| 26 | 《开发 Story 拆分》 | Story 10 G | 补充定义 | v0.1 的 **8 点自检原文**（本文件 §十二 已收录）与逐条可执行证据；建议在文档中给出证据位置 | OQ-61 |
-| 27 | 《架构设计》 | §8 | 补充定义 | `story_state.state_rebuild_conflicts[].type` 扩为 `['ORPHANED', 'OCCURRED_CONFLICT']`（枚举扩展，不新增 Schema） | I-77 |
-| 28 | 《架构设计》 | §34 | 补充定义 | P2 原则的可执行判定补充：Blueprint 内容项 `status` 只允许 `CONFIRMED`，唯一例外是 `seed_fidelity.added[].status = PROPOSED` | I-26 |
-| 29 | 《需求规格》 | §6.2 / §9.2 | 补充定义 | 参与本次 Gate 2 的提案若存在 `resolution=pending` 的冲突则**拒绝确认**；裁决只写 meta，不回写 `proposals.yaml` | I-28 / I-29 |
-| 30 | 《需求规格》 | §7.2 | 补充定义 | Gate 2 的 `source_refs` 三形态：`<参与提案>.<字段>` / `user_edit:<字段>` / `harness`（映射为 `blueprint_gate2` + `GATE2_<NNN>`）；合并时字段来源必须与字段计划一致，不静默换源 | I-30 / I-32 |
+| 21 | 《需求规格》 | §29 | 新增目录 | `projects/<id>/` 下新增 `blueprint-history/<NNN>.meta.yaml`（Gate 2 元数据），与 `history/blueprint-<NNN>.yaml` 按同一 NNN 一一对应 | OQ-10 / OQ-35 / I-31 |
+| 22 | 《架构设计》 | §32 | 新增目录 | 同上（架构侧文件树同步新增 `blueprint-history/<NNN>.meta.yaml`） | OQ-10 / OQ-35 / I-31 |
+| 23 | 《需求规格》 | §29 | 无改动（仅备案） | 未新增其它条目：`drafts/final.md` 落在既有 `drafts/` 下；评估资产在 `tests/fixtures/evaluation/`（不在 `projects/`） | Story 10 起始会裁决 |
+| 24 | 《架构设计》 | §32 | 无改动（仅备案） | 同上（架构侧文件树未新增其它条目） | Story 10 起始会裁决 |
+| 25 | 《需求规格》 | §31.1 | 位置明确 | Story Development Test Set 存放于 `tests/fixtures/evaluation/story-development/`；10 个 Seed，measured 7（2 项目型 + 5 fixture 型：情感 / 悬疑 / 温情 / 现实 / 轻科幻），corpus_only 3（开放结局 / 单场景 / 强反转） | OQ-60 / I-78 / I-79 |
+| 26 | 《需求规格》 | §31.2 | 补充定义 | Anti-AI A/B Test Set 的 11 个人工评分列；**v0.1 不执行盲测、不自动评分**；长度归一化口径（±20% 阈值 + 每千码点 warning） | Story 10 裁决 4 / I-80 |
+| 27 | 《需求规格》 | §31.3 | 补充定义 | Author Cost 的列定义（`AUTHOR_COST_CSV_COLUMNS`），可由项目状态复算 | Story 10 E |
+| 28 | 《开发 Story 拆分》 | Story 10 G | 补充定义 | v0.1 的 **8 点自检原文**（本文件 §十二 已收录）与逐条可执行证据；建议在文档中给出证据位置 | OQ-61 |
+| 29 | 《架构设计》 | §8 | 补充定义 | `story_state.state_rebuild_conflicts[].type` 扩为 `['ORPHANED', 'OCCURRED_CONFLICT']`（枚举扩展，不新增 Schema） | I-77 |
+| 30 | 《架构设计》 | §34 | 补充定义 | P2 原则的可执行判定补充：Blueprint 内容项 `status` 只允许 `CONFIRMED`，唯一例外是 `seed_fidelity.added[].status = PROPOSED` | I-26 |
+| 31 | 《需求规格》 | §6.2 / §9.2 | 补充定义 | 参与本次 Gate 2 的提案若存在 `resolution=pending` 的冲突则**拒绝确认**；裁决只写 meta，不回写 `proposals.yaml` | I-28 / I-29 |
+| 32 | 《需求规格》 | §7.2 | 补充定义 | Gate 2 的 `source_refs` 三形态：`<参与提案>.<字段>` / `user_edit:<字段>` / `harness`（映射为 `blueprint_gate2` + `GATE2_<NNN>`）；合并时字段来源必须与字段计划一致，不静默换源 | I-30 / I-32 |
 

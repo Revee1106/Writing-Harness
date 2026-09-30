@@ -1,6 +1,7 @@
-import { cpSync, mkdirSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vitest'
 import {
   AB_LENGTH_TOLERANCE,
   ANTI_AI_CSV_COLUMNS,
@@ -45,15 +46,20 @@ import { makeTempDir, REPO_ROOT, type TempDir } from '../helpers/tmp.ts'
  * - 评估工具：测试集校验、CSV 列、A/B session、作者成本。
  */
 
-const tempDirs: TempDir[] = []
+/**
+ * 测试专用临时目录。
+ *
+ * 副本一律落在**系统临时区**（`makeTempDir` → `mkdtempSync(os.tmpdir())`），
+ * 不是仓库内；清理通过 `onTestFinished()` 注册，**测试失败时同样会执行**
+ * （等价于 finally，不依赖"事后看 git status"）。
+ */
 function tempRoot(): TempDir {
   const dir = makeTempDir('harness-s10-unit-')
-  tempDirs.push(dir)
+  onTestFinished(() => {
+    dir.cleanup()
+  })
   return dir
 }
-afterEach(() => {
-  while (tempDirs.length > 0) tempDirs.pop()?.cleanup()
-})
 
 /** 测试里 loadStoryState 一定存在；用断言把它收紧成非空类型。 */
 function storyStateOf(paths: ReturnType<typeof projectPaths>): NonNullable<ReturnType<typeof loadStoryState>> {
@@ -512,6 +518,45 @@ describe('E：Anti-AI A/B 测试集与 CSV 模板', () => {
     const ai = '她深吸一口气，心中五味杂陈。时间仿佛静止，仿佛整个世界都安静了下来。'
     const human = '她把碗推过去。\n\n“就这一次。”'
     expect(countRuleWarnings(ai)).toBeGreaterThan(countRuleWarnings(human))
+  })
+})
+
+describe('G：测试副本的创建位置与清理机制（封版细节 3）', () => {
+  it('副本落在系统临时区（不是仓库内），且 cleanup() 会真正删除整个目录', () => {
+    const root = makeTempDir('harness-s10-cleanup-')
+    onTestFinished(() => {
+      root.cleanup()
+    })
+    cpSync(join(REPO_ROOT, 'projects', 'demo-01'), join(root.dir, 'demo-01'), { recursive: true })
+    const paths = projectPaths(root.dir, 'demo-01')
+    // 位置：系统临时区，且不在仓库内
+    expect(root.dir.startsWith(tmpdir())).toBe(true)
+    expect(paths.dir.startsWith(REPO_ROOT)).toBe(false)
+    expect(paths.dir.startsWith(root.dir)).toBe(true)
+    // 副本内容非空（确实复制了项目，而不是空目录）
+    expect(existsSync(join(paths.dir, 'blueprint.yaml'))).toBe(true)
+    expect(readdirSync(paths.dir).length).toBeGreaterThan(5)
+    // cleanup() 立即生效（onTestFinished 会在测试结束时对其它副本做同样的事）
+    root.cleanup()
+    expect(existsSync(root.dir)).toBe(false)
+  })
+
+  it('清理通过 onTestFinished() 注册：测试失败时也会执行（等价 finally，不靠事后 git status）', () => {
+    const helper = readTextFile(join(REPO_ROOT, 'tests/helpers/tmp.ts'))
+    expect(helper).toContain('mkdtempSync(join(tmpdir()')
+    expect(helper).toContain('rmSync(dir, { recursive: true, force: true })')
+    const forbiddenHook = `${'after'}${'Each'}(${''}`
+    for (const file of [
+      'tests/unit/story10.test.ts',
+      'tests/acceptance/story10.principles.test.ts',
+      'tests/acceptance/story10.acceptance.test.ts',
+    ]) {
+      const source = readTextFile(join(REPO_ROOT, file))
+      // 不再依赖"测试结束时统一兜底"的钩子：清理必须在 onTestFinished 中注册
+      expect(source).not.toContain(forbiddenHook)
+      expect(source).toContain('onTestFinished(() => {')
+      expect(source).toContain('dir.cleanup()')
+    }
   })
 })
 

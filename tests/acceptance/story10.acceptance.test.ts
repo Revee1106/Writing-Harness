@@ -1,6 +1,6 @@
 import { cpSync, existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vitest'
 import { runGate3 } from '../../src/state/gate3.ts'
 import { loadScenes, loadStoryState, runSceneBreakdown } from '../../src/scenes/service.ts'
 import { validateBlueprint } from '../../src/schema/blueprint.ts'
@@ -40,15 +40,20 @@ import { makeTempDir, REPO_ROOT, type TempDir } from '../helpers/tmp.ts'
  * 每条都对应本仓库里真实可跑的断言；条款文字**待用户确认后替换**。
  */
 
-const tempDirs: TempDir[] = []
+/**
+ * 测试专用临时目录。
+ *
+ * 副本一律落在**系统临时区**（`makeTempDir` → `mkdtempSync(os.tmpdir())`），
+ * 不是仓库内；清理通过 `onTestFinished()` 注册，**测试失败时同样会执行**
+ * （等价于 finally，不依赖"事后看 git status"）。
+ */
 function tempRoot(): TempDir {
   const dir = makeTempDir('harness-s10-acc-')
-  tempDirs.push(dir)
+  onTestFinished(() => {
+    dir.cleanup()
+  })
   return dir
 }
-afterEach(() => {
-  while (tempDirs.length > 0) tempDirs.pop()?.cleanup()
-})
 
 /** 测试里 loadStoryState 一定存在；用断言把它收紧成非空类型。 */
 function storyStateOf(paths: ReturnType<typeof projectPaths>): NonNullable<ReturnType<typeof loadStoryState>> {
