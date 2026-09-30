@@ -149,7 +149,8 @@ function validateConflicts(
   resolutions: Readonly<Record<string, string>>,
 ): { id: string; proposal_id: string; seed_ref: string; resolution: string }[] {
   const records: { id: string; proposal_id: string; seed_ref: string; resolution: string }[] = []
-  const pending: string[] = []
+  /** 待裁决冲突：带上它真正的键（`<proposal_id>:<conflict_id>`），提示文本必须用它，不能猜提案。 */
+  const pending: { key: string; label: string }[] = []
 
   const participating = proposals.proposals.filter((proposal) =>
     participatingProposalIds.includes(proposal.proposal_id),
@@ -183,9 +184,10 @@ function validateConflicts(
     const [proposalId, conflictId] = key.split(':') as [string, string]
     const declared = resolutions[key] ?? entry.proposal.conflicts[entry.index]?.resolution ?? 'pending'
     if (declared === 'pending') {
-      pending.push(
-        `${proposalId}:${conflictId}（${entry.proposal.conflicts[entry.index]?.seed_ref} 的 ${entry.proposal.conflicts[entry.index]?.proposal_field}）`,
-      )
+      pending.push({
+        key: `${proposalId}:${conflictId}`,
+        label: `${proposalId}:${conflictId}（${entry.proposal.conflicts[entry.index]?.seed_ref} 的 ${entry.proposal.conflicts[entry.index]?.proposal_field}）`,
+      })
       continue
     }
     records.push({
@@ -198,7 +200,10 @@ function validateConflicts(
 
   if (pending.length > 0) {
     throw new Gate2ConflictPendingError(
-      pending.map((item) => `${item}：请用 --resolve PROP_A:CONF_001=kept_user|changed_user|dropped 裁决`),
+      pending.map(
+        (item) =>
+          `${item.label}：请用 --resolve ${item.key}=kept_user|changed_user|dropped 裁决`,
+      ),
     )
   }
   return records

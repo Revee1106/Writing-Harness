@@ -134,33 +134,33 @@ const DEFAULT_PROJECTS_ROOT = resolve(REPO_ROOT, 'projects')
 const USAGE = `Short-story-first Writing Harness v0.1 — 项目 / Seed / Gate 1
 
 用法：
-  harness init <projectId> [选项]       创建新短篇项目
-  harness seed set <projectId> [选项]   保存 / 覆盖用户 raw input（Gate 1 之前）
-  harness seed show <projectId> [选项]  显示 seed.yaml
-  harness config show <projectId> [选项] 显示 project-config.yaml
-  harness gate1 <projectId> [选项]      Seed Interpreter → Author Gate 1
-  harness develop <projectId> [选项]    Story Developer → 2～3 个 Proposal
-  harness proposals show <projectId>    显示 proposals.yaml 摘要与 Seed Preservation Rate
-  harness gate2 <projectId> [选项]      Author Gate 2：确认 / 合并 / 手改 → Blueprint
-  harness blueprint show <projectId>    显示当前 Blueprint 摘要
-  harness breakdown <projectId> [选项]  Scene Breakdown → /scenes + story_state + coverage
-  harness scenes show <projectId>       显示 Scene 列表摘要
-  harness state show <projectId>        显示 story_state.yaml 摘要
-  harness coverage show <projectId>     显示 coverage 报告（结构化 warning）
-  harness context <projectId> [选项]    Context Compiler：为某个 Scene 编译受控上下文 + Manifest
-  harness style add <projectId> [选项]  保存一个 Style Sample（SAMPLE_<NNN> 由 Harness 分配）
-  harness style show <projectId>        显示 style/profile.yaml 摘要
-  harness write <projectId> [选项]      Prose Writer：按 Scene 生成 drafts/scene-NNN.md
-  harness drafts show <projectId>       显示已生成正文的长度与检查摘要
-  harness lint <projectId> [选项]       Rule Anti-AI Linter：确定性 / 统计型检查（不自动 Rewrite）
-  harness lint show <projectId>         显示 reports/linter.yaml
-  harness rewrite <projectId> [选项]    对某条 warning 的 span 做局部 Rewrite（不整篇重写）
-  harness gate3 <projectId> [选项]      Gate 3：拼接 final.md + 整篇确认 + State Extractor
-  harness final show <projectId>        显示 drafts/final.md 摘要
-  harness eval story-development        生成 Story Development 评估表（≥10 Seed，CSV）
-  harness eval author-cost              生成作者成本表（CSV）
-  harness eval ab-generate             生成 Anti-AI A/B 对照 session + 人工填写模板
-  harness help                          显示本帮助
+  pnpm harness init <projectId> [选项]       创建新短篇项目
+  pnpm harness seed set <projectId> [选项]   保存 / 覆盖用户 raw input（Gate 1 之前）
+  pnpm harness seed show <projectId> [选项]  显示 seed.yaml
+  pnpm harness config show <projectId> [选项] 显示 project-config.yaml
+  pnpm harness gate1 <projectId> [选项]      Seed Interpreter → Author Gate 1
+  pnpm harness develop <projectId> [选项]    Story Developer → 2～3 个 Proposal
+  pnpm harness proposals show <projectId>    显示 proposals.yaml 摘要与 Seed Preservation Rate
+  pnpm harness gate2 <projectId> [选项]      Author Gate 2：确认 / 合并 / 手改 → Blueprint
+  pnpm harness blueprint show <projectId>    显示当前 Blueprint 摘要
+  pnpm harness breakdown <projectId> [选项]  Scene Breakdown → /scenes + story_state + coverage
+  pnpm harness scenes show <projectId>       显示 Scene 列表摘要
+  pnpm harness state show <projectId>        显示 story_state.yaml 摘要
+  pnpm harness coverage show <projectId>     显示 coverage 报告（结构化 warning）
+  pnpm harness context <projectId> [选项]    Context Compiler：为某个 Scene 编译受控上下文 + Manifest
+  pnpm harness style add <projectId> [选项]  保存一个 Style Sample（SAMPLE_<NNN> 由 Harness 分配）
+  pnpm harness style show <projectId>        显示 style/profile.yaml 摘要
+  pnpm harness write <projectId> [选项]      Prose Writer：按 Scene 生成 drafts/scene-NNN.md
+  pnpm harness drafts show <projectId>       显示已生成正文的长度与检查摘要
+  pnpm harness lint <projectId> [选项]       Rule Anti-AI Linter：确定性 / 统计型检查（不自动 Rewrite）
+  pnpm harness lint show <projectId>         显示 reports/linter.yaml
+  pnpm harness rewrite <projectId> [选项]    对某条 warning 的 span 做局部 Rewrite（不整篇重写）
+  pnpm harness gate3 <projectId> [选项]      Gate 3：拼接 final.md + 整篇确认 + State Extractor
+  pnpm harness final show <projectId>        显示 drafts/final.md 摘要
+  pnpm harness eval story-development        生成 Story Development 评估表（≥10 Seed，CSV）
+  pnpm harness eval author-cost              生成作者成本表（CSV）
+  pnpm harness eval ab-generate             生成 Anti-AI A/B 对照 session + 人工填写模板
+  pnpm harness help                          显示本帮助
 
 通用选项：
   --projects-root <dir>   项目根目录（默认：${DEFAULT_PROJECTS_ROOT}）
@@ -202,11 +202,11 @@ gate3 选项：
   --provider <name>       State Extractor 使用的 provider（默认 recorded）
   --fixtures <dir>        recorded fixture 目录（默认 tests/fixtures/recorded/state_extractor）
 
-eval 选项：
-  eval story-development [--projects demo-01,demo-02] [--out <path>]
-  eval author-cost [--projects demo-01,demo-02] [--out <path>]
-  eval ab-generate [--session <session-NNN>] [--projects demo-01,demo-02]
-  eval ab-report [--session session-001]    A/B 长度归一化摘要（不做质量判定）
+pnpm harness eval 选项：
+  pnpm harness eval story-development [--projects demo-01,demo-02] [--out <path>]
+  pnpm harness eval author-cost [--projects demo-01,demo-02] [--out <path>]
+  pnpm harness eval ab-generate [--session <session-NNN>] [--projects demo-01,demo-02]
+  pnpm harness eval ab-report [--session session-001]    A/B 长度归一化摘要（不做质量判定）
 
 rewrite 选项：
   --scene <scene-###>     目标 Scene（必填）
@@ -1046,6 +1046,11 @@ async function runWriteCommand(parsed: ParsedCli): Promise<number> {
   const resolved = providerFor(parsed, PROSE_WRITER_CONTRACT_ID)
   const sceneRaw = parsed.values.scene
   const dryRun = parsed.values.plan === true
+
+  // 无 Scene 时不能"静默写 0 个 Draft"：必须先拆场，否则用户会以为写完了
+  if (loadScenes(paths).length === 0) {
+    throw new ProseWriterError('No scenes found; run breakdown first')
+  }
 
   if (typeof sceneRaw === 'string') {
     const result = await runProseWriter({
