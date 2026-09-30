@@ -8,10 +8,10 @@
 - 强制里程碑：M1（Story 5 后）
 - 所有 Schema 直接引用《架构设计》，不得在 Story 实现时另建平行结构
 
-**v0.1 最终基线（回写完成，2026-09-30）**
+**v0.1 最终基线（回写完成 2026-09-30）**
 
 - 封版点（commit）：`d0d65da`
-- 回写批次：批次 1（状态模型核心）→ 批次 2（POV / 隔离 / 报告 / Style）→ 批次 3（文件结构 / 评估）→ 批次 4（状态与冲突模型补漏，待完成）
+- 回写批次：批次 1（状态模型核心）→ 批次 2（POV / 隔离 / 报告 / Style）→ 批次 3（文件结构 / 评估）→ 批次 4（状态与冲突模型补漏）**四批全部执行完毕**
 - 回写依据：仓库内 `docs/DECISIONS.md` §十三「封版后文档维护清单」（32 条）+ §十四 回写期裁决
 - 回写性质：**只做定义补全、枚举扩展、位置明确、备案**，不改变架构方向；条款级改动逐条带「回写项 N」标记
 - 文档自洽性：三份文档在同一批次内同步修改，不保留中间状态
@@ -290,6 +290,9 @@ blueprint.yaml
 
 ## Scene Schema
 
+（回写项 5 / 7 镜像）Scene **必填** `tone: [tone_value, ...]`（≥1，8 值标签集，由 Breakdown 产出）；
+`narrative_role_ref` **只允许 structure 位置 `BP_STR_*`**（arc 不由 Scene 承载，OQ-62 / I-83）。
+
 必须使用架构文档唯一 Scene Schema，包括：
 
 ```text
@@ -300,6 +303,9 @@ proposed_additions
 ```
 
 ## Story State
+
+（回写项 29 镜像）`state_rebuild_conflicts[].type` = `ORPHANED | OCCURRED_CONFLICT`；未处理冲突禁止 Context Compile；
+冲突不产生事实（不写 occurred、不改投影、不回写 Blueprint）。
 
 实现架构文档唯一 `story_state.yaml` Schema。
 
@@ -320,6 +326,12 @@ proposed_additions
 - occurred 使用 tagged union + deterministic ID。
 
 ## POV / Key Knowledge / allowed_reveals
+
+（回写项 10 镜像）`occurred[].payload` 用 `knowledge_ref` / `relationship_ref`，`story_state.*_state[].blueprint_ref`
+描述投影来源；`payload.revealed_to` 真子集 → 低危日志 `revealed_to_narrower_than_plan`（不落盘），
+真超集 / 无交集 / `from_state` 不符 → `OCCURRED_CONFLICT`。
+
+（回写项 11 镜像）`draft_context.max_chars` 的单位是 **Unicode 码点**，只统计非空白码点。
 
 实现双 POV 统一模型：
 
@@ -345,6 +357,10 @@ characters[].inner_state_pov_visible
 
 ## Coverage Check
 
+（回写项 8 镜像）severity：`structure_coverage` / `ending_coverage` / `reveal_alignment` /
+`blueprint_reference_integrity` = high，`length_coverage` / `arc_coverage` = medium，**全部不阻塞**；
+arc 覆盖按映射判定（START→BEG / SHIFT→TURN / END→END），arc 值为空时跳过。
+
 检查：
 
 - structure；
@@ -356,6 +372,9 @@ characters[].inner_state_pov_visible
 - Blueprint 引用完整性。
 
 ## 关键规则
+
+（回写项 31 镜像）本次 Gate 2 参与提案存在 `pending` 冲突 → **拒绝确认**；裁决只写 meta（`conflict_resolutions`），
+**不回写 `proposals.yaml`**；`PROPOSED → USER_GIVEN` 无条件禁止（G1）。
 
 Scene 新增内容：
 

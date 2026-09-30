@@ -467,8 +467,22 @@ describe('验收 F：v0.1 8 点自检（《开发 Story 拆分》Story 10 G 节�
       const state = storyStateOf(paths)
       const allExcludedTypes = new Set<string>()
       const allExclusionReasons = new Set<string>()
+      // OQ-63 软检查：type ↔ reason 必须落在文档组合表内（Schema 不强制，测试层把关）
+      const legalPairs: Record<string, readonly string[]> = {
+        key_knowledge: ['not_revealed_yet', 'user_override'],
+        foreshadowing: ['foreshadowing_backstage'],
+        future_content: ['future_scene'],
+        unconfirmed_content: ['unconfirmed_content'],
+        user_override: ['user_override'],
+        character_inner_state: ['non_pov_inner_state', 'user_override'],
+      }
       for (const scene of scenes) {
         const { manifest } = compileContext({ paths, sceneId: scene.scene_id })
+        for (const item of manifest.excluded_sensitive) {
+          const allowed = legalPairs[item.type]
+          expect(allowed, `未知 type：${item.type}`).toBeDefined()
+          expect(allowed, `${item.type} + ${item.reason} 不在组合表内`).toContain(item.reason)
+        }
         // 硬事实：future / 未确认提案一律不进上下文
         expect(manifest.future_content_exposed).toBe(false)
         expect(manifest.unconfirmed_proposal_exposed).toBe(false)

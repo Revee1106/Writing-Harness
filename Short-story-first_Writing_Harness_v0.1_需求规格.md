@@ -10,10 +10,10 @@
 - 核心目标：将一句话或一段模糊故事种子，发展为可用故事蓝图，并进一步生成低 AI 感正文
 - 本文与《架构设计》《开发 Story 拆分》共同构成 v0.1 唯一开发基线
 
-**v0.1 最终基线（回写完成，2026-09-30）**
+**v0.1 最终基线（回写完成 2026-09-30）**
 
 - 封版点（commit）：`d0d65da`
-- 回写批次：批次 1（状态模型核心）→ 批次 2（POV / 隔离 / 报告 / Style）→ 批次 3（文件结构 / 评估）→ 批次 4（状态与冲突模型补漏，待完成）
+- 回写批次：批次 1（状态模型核心）→ 批次 2（POV / 隔离 / 报告 / Style）→ 批次 3（文件结构 / 评估）→ 批次 4（状态与冲突模型补漏）**四批全部执行完毕**
 - 回写依据：仓库内 `docs/DECISIONS.md` §十三「封版后文档维护清单」（32 条）+ §十四 回写期裁决
 - 回写性质：**只做定义补全、枚举扩展、位置明确、备案**，不改变架构方向；条款级改动逐条带「回写项 N」标记
 - 文档自洽性：三份文档在同一批次内同步修改，不保留中间状态
@@ -214,7 +214,11 @@ OCCURRED
 - 最高优先级；
 - 不允许 Harness 自动覆盖；
 - 若 Proposal 与 `USER_GIVEN` 冲突，必须产生 conflict；
-- conflict 不自动覆盖、不自动合并，在 Gate 2 由用户处理。
+- conflict 不自动覆盖、不自动合并，在 Gate 2 由用户处理；
+- **参与本次 Gate 2 的提案若存在 `resolution = pending` 的冲突，则拒绝确认**（v0.1 补充定义，回写项 31）：
+  逐条给出待处理的冲突与处理命令，用户先裁决（`kept_user` / `changed_user` / `dropped`）再确认；
+- **裁决结果只写 Gate 2 元数据（`blueprint-history/<NNN>.meta.yaml` 的 `conflict_resolutions`），不回写 `proposals.yaml`**——
+  Proposal 是"当时提出的方案"的历史记录，不得被事后修改。
 
 ### 6.3 PROPOSED
 
@@ -227,7 +231,10 @@ OCCURRED
 - 被 Prose Writer 引用，仍然是 `PROPOSED`；
 - 出现在 Draft 中，仍然不会自动升级；
 - 被多次使用也不会自动升级；
-- 只有 Gate 2 的用户确认可正常升级为 `CONFIRMED`。
+- 只有 Gate 2 的用户确认可正常升级为 `CONFIRMED`；
+- **`PROPOSED → USER_GIVEN` 无条件禁止（G1，v0.1 新增，回写项 31）**：用户确认只能产生 `CONFIRMED`，
+  不存在"用户后来认可所以改标 `USER_GIVEN`"。一旦把机器推测标成 `USER_GIVEN`，就等于把 Harness 的补充伪装成用户原意（违反原则 2）；
+  若要改变"这是用户自己说的"这一事实，只能由用户**重新编辑 Seed**（新增 item 或走 Gate 1 操作）。
 
 ### 6.4 CONFIRMED
 
@@ -423,6 +430,13 @@ conflicts:
 - 用户值；
 - Proposal 值；
 - Gate 2 最终处理结果。
+
+**Gate 2 的处理纪律（v0.1 补充定义，回写项 31）**
+
+- `resolution` 取值：`pending | kept_user | changed_user | dropped`；
+- **本次 Gate 2 参与提案存在 `pending` 冲突 → 拒绝确认**（不自动覆盖、不自动合并，见 §6.2）；
+- 最终处理结果写入 Gate 2 元数据的 `conflict_resolutions[]`（`{id: CONF_<NNN>, proposal_id, seed_ref, resolution}`）；
+- **不修改 `proposals.yaml`**：Proposal 侧保留 `pending` 原值，用户裁决不回写。
 
 ### 9.3 source_refs.type=proposal
 
@@ -810,6 +824,36 @@ Scene Breakdown 后检查：
 
 解析失败、order 越界、重复覆盖均为 high warning。
 
+**各检查类型的 severity（v0.1 补充定义，回写项 8）**
+
+| warning 类型 | severity | 说明 |
+|---|---|---|
+| `structure_coverage` | **high** | structure 位置是否被 Scene 覆盖 |
+| `ending_coverage` | **high** | ending 位置是否被覆盖 |
+| `reveal_alignment` | **high** | 每个 K 是否恰好被一个 Scene 的 `allowed_reveals` 覆盖 |
+| `blueprint_reference_integrity` | **high** | Scene 是否引用了不存在的 Blueprint ID |
+| `length_coverage` | medium | 各场 `target_length` 与 Blueprint `meta.target_length` 的匹配 |
+| `arc_coverage` | medium | arc 位置是否被覆盖（见下） |
+
+**所有 Coverage warning 一律不阻塞**（§28 的精神：用户可继续创作）。
+
+**arc 覆盖判定（v0.1 补充定义，回写项 8）**
+
+arc 位置**不由 Scene 直接承载**（Scene 的 `narrative_role_ref` 只允许 structure 位置，见 §14），判定按映射进行：
+
+```text
+arc 位置被覆盖 ⇔
+  （该 arc 位置有 Scene 直接引用）
+  或（其映射的 structure 位置已被覆盖）
+
+映射：START → beginning（BP_STR_BEG）
+      SHIFT → turning_point（BP_STR_TURN）
+      END   → ending（BP_STR_END）
+```
+
+- arc 值为空（`null` / 空串）时**跳过该位置的判定**；
+- 两者都不满足时产生 `arc_coverage` warning（medium），**不阻塞**。
+
 ## 17. Story State Schema
 
 `story_state.yaml` 是运行时投影，不复制 CONFIRMED 内容。
@@ -910,6 +954,35 @@ state_rebuild_conflicts:
 
 ## 18. OCCURRED 生成机制
 
+### 18.0 payload 命名与低危日志（v0.1 补充定义，回写项 10）
+
+**payload 命名（与 `story_state` 的字段名分工）**
+
+| 位置 | 字段 | 含义 |
+|---|---|---|
+| `occurred[].payload` | `knowledge_ref` / `relationship_ref` | **发生了什么变化**（本次正文实际发生） |
+| `story_state.knowledge_state[]` / `relationship_state[]` | `blueprint_ref` | **投影自哪个 Blueprint 项** |
+
+- 代码保证 `payload.knowledge_ref === knowledge_state[].blueprint_ref`（同一 ID 的不同角色），**不要求字面同名**；
+- 该分工的理由：OCCURRED 描述"事实上发生了什么"，投影描述"这条状态对应哪一项计划"，两者语义不同、生命周期也不同。
+
+**State Extractor 的校验与低危日志**
+
+State Extractor 只输出候选（`knowledge_reveals` / `relationship_changes`），**由 Harness 校验后才写入事实**：
+
+| 情形 | 处理 |
+|---|---|
+| `payload.revealed_to` == Blueprint `reveal_to` | 正常写入 |
+| **真子集**（实际揭示范围窄于计划） | 正常写入 + **低危日志** `{"code": "revealed_to_narrower_than_plan", ...}`（附 `knowledge_ref` / `plan` / `actual`） |
+| **真超集** | **conflict**（不写入 occurred、不改投影、不回写 Blueprint） |
+| **无交集** | **conflict** |
+| `relationship_change.from_state` 与 `relationship_state` 不一致 | **conflict** |
+| 引用不存在的 K / REL | **conflict** |
+
+- 低危日志的 entry 形态：`{code, message, evidence}`；本次新增的 code 为 **`revealed_to_narrower_than_plan`**；
+- **低危日志不是 `story_state` 的字段，v0.1 不落盘**（见 §17）：只在 Gate 3 的结果 / CLI 输出中可见，需要留档用 stdout 重定向；
+- 所有冲突写入 `story_state.state_rebuild_conflicts`（`type: OCCURRED_CONFLICT`，见 §17）。
+
 Gate 3 后 State Extractor 按 `Scene.order` 逐 Scene 处理。
 
 ### 18.1 tagged union + deterministic ID
@@ -987,6 +1060,14 @@ draft_context:
 ```
 
 `max_chars` v0.1 推荐允许 500～800 范围配置。
+
+**`max_chars` 的计数口径（v0.1 补充定义，回写项 11）**
+
+- 单位是 **Unicode 码点**（code point），**不是字节、不是 UTF-16 code unit**；
+- 计数**只统计非空白码点**：空白、换行、制表符一律不计入；
+- 因此"末尾 600 个中文字符" = **末尾 600 个非空白码点**（中英文混排时按字符个数计，不按宽度计）；
+- 截断从末尾向前取（保持紧邻前文的语感），并按段落边界回退到最近的换行处，避免从句子中间切开；
+- 同一口径贯穿：`draft_context.max_chars`、Linter 的 span / 阈值、`target_length` 与长度统计、A/B 长度归一化。
 
 规则：
 
@@ -1105,13 +1186,15 @@ overrides:
 |---|---|
 | `key_knowledge` | `not_revealed_yet`（尚未揭示） / `user_override`（用户已在前文揭示） |
 | `foreshadowing` | `foreshadowing_backstage`（伏笔幕后解释） |
-| `future_content` | `future_scene`（后续场景内容） / `non_pov_inner_state`（**未出场**角色的内心） |
+| `future_content` | `future_scene`（**仅**用于后续 Scene 的内容） |
 | `unconfirmed_content` | `unconfirmed_content`（未确认内容） |
 | `user_override` | `user_override` |
-| `character_inner_state` | `non_pov_inner_state` / `user_override` |
+| `character_inner_state` | `non_pov_inner_state` / `user_override`（含**本场未出场**角色的内心） |
 
-> 注：`future_content` + `non_pov_inner_state` 用于"本场未出场角色的内心"这条隔离路径——语义上偏"内心"而非"未来"，
-> 该配对是否应改为 `character_inner_state` 或拆成两条，属实现细节待裁决（见 OQ-63）。
+> **OQ-63 裁决（2026-09-30，批次 4）**：① **Schema 不做 type↔reason 强校验**（两者是语义维度，强校验会让用户
+> override 复杂化）；本表 + 运行时软检查即为约束。② **组合收窄**：`future_content` 只用于"未来 Scene 的内容"、
+> reason 只允许 `future_scene`；"未出场角色的内心"统一用 `character_inner_state` + `non_pov_inner_state`
+> （实现已同步，`src/context/compiler.ts`）。
 
 - 普通非敏感 included facts 不逐条写入；
 - 用户补充的 director note 内容写入 `director_surface`，并使用 `source: user_override`；
@@ -1661,15 +1744,17 @@ Context Manifest Schema 固定
 Proposal 与 Writer 物理隔离
 ```
 
-**v0.1 冻结声明（2026-09-30，批次 3）**
+**v0.1 冻结声明（2026-09-30，四批回写全部完成）**
 
 ```text
 封版点（commit）      d0d65da
 本文件                《需求规格》v0.1（回写完成版，33 章）
-同批冻结              《架构设计》v0.1、《开发 Story 拆分》v0.1
-通过标准              《开发 Story 拆分》Story 10 G（8 条，逐条有可执行证据）
-遗留待裁决            OQ-62（已处理：同批收紧）、OQ-63（type/reason 配对是否入 Schema）、
-                      架构 §7 的 G1（已入文档）、批次 4 尚未执行
+同批冻结              《架构设计》v0.1（35 章）、《开发 Story 拆分》v0.1
+回写批次              批次 1 状态模型核心 / 批次 2 POV·隔离·报告·Style /
+                      批次 3 文件结构·评估·备案·冻结声明 / 批次 4 状态与冲突模型补漏
+                      → 四批全部执行完毕，条目 1–32 全部处置
+通过标准              《开发 Story 拆分》Story 10 G（8 条，逐条有可执行证据，见 G.1）
+遗留未决（不阻塞）    OQ-56 / OQ-57 / OQ-58（待复核）；OQ-59 / OQ-60 / OQ-61 / OQ-62 / OQ-63 已处理
 ```
 
 - 通过标准 8 条与其实证据见《开发 Story 拆分》Story 10 G / G.1；

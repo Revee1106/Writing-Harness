@@ -324,12 +324,13 @@ export function compileContext(options: CompileContextOptions): CompileContextRe
       })
     }
   }
-  // 未出场角色的内心也必须隔离（同属 non_pov_inner_state）
+  // 未出场角色的内心也必须隔离（OQ-63 收窄：统一用 character_inner_state + non_pov_inner_state；
+  // future_content 只用于"未来 Scene 内容"，reason 只允许 future_scene）
   for (const character of blueprint.characters) {
     if (sceneCharacters.has(character.id)) continue
     excludedSensitive.push({
       id: `${character.id}.inner_state`,
-      type: 'future_content',
+      type: 'character_inner_state',
       source_ref: `blueprint.characters.${character.id}`,
       reason: 'non_pov_inner_state',
     })

@@ -383,10 +383,12 @@
 按"目标文档 + 章节 + 变更性质"逐条列出，供后续统一回写。
 **回写进度**：批次 1（状态模型核心）✅ 已完成 —— 条目 1 / 2 / 3 / 4 / 5 / 6 / 7 / 9 / 32（+ I-81/I-82/I-83 澄清与代码收紧）；
 批次 2（POV / 隔离 / 报告 / Style）✅ 已完成 —— 条目 12 / 13 / 14 / 15 / 16 / 17 / 18 / 19 / 20；
-批次 3（文件结构 / 评估 / 备案 / 冻结声明）✅ 已完成 —— 条目 21 / 22 / 23 / 24 / 25 / 26 / 27 / 28 + §7 的 G1 + §30/§32/§33 备案；
-批次 3（文件结构 / 评估）—— 条目 21 / 22 / 23 / 24 / 25 / 26 / 27 / 28；
-批次 4（状态与冲突模型补漏）—— 条目 8 / 10 / 11 / 29 / 30 / 31（+ 架构 §17 镜像）。
-章节级进度见 §十五。
+批次 3（文件结构 / 评估 / 备案 / 冻结声明）✅ 已完成 —— 条目 21 / 22 / 23 / 24 / 25 / 26 / 27 / 28 + §30/§32/§33 备案；
+批次 4（状态与冲突模型补漏）✅ 已完成 —— 条目 8 / 10 / 11 / 29 / 30 / 31 + 需求 §6.3 的 G1 + Story 5 段落镜像；
+**四批全部完成，条目 1–32 全部处置**；三份文档 §1 已改为无保留的"回写完成 2026-09-30"。
+批次 3（文件结构 / 评估）✅ 已完成 —— 条目 21–28；
+批次 4（状态与冲突模型补漏）✅ 已完成 —— 条目 8 / 10 / 11 / 29 / 30 / 31（+ 需求 §6.3 的 G1 + Story 5 镜像）。
+**四批全部完成，条目 1–32 全部处置；章节级进度见 §十五（全部 ✅）。**
 
 （章节号以 v0.1 冻结版文档为准；`性质` 取值：**新增** / **扩展枚举** / **补充定义** / **收窄解读** / **位置明确** / **无改动（仅备案）**。）
 
@@ -438,6 +440,9 @@
 | **追问：`type` 与 `reason` 的关系** | 接受"不强制 1:1，但语义必须一致"的写法，并附**合法组合表**；同时记录实现现状（Schema 只校验 `reason ∈ 六类`，不校验配对）。 | 《需求规格》§21 + 《架构设计》§22 已写入；新增 **OQ-63**（是否把配对写进 Schema；`future_content` + `non_pov_inner_state` 是否改派） |
 | **G1 是否入文档** | **入文档**：在《架构设计》§7「禁止流转」加第 7 条 `PROPOSED → USER_GIVEN`（无条件禁止），并注明"源自原则 2 推导，v0.1 落地（OQ-22）"。 | 已写回；维护清单新增条目 **31** 的归属（原条目 31 为需求 §6.2/§9.2，G1 另计为 §7 的补充） |
 | **§30 / §32 / §33 备案** | §30 / §32 / §33 属"核对无变更"，在对应章节末尾**只加一行备案**（"v0.1 回写核对：无变更（2026-09-30 批次 3）"），**不改内容**；归批次 3 处理。 | 需求 §30 / §32、架构 §30 / §33 已加备案行；架构 §33 另注明"见 §7 的 G1" |
+| **OQ-63 裁决** | ① **Schema 强校验 type↔reason：不做**（type/reason 是语义维度，强校验会让用户 override 复杂化；文档组合表 + 运行时软检查已足够）。② **组合收窄**：`future_content` 只用于未来 Scene 内容、reason 只允许 `future_scene`；"未出场角色内心"统一用 `character_inner_state` + `non_pov_inner_state`。③ 实现已同步（`src/context/compiler.ts`），无测试依赖旧行为。 | 需求 §21 / 架构 §22 组合表已更新；软检查落在 Story 10 验收 ⑤（遍历真实 Manifest 校验配对）；OQ-63 状态改为"已处理" |
+| **§6.3 加 G1** | 采纳：需求 §6.3 增补"`PROPOSED → USER_GIVEN` 无条件禁止（G1）；用户确认只能产生 `CONFIRMED`"。 | 已写回（归批次 4） |
+| **架构 §25 备案可追溯** | "核对无变更"必须在汇报的备案列与 §十五 中显式列出，不得沉默。 | 架构 §25、需求 §20、架构 §20 已在 §十五 标注"✅（备案：核对无变更，批次 2）"；批次 4 汇报表增设备案列 |
 | **批次划分（最终）** | 批次 1 状态模型核心（✅ 已完成）；**批次 2** POV / 隔离 / 报告 / Style（《架构设计》§21 / §22 + 《需求规格》§21 / §22 / §23 / §24 / §25 / §27）；**批次 3** 文件结构 / 评估（《需求规格》§29 / §31 + 《架构设计》§32 + 《开发 Story 拆分》Story 10 G）；**批次 4** 状态与冲突模型补漏（《需求规格》§6.2 / §9.2 / §16 / §18.1 / §19.1 + 《架构设计》§8 / §17 / §34）。 | 见 §十五 的全局章节处理进度表 |
 
 ### 实现解读（回写期）
@@ -460,25 +465,25 @@
 | 章节 | 状态 | 备注 |
 |---|---|---|
 | §1 文档状态 | ✅ | 已写 v0.1 最终基线（封版点 / 批次 / 回写依据 / 性质 / 自洽性） |
-| §2 产品定义 | — | |
-| §3 四条底层原则 | — | P1–P4 已在 Story 10 F 落地 |
-| §4 核心用户流程 | — | |
-| §5 Author Gate | — | §5.2 的 pending 冲突处理在 B4 经 §6.2 / §9.2 补 |
-| §6 状态模型 | B4 | §6.2（USER_GIVEN / pending 冲突拒绝确认） |
+| §2 产品定义 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §3 四条底层原则 | ✅（备案：无清单条目） | P1–P4 已在 Story 10 F 落地 |
+| §4 核心用户流程 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §5 Author Gate | ✅（备案：无清单条目） | §5.2 的 pending 冲突处理在 B4 经 §6.2 / §9.2 补 |
+| §6 状态模型 | ✅ | §6.2 pending 冲突拒绝确认 + 裁决不回写；**§6.3 新增 G1**（`PROPOSED → USER_GIVEN` 无条件禁止） |
 | §7 状态数据必须保留来源 | ✅ | §7.2 已完成（含 I-81 两级 `user_edit`） |
-| §8 Story Seed | — | |
-| §9 Story Proposal | B4 | §9.2 冲突处理（§9.4 已于批次 1 完成） |
+| §8 Story Seed | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §9 Story Proposal | ✅ | §9.2 Gate 2 处理纪律：`pending` → 拒绝确认；裁决只写 meta 的 `conflict_resolutions`，不回写 `proposals.yaml` |
 | §10 Seed Preservation Rate | ✅ | §10.2 可执行口径 |
 | §11 Story Blueprint | ✅ | §11.1 / §11.3（镜像） |
-| §12 Blueprint 版本快照 | — | |
-| §13 Key Knowledge | — | |
+| §12 Blueprint 版本快照 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §13 Key Knowledge | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
 | §14 Scene Breakdown | ✅ | `tone` 必填；`narrative_role_ref` 保持 `BP_STR_*` |
-| §15 allowed_reveals 与结构位置解析 | — | |
-| §16 Blueprint Coverage Check | B4 | severity 定义 + arc 覆盖判定措辞（I-38） |
+| §15 allowed_reveals 与结构位置解析 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §16 Blueprint Coverage Check | ✅ | 六类 warning 的 severity 表（high 4 / medium 2，全部不阻塞）+ arc 映射判定（START→BEG / SHIFT→TURN / END→END，空值跳过） |
 | §17 Story State Schema | ✅ | `type` 扩枚举 + 低危日志不落盘 |
-| §18 OCCURRED 生成机制 | B4 | §18.1 payload 命名 + 低危日志字段与取值 |
-| §19 Draft Context | B4 | §19.1 `max_chars` 码点口径 |
-| §20 Context Compiler | ✅ | 核对一致，**无变更**（数据源白名单 / Writer 可获得 / 默认不能获得与实现一致；§20 归属裁决 = (a) 已隐含在镜像检查中） |
+| §18 OCCURRED 生成机制 | ✅ | §18.0 payload 命名分工表 + 校验/低危日志表（真子集 → `revealed_to_narrower_than_plan`、不落盘；真超集/无交集/`from_state` 不符 → conflict） |
+| §19 Draft Context | ✅ | `max_chars` = Unicode 码点、只计非空白码点、末尾向前 + 段落边界回退；口径与 Linter / target_length / A-B 归一化统一 |
+| §20 Context Compiler | ✅（备案：核对无变更，批次 2） | 数据源白名单 / Writer 可获得 / 默认不能获得与实现一致；§20 归属裁决 = (a) 已隐含在镜像检查中 |
 | §21 Context Manifest Schema | ✅ | 6 类 `type` + 六类 `reason` 枚举；Manifest 单文件末次覆盖 + `# Last compiled scene:`；`writer_context` 不落盘 |
 | §22 Context Compiler 失败降级 | ✅ | `breakdown --note`（Scene 持久化 / `source: user`）vs `context --note`（仅 Manifest / `user_override`） |
 | §23 Style Samples | ✅ | `style/profile.yaml` Schema（`SAMPLE_<NNN>` / tags / `de_entity`→`sanitized_text` 必填）+ 降级顺序与 `matched_on` 记录 |
@@ -486,7 +491,7 @@
 | §25 Anti-AI Linter | ✅ | §25.1 项目级词表 + 仓库级 fallback + 升华词典同构；§25.2 报告位置/共用 Schema/`evidence` 结构/默认阈值；§25.3 五类语义默认 severity + span 合法性 |
 | §26 Linter 降级与配置 | ✅ | 随 §25 核对：单条规则开关 + `linter.thresholds` 覆盖层 |
 | §27 Local Rewrite | ✅ | Rewrite 契约（纯文本 / ≤3× span / 拼接守恒 / ≥4 码点重叠拒绝 / 原地改写 / `rewrite` 审计）+ 二次检查范围（Rule 段落±1；LLM span±1 段落；ID 重分配） |
-| §28 Proposal 失败降级 | — | |
+| §28 Proposal 失败降级 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
 | §29 项目文件结构 | ✅ | 新增 `blueprint-history/<NNN>.meta.yaml`（条目 21）+ 其余无改动备案（条目 23） |
 | §30 MVP 范围 | ✅ | 备案：无变更（2026-09-30 批次 3） |
 | §31 评估指标 | ✅ | §31.1 测试集与指标（条目 25）/ §31.2 A/B 11 列 + 不做盲测 + 归一化口径（条目 26）/ §31.3 Author Cost 列（条目 27） |
@@ -498,39 +503,39 @@
 | 章节 | 状态 | 备注 |
 |---|---|---|
 | §1 文档状态 | ✅ | 同上（v0.1 最终基线） |
-| §2 架构目标 | — | |
-| §3 总体架构 | — | |
-| §4 Seed Interpreter | — | |
-| §5 Author Gate 1 | — | |
-| §6 Story Developer | — | |
-| §7 状态机 | ✅ | 核对一致，**无变更**；G1（`PROPOSED → USER_GIVEN`）是否入文档待裁决 |
-| §8 冲突模型 | B4 | `state_rebuild_conflicts.type` 扩枚举（模型侧） |
-| §9 Proposal Schema | — | |
-| §10 Blueprint Builder | — | 字段来源纪律已在需求 §7.2（I-81） |
+| §2 架构目标 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §3 总体架构 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §4 Seed Interpreter | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §5 Author Gate 1 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §6 Story Developer | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §7 状态机 | ✅ | 批次 1 核对一致；**批次 4 新增第 7 条 G1**（`PROPOSED → USER_GIVEN` 无条件禁止，源自 P2 推导） |
+| §8 冲突模型 | ✅ | `type` 扩为 `ORPHANED \| OCCURRED_CONFLICT`（表：产生时机 / 语义 / 共用 `SRC_<NNN>` / 未处理即阻塞 Compile / 不产生事实） |
+| §9 Proposal Schema | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §10 Blueprint Builder | ✅（备案：无清单条目） | 字段来源纪律已在需求 §7.2（I-81） |
 | §11 Blueprint Schema | ✅ | §11.1 / §11.3 |
-| §12 Blueprint Versioning | — | |
-| §13 Key Knowledge Schema | — | |
+| §12 Blueprint Versioning | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §13 Key Knowledge Schema | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
 | §14 Scene Schema | ✅ | `tone`（镜像；`BP_ARC_*` 声明已撤销） |
-| §15 allowed_reveals 契约 | — | |
-| §16 Blueprint Coverage Check | B4 | 镜像 §16 |
-| §17 Story State Schema | B4 | 镜像 §17 |
-| §18 OCCURRED 路径 | B4 | 镜像 §18 |
-| §19 Draft Context | B4 | 镜像 §19 |
-| §20 Context Compiler 数据源 | ✅ | 核对一致，**无变更**（与需求 §20 同口径） |
+| §15 allowed_reveals 契约 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| §16 Blueprint Coverage Check | ✅ | severity + arc 映射判定（镜像 §16） |
+| §17 Story State Schema | ✅ | `type` 扩枚举 + `OCCURRED_CONFLICT` 与 ORPHANED 同类处理（镜像 §8/§17） |
+| §18 OCCURRED 路径 | ✅ | payload 命名 + 真子集低危日志 + 不落盘（镜像 §18） |
+| §19 Draft Context | ✅ | `max_chars` 码点口径（镜像 §19） |
+| §20 Context Compiler 数据源 | ✅（备案：核对无变更，批次 2） | 与需求 §20 同口径 |
 | §21 Context Compiler 输出 | ✅ | `writer_context` 不落盘；输出与 §22 Manifest 的对应关系已写明 |
 | §22 Context Manifest Schema | ✅ | 6 类 `type` + 六类 `reason`（镜像）；位置与覆盖约定（镜像） |
 | §23 Context Compiler 降级路径 | ✅ | 两条路径（镜像 §22） |
 | §24 Style Sample Selector | ✅ | `style/profile.yaml` Schema + `matched_on`（镜像 §23） |
-| §25 Prose Writer | ✅ | 与 §20 白名单 / §29 改写范围一致（核对） |
+| §25 Prose Writer | ✅（备案：核对无变更，批次 2） | "只负责把 Scene 写成正文 + 不得读 proposals / 推进 Future Scene / 提前 reveal" 与实现一致；与 §20 白名单、§29 改写范围无冲突 |
 | §26 Rule Linter | ✅ | 词表位置 + `low` 只进 `low_severity_log` + 默认阈值 + 段尾 16 码点（镜像） |
 | §27 LLM Linter | ✅ | span 合法性与 `llm_span_invalid`（镜像 §25.2 / §25.3） |
 | §28 Linter 配置与降级 | ✅ | 报告位置与共用 Schema + 五类语义默认 severity（镜像） |
 | §29 Local Rewrite | ✅ | 契约与落回 + 二次检查范围（镜像 §27） |
 | §30 失败降级策略 | ✅ | 备案：无变更（2026-09-30 批次 3） |
-| §31 Seed Preservation Rate | — | 需求 §10 已写，架构侧仅引用 |
+| §31 Seed Preservation Rate | ✅（备案：无清单条目） | 需求 §10 已写，架构侧仅引用 |
 | §32 文件结构 | ✅ | 新增 `blueprint-history/`（条目 22）+ 其余无改动备案（条目 24） |
 | §33 技术实现原则 | ✅ | 备案：无变更（2026-09-30 批次 3），并指向 §7 的 G1 |
-| §34 四条原则的架构测试要求 | B4 | P2 的 `status` 例外 |
+| §34 四条原则的架构测试要求 | ✅ | P2 可执行判定：内容项 `status` 只允许 `CONFIRMED`，唯一例外 `seed_fidelity.added[]`（递归扫描强制） |
 | §35 架构冻结结论 | ✅ | 已写 v0.1 架构冻结声明（封版点 + 新增条目/规则 + 待执行批次 4） |
 
 ### 《开发 Story 拆分》
@@ -538,16 +543,16 @@
 | 章节 | 状态 | 备注 |
 |---|---|---|
 | §1 文档状态 | ✅ | 同上（v0.1 最终基线） |
-| §2 开发原则 | — | |
-| Story 1–4 | — | 回写内容落在前两份文档 |
-| Story 5（Scene Schema / Coverage Check / 关键规则） | B4 | `tone`、arc 覆盖判定（I-38）、severity 的镜像检查 |
-| Milestone M1 | — | |
+| §2 开发原则 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
+| Story 1–4 | ✅（备案：无清单条目） | 回写内容落在前两份文档 |
+| Story 5（Scene Schema / Coverage Check / 关键规则） | ✅ | `tone` / `narrative_role_ref` 只允许 `BP_STR_*` / `type` 扩枚举 / payload 命名 / 码点口径 / severity / arc 判定 / Gate 2 纪律 / G1（镜像） |
+| Milestone M1 | ✅（备案：无清单条目） | 条款未变；由对应 Story 的验收测试覆盖 |
 | Story 6 | ✅ | Manifest 位置 + 6 类 + 两条降级路径 + `scene_type ∪ tone`（镜像） |
 | Story 7（Style Sample 标签 / 匹配降级 / Draft Context） | ✅ | 标签取值 + `matched_on` + profile Schema + `sanitized_text` 必填（镜像） |
 | Story 8（词频类 / 配置） | ✅ | 报告位置 / 词表回落 / `evidence` / 段尾窗口 / 阈值（镜像） |
 | Story 9（Local Rewrite / 二次检查范围） | ✅ | 默认 severity + span 合法性 + Rewrite 契约 + 范围语义（镜像） |
 | **Story 10 G（v0.1 通过标准）** | **✅** | 8 点原文已在文档中；新增 **G.1 逐条证据表**（条目 28） |
-| Story 10 A–F | — | A–F 无清单条目 |
+| Story 10 A–F | ✅（备案：无清单条目） | A–F 无清单条目 |
 
 > 说明：《开发 Story 拆分》以 Story 为章节单位，其内容是对前两份文档的验收化表达；
 > 本表把 B2 / B3 / B4 涉及的 Story 段落逐条标出，避免"只改前两份、Story 拆分不同步"。

@@ -7,10 +7,10 @@
 - 适用范围：短篇优先模式
 - 本文所有 Schema 与《需求规格》保持唯一版本，不允许实现层自行定义平行结构
 
-**v0.1 最终基线（回写完成，2026-09-30）**
+**v0.1 最终基线（回写完成 2026-09-30）**
 
 - 封版点（commit）：`d0d65da`
-- 回写批次：批次 1（状态模型核心）→ 批次 2（POV / 隔离 / 报告 / Style）→ 批次 3（文件结构 / 评估）→ 批次 4（状态与冲突模型补漏，待完成）
+- 回写批次：批次 1（状态模型核心）→ 批次 2（POV / 隔离 / 报告 / Style）→ 批次 3（文件结构 / 评估）→ 批次 4（状态与冲突模型补漏）**四批全部执行完毕**
 - 回写依据：仓库内 `docs/DECISIONS.md` §十三「封版后文档维护清单」（32 条）+ §十四 回写期裁决
 - 回写性质：**只做定义补全、枚举扩展、位置明确、备案**，不改变架构方向；条款级改动逐条带「回写项 N」标记
 - 文档自洽性：三份文档在同一批次内同步修改，不保留中间状态
@@ -275,6 +275,19 @@ PROPOSED → USER_GIVEN          # G1（v0.1 新增，源自原则 2 推导，�
 - 不覆盖；
 - State Extractor 产生 conflict；
 - 用户选择修改正文或修改 Blueprint。
+
+### `state_rebuild_conflicts[].type`（v0.1 扩展枚举，回写项 29）
+
+冲突统一落在 `story_state.state_rebuild_conflicts`，`type` 取值两种：
+
+| 取值 | 产生时机 | 语义 |
+|---|---|---|
+| `ORPHANED` | Blueprint 版本重建（§17） | 旧 occurred 引用的 Blueprint 项已不存在；**不删除、重建继续** |
+| `OCCURRED_CONFLICT` | Gate 3 的 State Extractor 校验 | 正文实际发生的内容与计划 / 投影不一致（`revealed_to` 真超集或无交集、`from_state` 与 `relationship_state` 不符、引用不存在的 K / REL）；**不覆盖、不自动合并，由用户裁决** |
+
+- 两者共用 `SRC_<NNN>` 编号；新增冲突从既有最大编号继续（`OCCURRED_CONFLICT` 使用偏移，避免与旧冲突撞号）；
+- **未处理冲突（`resolution_note === null`）一律禁止 Context Compile**（§17.3 的规则对两类同时生效）；
+- 冲突**不产生事实**：不写 `occurred`、不改投影、不回写 Blueprint。
 
 ---
 
@@ -667,6 +680,13 @@ Scene Breakdown 后检查：
 
 解析失败、order 越界、重复覆盖均为 high warning。
 
+**severity（回写项 8）**：`structure_coverage` / `ending_coverage` / `reveal_alignment` /
+`blueprint_reference_integrity` = **high**；`length_coverage` / `arc_coverage` = medium；**全部不阻塞**。
+
+**arc 覆盖判定（回写项 8）**：arc 位置不由 Scene 直接承载（§14 的 `narrative_role_ref` 只允许 `BP_STR_*`），
+按映射判定——`START → BP_STR_BEG`、`SHIFT → BP_STR_TURN`、`END → BP_STR_END`；arc 值为空时跳过；
+直接引用或映射 structure 被覆盖任一成立即视为覆盖，否则产生 medium warning。
+
 ## 17. Story State Schema
 
 `story_state.yaml` 是运行时投影，不复制 CONFIRMED 内容。
@@ -738,7 +758,9 @@ state_rebuild_conflicts: []
 - 同一 Scene 内按 occurred 数组物理顺序；
 - 引用失效产生 ORPHANED `state_rebuild_conflict`；
 - ORPHANED 不删除，重建继续；
-- 未处理 ORPHANED 时禁止 Context Compile。
+- 未处理 ORPHANED 时禁止 Context Compile；
+- **`state_rebuild_conflicts[].type` 扩为 `ORPHANED | OCCURRED_CONFLICT`**（回写项 29，见 §8）；
+  Gate 3 阶段产生的 `OCCURRED_CONFLICT` 与 ORPHANED 同类处理（未处理即阻塞 Context Compile，同样不删除、需用户裁决）。
 
 ## 18. OCCURRED 路径
 
@@ -772,8 +794,16 @@ relationship_change → OCC_REL_<relationship_id>_<scene_id>
 State Extractor 对正文实际范围做检查：
 
 - 一致 → 正常写入；
-- 实际范围与 Blueprint 不一致 → conflict；
+- **真子集（窄于计划）→ 正常写入 + 低危日志** `{code: "revealed_to_narrower_than_plan", …}`（回写项 10）；
+- **真超集 / 无交集 → conflict**；
 - 不自动静默改写 Blueprint 计划。
+
+**payload 命名（回写项 10）**：`occurred[].payload` 用 `knowledge_ref` / `relationship_ref`（描述"发生了什么变化"）；
+`story_state.knowledge_state[].blueprint_ref` / `relationship_state[].blueprint_ref` 保持原名（描述"投影自哪一项"）；
+二者指向同一 ID，代码保证相等，不要求字面同名。
+
+**低危日志**：entry 形态 `{code, message, evidence}`；**不是 `story_state` 的字段、v0.1 不落盘**，
+只在 Gate 3 结果 / CLI 输出可见（`type` 扩枚举与冲突落点见 §8 / §17）。
 
 ### 18.3 relationship_change
 
@@ -819,6 +849,8 @@ draft_context:
 约束：
 
 - `max_chars` 推荐配置范围 500～800；
+- **计数口径（回写项 11）**：`max_chars` 的单位是 **Unicode 码点**，且只统计**非空白码点**（空白 / 换行 / 制表符不计入）；
+  从末尾向前截取并按段落边界回退；该口径与 Linter 的 span / 阈值、`target_length`、A/B 长度归一化一致；
 - 首个该 POV Scene 不加载；
 - 不默认加载其他 POV；
 - 不加载完整上一 Scene；
@@ -924,7 +956,8 @@ overrides:
 
 - **`type` 与 `reason` 不强制 1:1，但语义必须一致**（回写项 12）：`character_inner_state` → `non_pov_inner_state` / `user_override`；
   `key_knowledge` → `not_revealed_yet` / `user_override`；`foreshadowing` → `foreshadowing_backstage`；
-  `future_content` → `future_scene` / `non_pov_inner_state`；`unconfirmed_content` → `unconfirmed_content`；`user_override` → `user_override`（详见《需求规格》§21）；
+  `future_content` → `future_scene`（**仅**）；`unconfirmed_content` → `unconfirmed_content`；
+  `user_override` → `user_override`（详见《需求规格》§21；OQ-63 已收窄，Schema 不强制配对）；
 - 普通 included fact 不记录；
 - 用户 director note 的正文指令进入 `director_surface`，source=`user_override`；
 - `overrides` 只保存审计来源，并通过 `director_surface_ref` 一对一引用对应指令；
@@ -1247,6 +1280,14 @@ Scene / Writer 使用 Proposal 不改变 status。
 
 Harness 新增内容必须保留 `source=harness`，不能伪装成 USER_GIVEN。
 
+**可执行判定（v0.1 补充定义，回写项 30）**
+
+- Blueprint 内容项的 `status` **只允许 `CONFIRMED`**（= Gate 2 接受）；
+- **唯一例外**是 `seed_fidelity.added[]`：该子树保持 `status: PROPOSED` + `source: harness`，永久不升级；
+- 该规则由实现**递归扫描整个 Blueprint** 强制执行（含 `characters[].observable_behavior_hints[]` /
+  `relationships[]` / `key_knowledge[]` / `foreshadowing[]` 等子结构），不是抽样检查；
+- 因此"Harness 补出的内容"在产物里始终可被机械识别，不依赖人工审阅。
+
 ### P3
 
 敏感信息排除必须在 Manifest 可见。
@@ -1274,7 +1315,7 @@ Key Knowledge reveal 契约
 
 而不是复杂 Agent 或大型状态系统。
 
-**v0.1 架构冻结声明（2026-09-30，批次 3）**
+**v0.1 架构冻结声明（2026-09-30，四批回写全部完成）**
 
 ```text
 封版点（commit）  d0d65da
@@ -1282,6 +1323,10 @@ Key Knowledge reveal 契约
 同批冻结          《需求规格》v0.1、《开发 Story 拆分》v0.1
 新增条目          projects/<id>/blueprint-history/<NNN>.meta.yaml（§32）
 新增规则          §7 禁止流转第 7 条 G1（PROPOSED → USER_GIVEN 无条件禁止）
-                   §14 Scene 必填 tone；§11.1 Blueprint 顶层 seed_fidelity
-待执行            批次 4（状态与冲突模型补漏：§8 / §16 / §17 / §18 / §19 / §34 与需求 §6.2 / §9.2 / §16 / §18.1 / §19.1）
+                   §8/§17 冲突 type 扩为 ORPHANED | OCCURRED_CONFLICT
+                   §11.1 Blueprint 顶层 seed_fidelity；§11.3 inner_state_pov_visible 收窄
+                   §14 Scene 必填 tone、narrative_role_ref 只允许 BP_STR_*
+                   §16 Coverage severity 与 arc 映射判定；§18 低危日志；§19 max_chars 码点口径
+                   §22 excluded_sensitive 6 类；§26–§29 报告位置与 Rewrite 契约
+执行状态          批次 1–4 全部完成；条目 1–32 全部处置（详见 docs/DECISIONS.md §十三 / §十五）
 ```
